@@ -229,7 +229,7 @@ export default function BTCChart() {
 				horzLines: { color: "#f0f0f0" },
 			},
 			width: chartContainer.clientWidth,
-			height: 400,
+			height: 420,
 			timeScale: {
 				timeVisible: true,
 				secondsVisible: false,
@@ -397,58 +397,63 @@ export default function BTCChart() {
 	});
 
 	return (
-		<div class="btc-chart-wrapper">
-			<div class="header-row">
-				<h2>Bitcoin (BTC/USDT)</h2>
-				<div class="selectors">
-					<div class="indicators-selector">
+		<div class="my-8 bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden">
+			<div class="flex justify-between items-center p-4 border-b border-gray-100">
+				<h2 class="text-xl font-medium text-gray-800 m-0">Bitcoin (BTC/USDT)</h2>
+				<div class="flex flex-col gap-2">
+					<div class="flex items-center gap-2 text-sm">
 						<span>Indicators:</span>
-						<label>
+						<label class="flex items-center gap-1 cursor-pointer">
 							<input
 								type="checkbox"
 								checked={indicators().ema20}
 								onChange={(e) => setIndicators(prev => ({ ...prev, ema20: e.target.checked }))}
+								class="m-0"
 							/>
 							EMA 20
 						</label>
-						<label>
+						<label class="flex items-center gap-1 cursor-pointer">
 							<input
 								type="checkbox"
 								checked={indicators().ema60}
 								onChange={(e) => setIndicators(prev => ({ ...prev, ema60: e.target.checked }))}
+								class="m-0"
 							/>
 							EMA 60
 						</label>
-						<label>
+						<label class="flex items-center gap-1 cursor-pointer">
 							<input
 								type="checkbox"
 								checked={indicators().ema120}
 								onChange={(e) => setIndicators(prev => ({ ...prev, ema120: e.target.checked }))}
+								class="m-0"
 							/>
 							EMA 120
 						</label>
-						<label>
+						<label class="flex items-center gap-1 cursor-pointer">
 							<input
 								type="checkbox"
 								checked={indicators().ema150}
 								onChange={(e) => setIndicators(prev => ({ ...prev, ema150: e.target.checked }))}
+								class="m-0"
 							/>
 							EMA 150
 						</label>
-						<label>
+						<label class="flex items-center gap-1 cursor-pointer">
 							<input
 								type="checkbox"
 								checked={indicators().ema200}
 								onChange={(e) => setIndicators(prev => ({ ...prev, ema200: e.target.checked }))}
+								class="m-0"
 							/>
 							EMA 200
 						</label>
 					</div>
-					<div class="interval-selector">
+					<div class="flex gap-2">
 						{intervals.map((opt) => (
 							<button
 								type="button"
-								class={interval() === opt.value ? "active" : ""}
+								class={`px-3 py-1 border border-gray-300 bg-gray-50 rounded text-sm cursor-pointer transition-all hover:bg-gray-100 ${interval() === opt.value ? "bg-gray-800 text-white border-gray-800" : ""}`}
 								onClick={() => setInterval(opt.value)}
 							>
 								{opt.label}
@@ -458,96 +463,12 @@ export default function BTCChart() {
 				</div>
 			</div>
 
-			<div class="chart-box">
-				{isLoading() && <div class="loading-overlay">Loading data...</div>}
-				{error() && <div class="error-overlay">{error()}</div>}
-				<div ref={chartContainer} class="chart-container" />
+			<div class="relative h-[420px]">
+				{isLoading() && <div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10 font-medium">Loading data...</div>}
+				{error() && <div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10 font-medium text-red-500">{error()}</div>}
+				<div ref={chartContainer} class="w-full h-full" />
 			</div>
 
-			<style>{`
-    .btc-chart-wrapper {
-      margin: 2rem 0;
-      background: #fff;
-      border: 1px solid #e1e1e1;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-      overflow: hidden;
-    }
-    .header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .selectors {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .indicators-selector {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.85rem;
-    }
-    .indicators-selector label {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      cursor: pointer;
-    }
-    .indicators-selector input[type="checkbox"] {
-      margin: 0;
-    }
-    h2 {
-      margin: 0;
-      font-size: 1.25rem;
-      color: #333;
-    }
-    .interval-selector {
-      display: flex;
-      gap: 0.5rem;
-    }
-    .interval-selector button {
-      padding: 0.4rem 0.8rem;
-      border: 1px solid #ddd;
-      background: #f9f9f9;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.2s;
-    }
-    .interval-selector button:hover {
-      background: #eee;
-    }
-    .interval-selector button.active {
-      background: #333;
-      color: #fff;
-      border-color: #333;
-    }
-    .chart-box {
-      position: relative;
-      height: 400px;
-    }
-    .chart-container {
-      width: 100%;
-      height: 100%;
-    }
-    .loading-overlay, .error-overlay {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255,255,255,0.8);
-      z-index: 10;
-      font-weight: 500;
-    }
-    .error-overlay {
-      color: #ef5350;
-    }
-  `}</style>
 		</div>
 	);
 }
