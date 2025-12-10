@@ -368,21 +368,45 @@ export default function BTCChart() {
 					{(t) => (
 						<>
 							<div class="absolute w-3 h-3 bg-indigo-600 rounded-full border-2 border-white shadow-sm pointer-events-none z-10 transition-transform duration-75 ease-out" style={{ top: "0", left: "0", transform: `translate(${t().x - 6}px, ${t().snapY - 6}px)` }} />
-							<div class="absolute z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-gray-200/50 shadow-xl rounded-lg p-3 text-xs w-48 transition-all duration-100 ease-out flex flex-col gap-1.5" style={{ top: "0", left: "0", transform: `translate(${Math.min(Math.max(10, t().x + 20), (chartContainer?.clientWidth ?? 800) - 200)}px, ${Math.min(Math.max(10, t().y - 50), 300)}px)` }}>
-								<div class="text-gray-400 font-medium border-b border-gray-100 pb-1 mb-0.5">{t().time}</div>
-								<div class="grid grid-cols-2 gap-x-2 gap-y-1 text-gray-600">
-									<div class="flex justify-between"><span>Open</span> <span class="font-mono text-gray-900">{t().open}</span></div>
-									<div class="flex justify-between"><span>High</span> <span class="font-mono text-gray-900">{t().high}</span></div>
-									<div class="flex justify-between"><span>Low</span> <span class="font-mono text-gray-900">{t().low}</span></div>
-									<div class="flex justify-between"><span>Close</span> <span class={`font-mono font-bold ${t().changeColor}`}>{t().close}</span></div>
+							{/* Tooltip Container */}
+							<div 
+								class="absolute z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-gray-200/60 shadow-xl rounded-lg p-3 text-xs w-64 transition-all duration-100 ease-out flex flex-col gap-2" 
+								style={{ 
+									top: "0", 
+									left: "0", 
+									/* Adjusted boundary check (-270) because width is now w-64 (~256px) */
+									transform: `translate(${Math.min(Math.max(10, t().x + 20), (chartContainer?.clientWidth ?? 800) - 270)}px, ${Math.min(Math.max(10, t().y - 50), 300)}px)` 
+								}}
+							>
+								<div class="text-gray-500 font-medium border-b border-gray-100 pb-2 text-center uppercase tracking-wider text-[10px]">{t().time}</div>
+								
+								{/* Grid with stacked labels/values to prevent overlap */}
+								<div class="grid grid-cols-2 gap-x-4 gap-y-3">
+									<div>
+										<span class="block text-[10px] text-gray-400 font-semibold uppercase mb-0.5">Open</span>
+										<span class="font-mono text-gray-900 text-sm block">{t().open}</span>
+									</div>
+									<div>
+										<span class="block text-[10px] text-gray-400 font-semibold uppercase mb-0.5">High</span>
+										<span class="font-mono text-gray-900 text-sm block">{t().high}</span>
+									</div>
+									<div>
+										<span class="block text-[10px] text-gray-400 font-semibold uppercase mb-0.5">Low</span>
+										<span class="font-mono text-gray-900 text-sm block">{t().low}</span>
+									</div>
+									<div>
+										<span class="block text-[10px] text-gray-400 font-semibold uppercase mb-0.5">Close</span>
+										<span class={`font-mono text-sm font-bold block ${t().changeColor}`}>{t().close}</span>
+									</div>
 								</div>
+
 								{(t().ema20 || t().ema60 || t().ema120 || t().ema150 || t().ema200) && (
-									<div class="border-t border-gray-100 pt-1 mt-0.5 space-y-0.5">
-										<Show when={t().ema20}><div class="flex justify-between text-blue-500"><span>EMA 20</span> <span class="font-mono">{t().ema20}</span></div></Show>
-										<Show when={t().ema60}><div class="flex justify-between text-green-500"><span>EMA 60</span> <span class="font-mono">{t().ema60}</span></div></Show>
-										<Show when={t().ema120}><div class="flex justify-between text-orange-500"><span>EMA 120</span> <span class="font-mono">{t().ema120}</span></div></Show>
-										<Show when={t().ema150}><div class="flex justify-between text-red-500"><span>EMA 150</span> <span class="font-mono">{t().ema150}</span></div></Show>
-										<Show when={t().ema200}><div class="flex justify-between text-purple-500"><span>EMA 200</span> <span class="font-mono">{t().ema200}</span></div></Show>
+									<div class="border-t border-gray-100 pt-2 mt-1 space-y-1">
+										<Show when={t().ema20}><div class="flex justify-between text-blue-500 items-center"><span>EMA 20</span> <span class="font-mono">{t().ema20}</span></div></Show>
+										<Show when={t().ema60}><div class="flex justify-between text-green-500 items-center"><span>EMA 60</span> <span class="font-mono">{t().ema60}</span></div></Show>
+										<Show when={t().ema120}><div class="flex justify-between text-orange-500 items-center"><span>EMA 120</span> <span class="font-mono">{t().ema120}</span></div></Show>
+										<Show when={t().ema150}><div class="flex justify-between text-red-500 items-center"><span>EMA 150</span> <span class="font-mono">{t().ema150}</span></div></Show>
+										<Show when={t().ema200}><div class="flex justify-between text-purple-500 items-center"><span>EMA 200</span> <span class="font-mono">{t().ema200}</span></div></Show>
 									</div>
 								)}
 							</div>
