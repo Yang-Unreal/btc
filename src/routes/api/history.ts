@@ -1,62 +1,98 @@
+
+
 import { json } from "@solidjs/router";
 import type { APIEvent } from "@solidjs/start/server";
 
-// Type for Kraken OHLC data item: [time, open, high, low, close, vwap, volume, count]
+// Kraken OHLC item: [time, open, high, low, close, vwap, volume, count]
 type KrakenOHLCItem = [number, string, string, string, string, string, string, number];
 
-// Map intervals to Kraken format
+const PAIR = "XXBTZUSD";
+
 const mapIntervalToKraken = (interval: string): number => {
-	switch (interval) {
-		case "1m": return 1;
-		case "3m": return 5; // Closest: 5m
-		case "5m": return 5;
-		case "15m": return 15;
-		case "30m": return 30;
-		case "1h": return 60;
-		case "2h": return 240; // Closest: 4h
-		case "4h": return 240;
-		case "12h": return 1440; // Closest: 1d
-		case "1d": return 1440;
-		case "3d": return 10080; // Closest: 1w
-		case "1w": return 10080;
-		case "1M": return 21600;
-		default: return 1440; // Default to 1d
-	}
+	// Kraken API interval values are in minutes
+	const map: Record<string, number> = {
+		"1m": 1, 
+		"3m": 5, // Closest match
+		"5m": 5, 
+		"15m": 15, 
+		"30m": 30,
+		"1h": 60, 
+		"2h": 240, 
+		"4h": 240, 
+		"12h": 1440, 
+		"1d": 1440, 
+		"3d": 10080, 
+		"1w": 10080, 
+		"1M": 21600
+	};
+	return map[interval] || 60;
 };
 
 export async function GET({ request }: APIEvent) {
 	const url = new URL(request.url);
-	// Default to 1 day if not specified
-	const interval = url.searchParams.get("interval") || "1d";
+	const interval = url.searchParams.get("interval") || "1h";
+	const toParam = url.searchParams.get("to"); // Timestamp in Milliseconds
+
 	const krakenInterval = mapIntervalToKraken(interval);
-	// Kraken Pro API for OHLC
-	const krakenUrl = `https://api.kraken.com/0/public/OHLC?pair=XXBTZUSD&interval=${krakenInterval}&since=0`;
+
+	// Kraken API URL
+	let krakenUrl = `https://api.kraken.com/0/public/OHLC?pair=${PAIR}&interval=${krakenInterval}`;
+
+	// Pagination Logic
+	if (toParam) {
+		const toTimeMs = parseInt(toParam);
+		const toTimeSec = Math.floor(toTimeMs / 1000);
+
+		// Kraken returns approximately 720 candles per request.
+		// To get the "previous page" ending at 'toTime', we calculate a 'since' 
+		// timestamp that is 720 intervals in the past.
+		const lookbackWindow = 720 * (krakenInterval * 60); // 720 candles * seconds per candle
+		const sinceTimestamp = toTimeSec - lookbackWindow;
+
+		krakenUrl += `&since=${sinceTimestamp}`;
+	}
 
 	try {
 		const response = await fetch(krakenUrl);
+		
 		if (!response.ok) {
-			throw new Error(`Kraken API error: ${response.status}`);
+			// If Kraken fails (e.g., Rate limit), return empty to stop UI spinner safely
+			return json([]);
 		}
+
 		const data = await response.json();
+		
 		if (data.error && data.error.length > 0) {
-			throw new Error(`Kraken API error: ${data.error.join(", ")}`);
+			console.warn("Kraken API Warning:", data.error);
+			// Often "EService:Unavailable" or similar. Return empty.
+			return json([]);
 		}
-		// Kraken returns { XXBTZUSD: [[time, open, high, low, close, vwap, volume, count], ...] }
-		const ohlcData = data.result?.XXBTZUSD;
-		if (!Array.isArray(ohlcData)) {
-			throw new Error("Invalid Kraken data format");
+
+		const result = data.result?.[PAIR];
+		if (!Array.isArray(result)) {
+			return json([]);
 		}
-		// Map to Binance-like format: [timestamp, open, high, low, close]
-		const mappedData = ohlcData.map((item: KrakenOHLCItem) => [
-			item[0] * 1000, // Convert to milliseconds
-			parseFloat(item[1]), // open
-			parseFloat(item[2]), // high
-			parseFloat(item[3]), // low
-			parseFloat(item[4]), // close
+
+		// Map to chart format: [time(ms), open, high, low, close]
+		let mappedData = result.map((item: KrakenOHLCItem) => [
+			item[0] * 1000,
+			parseFloat(item[1]),
+			parseFloat(item[2]),
+			parseFloat(item[3]),
+			parseFloat(item[4]),
 		]);
+
+		// STRICT FILTERING:
+		// When using 'since', Kraken returns data starting FROM that time.
+		// We must filter out any data that overlaps with what we already have (data >= toParam).
+		if (toParam) {
+			const limitTime = parseInt(toParam);
+			mappedData = mappedData.filter((d) => d[0] < limitTime);
+		}
+
 		return json(mappedData);
 	} catch (error) {
 		console.error("Data Proxy Error:", error);
-		return json({ error: "Failed to fetch historical data" }, { status: 500 });
+		return json([]);
 	}
 }
