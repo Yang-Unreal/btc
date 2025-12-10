@@ -109,6 +109,26 @@ export default function BTCChart() {
 		}
 	};
 
+	// Map intervals to Kraken format for WebSocket
+	const mapIntervalToKrakenWS = (interval: Interval): string => {
+		switch (interval) {
+			case "1m": return "1";
+			case "3m": return "5"; // Closest: 5m
+			case "5m": return "5";
+			case "15m": return "15";
+			case "30m": return "30";
+			case "1h": return "60";
+			case "2h": return "240"; // Closest: 4h
+			case "4h": return "240";
+			case "12h": return "1440"; // Closest: 1d
+			case "1d": return "1440";
+			case "3d": return "10080"; // Closest: 1w
+			case "1w": return "10080";
+			case "1M": return "21600";
+			default: return "1440"; // Default to 1d
+		}
+	};
+
 	// Setup WebSocket for live updates
 	const connectWebSocket = (activeInterval: Interval) => {
 		// Close existing connection if any
@@ -116,16 +136,18 @@ export default function BTCChart() {
 			ws.close();
 		}
 
-		ws = new WebSocket("wss://stream.binance.us:9443/ws");
+		ws = new WebSocket("wss://ws.kraken.com");
 
 		ws.onopen = () => {
 			console.log(`WebSocket connected (${activeInterval})`);
 			ws?.send(
 				JSON.stringify({
-					method: "SUBSCRIBE",
-					// Binance stream names use lowercase interval codes (e.g. 1m, 1h, 1d, 1w, 1M)
-					params: [`btcusdt@kline_${activeInterval}`],
-					id: 1,
+					event: "subscribe",
+					pair: ["XBT/USD"],
+					subscription: {
+						name: "ohlc",
+						interval: mapIntervalToKrakenWS(activeInterval),
+					},
 				}),
 			);
 		};
