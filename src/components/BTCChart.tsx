@@ -49,6 +49,7 @@ export default function BTCChart() {
 	const [isLoading, setIsLoading] = createSignal(true);
 	const [error, setError] = createSignal<string | null>(null);
 	const [interval, setInterval] = createSignal<Interval>("1h");
+	const [isMobile, setIsMobile] = createSignal(false);
 
 	const [tooltip, setTooltip] = createSignal<TooltipData | null>(null);
 	const [indicators, setIndicators] = createSignal<Record<string, boolean>>({
@@ -225,7 +226,7 @@ export default function BTCChart() {
 			layout: { background: { color: "#ffffff" }, textColor: "#333" },
 			grid: { vertLines: { color: "#f0f0f0" }, horzLines: { color: "#f0f0f0" } },
 			width: chartContainer.clientWidth,
-			height: 420,
+			height: chartContainer.clientHeight,
 			crosshair: {
 				mode: 1,
 				vertLine: { width: 1, color: "#9B7DFF", style: 3, labelBackgroundColor: "#9B7DFF" },
@@ -233,6 +234,12 @@ export default function BTCChart() {
 			},
 			timeScale: { timeVisible: true, secondsVisible: false },
 			rightPriceScale: { borderColor: "#dfdfdf" },
+			handleScale: {
+				axisPressedMouseMove: true,
+			},
+			handleScroll: {
+				vertTouchDrag: false,
+			},
 		});
 
 		candlestickSeries = chart.addSeries(CandlestickSeries, {
@@ -281,7 +288,15 @@ export default function BTCChart() {
 
 		loadData(interval());
 
-		const handleResize = () => { if (chart && chartContainer) chart.applyOptions({ width: chartContainer.clientWidth }); };
+		const handleResize = () => {
+			if (chart && chartContainer) {
+				chart.applyOptions({ width: chartContainer.clientWidth });
+			}
+			setIsMobile(window.innerWidth < 768);
+		};
+		
+		// Initial check
+		handleResize();
 		window.addEventListener("resize", handleResize);
 
 		onCleanup(() => {
@@ -321,23 +336,42 @@ export default function BTCChart() {
 	createEffect(() => { if (candlestickSeries) loadData(interval()); });
 
 	return (
-		<div class="my-8 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden font-sans">
-			<div class="flex flex-col md:flex-row justify-between items-start md:items-center p-5 border-b border-gray-100 bg-gray-50/50 backdrop-blur-sm">
-				<div>
-					<h2 class="text-2xl font-bold text-gray-800 tracking-tight">Bitcoin <span class="text-gray-400 text-lg font-normal">/ USDT</span></h2>
-					<div class="flex gap-2 mt-1 text-xs text-gray-500 font-medium">
+		<div class="my-4 md:my-8 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden font-sans">
+			{/* Header */}
+			<div class="flex flex-col lg:flex-row justify-between items-start lg:items-center p-4 lg:p-5 border-b border-gray-100 bg-gray-50/50 backdrop-blur-sm gap-4 lg:gap-0">
+				<div class="w-full lg:w-auto">
+					<div class="flex justify-between items-center w-full">
+						<h2 class="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">Bitcoin <span class="text-gray-400 text-lg font-normal">/ USDT</span></h2>
+						{/* Mobile Header Data Display (Date + Close) */}
+						<Show when={isMobile() && tooltip()}>
+							<div class="text-right">
+								<div class={`text-sm font-bold font-mono ${tooltip()?.changeColor}`}>{tooltip()?.close}</div>
+								<div class="text-[10px] text-gray-400">{tooltip()?.time.split(',')[0]}</div>
+							</div>
+						</Show>
+					</div>
+					
+					{/* Desktop Header Data Display */}
+					<div class="hidden md:flex gap-3 mt-1 text-xs text-gray-500 font-medium font-mono">
+						<span>{tooltip() ? tooltip()?.time : ""}</span>
 						<span>O: {tooltip() ? tooltip()?.open : "---"}</span>
 						<span>H: {tooltip() ? tooltip()?.high : "---"}</span>
 						<span>L: {tooltip() ? tooltip()?.low : "---"}</span>
 						<span>C: {tooltip() ? tooltip()?.close : "---"}</span>
 					</div>
 				</div>
-				<div class="flex flex-col gap-3 mt-4 md:mt-0 items-end">
-					<div class="flex gap-1 bg-gray-200 p-1 rounded-lg">
-						{intervals.map((opt) => (
-							<button type="button" class={`px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200 ${interval() === opt.value ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`} onClick={() => setInterval(opt.value)}>{opt.label}</button>
-						))}
+
+				<div class="flex flex-col gap-3 w-full lg:w-auto items-start lg:items-end">
+					{/* Intervals - Scrollable on mobile */}
+					<div class="w-full overflow-x-auto no-scrollbar pb-1 lg:pb-0">
+						<div class="flex gap-1 bg-gray-200 p-1 rounded-lg w-max">
+							{intervals.map((opt) => (
+								<button type="button" class={`px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200 whitespace-nowrap ${interval() === opt.value ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`} onClick={() => setInterval(opt.value)}>{opt.label}</button>
+							))}
+						</div>
 					</div>
+
+					{/* Indicators */}
 					<div class="flex flex-wrap gap-3 text-xs">
 						{[20, 60, 120, 150, 200].map((p) => (
 							<label class="flex items-center gap-1.5 cursor-pointer group select-none">
@@ -352,7 +386,9 @@ export default function BTCChart() {
 					</div>
 				</div>
 			</div>
-			<div class="relative h-[420px] w-full group cursor-crosshair">
+
+			{/* Chart Area */}
+			<div class="relative h-[350px] md:h-[450px] w-full group cursor-crosshair touch-action-none">
 				<Show when={isLoading()}>
 					<div class="absolute inset-0 z-20 flex items-center justify-center bg-white/80 backdrop-blur-sm">
 						<div class="flex flex-col items-center gap-2"><div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div><span class="text-sm font-medium text-indigo-900">Syncing Market Data...</span></div>
@@ -363,43 +399,50 @@ export default function BTCChart() {
 						<div class="text-red-500 font-medium bg-red-50 px-4 py-2 rounded-lg border border-red-100">Error: {error()}</div>
 					</div>
 				</Show>
+
 				<div ref={chartContainer} class="w-full h-full" />
+
 				<Show when={tooltip()}>
 					{(t) => (
 						<>
-							<div class="absolute w-3 h-3 bg-indigo-600 rounded-full border-2 border-white shadow-sm pointer-events-none z-10 transition-transform duration-75 ease-out" style={{ top: "0", left: "0", transform: `translate(${t().x - 6}px, ${t().snapY - 6}px)` }} />
-							{/* Tooltip Container */}
+							{/* Crosshair Dot (Desktop Only) */}
+							<div class="hidden md:block absolute w-3 h-3 bg-indigo-600 rounded-full border-2 border-white shadow-sm pointer-events-none z-10 transition-transform duration-75 ease-out" style={{ top: "0", left: "0", transform: `translate(${t().x - 6}px, ${t().snapY - 6}px)` }} />
+							
+							{/* Tooltip Container - Responsive positioning */}
 							<div 
-								class="absolute z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-gray-200/60 shadow-xl rounded-lg p-3 text-xs w-64 transition-all duration-100 ease-out flex flex-col gap-2" 
-								style={{ 
-									top: "0", 
-									left: "0", 
-									/* Adjusted boundary check (-270) because width is now w-64 (~256px) */
-									transform: `translate(${Math.min(Math.max(10, t().x + 20), (chartContainer?.clientWidth ?? 800) - 270)}px, ${Math.min(Math.max(10, t().y - 50), 300)}px)` 
-								}}
+								class={`absolute z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-gray-200/60 shadow-xl p-3 text-xs transition-all duration-100 ease-out flex flex-col gap-2 
+								${isMobile() ? "top-2 left-2 rounded-lg w-[140px] border-l-4 border-l-indigo-500" : "rounded-lg w-64"}`}
+								style={
+									!isMobile() ? { 
+										top: "0", 
+										left: "0", 
+										transform: `translate(${Math.min(Math.max(10, t().x + 20), (chartContainer?.clientWidth ?? 800) - 270)}px, ${Math.min(Math.max(10, t().y - 50), 300)}px)` 
+									} : {}
+								}
 							>
-								<div class="text-gray-500 font-medium border-b border-gray-100 pb-2 text-center uppercase tracking-wider text-[10px]">{t().time}</div>
+								<div class="text-gray-500 font-medium border-b border-gray-100 pb-2 text-center uppercase tracking-wider text-[10px] truncate">{t().time}</div>
 								
-								{/* Grid with stacked labels/values to prevent overlap */}
-								<div class="grid grid-cols-2 gap-x-4 gap-y-3">
-									<div>
+								{/* Grid with stacked labels/values */}
+								<div class={`grid ${isMobile() ? "grid-cols-1 gap-y-1" : "grid-cols-2 gap-x-4 gap-y-3"}`}>
+									<div class={isMobile() ? "flex justify-between" : ""}>
 										<span class="block text-[10px] text-gray-400 font-semibold uppercase mb-0.5">Open</span>
 										<span class="font-mono text-gray-900 text-sm block">{t().open}</span>
 									</div>
-									<div>
+									<div class={isMobile() ? "flex justify-between" : ""}>
 										<span class="block text-[10px] text-gray-400 font-semibold uppercase mb-0.5">High</span>
 										<span class="font-mono text-gray-900 text-sm block">{t().high}</span>
 									</div>
-									<div>
+									<div class={isMobile() ? "flex justify-between" : ""}>
 										<span class="block text-[10px] text-gray-400 font-semibold uppercase mb-0.5">Low</span>
 										<span class="font-mono text-gray-900 text-sm block">{t().low}</span>
 									</div>
-									<div>
+									<div class={isMobile() ? "flex justify-between" : ""}>
 										<span class="block text-[10px] text-gray-400 font-semibold uppercase mb-0.5">Close</span>
 										<span class={`font-mono text-sm font-bold block ${t().changeColor}`}>{t().close}</span>
 									</div>
 								</div>
 
+								{/* Indicators Section */}
 								{(t().ema20 || t().ema60 || t().ema120 || t().ema150 || t().ema200) && (
 									<div class="border-t border-gray-100 pt-2 mt-1 space-y-1">
 										<Show when={t().ema20}><div class="flex justify-between text-blue-500 items-center"><span>EMA 20</span> <span class="font-mono">{t().ema20}</span></div></Show>
