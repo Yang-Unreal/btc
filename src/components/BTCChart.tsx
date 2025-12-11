@@ -169,7 +169,7 @@ export default function BTCChart() {
 		return rsiArray;
 	};
 
-	// --- TD Sequential Marker Update ---
+	// --- TD Sequential Marker Update (Setup + Countdown) ---
 	const updateTDMarkers = (data: BTCData[]) => {
 		if (!markersPrimitive) return;
 
@@ -181,13 +181,22 @@ export default function BTCChart() {
 			}
 
 			const markers: SeriesMarker<UTCTimestamp>[] = [];
+
+			// Setup Variables
 			let buySetup = 0;
 			let sellSetup = 0;
+
+			// Countdown Variables
+			let activeBuyCountdown = false;
+			let activeSellCountdown = false;
+			let buyCountdown = 0;
+			let sellCountdown = 0;
 
 			for (let i = 4; i < data.length; i++) {
 				const currentClose = data[i].close;
 				const closeLag4 = data[i - 4].close;
 
+				// --- 1. SETUP PHASE (1-9) ---
 				if (currentClose < closeLag4) {
 					buySetup++;
 					sellSetup = 0;
@@ -199,32 +208,89 @@ export default function BTCChart() {
 					sellSetup = 0;
 				}
 
-				if (buySetup > 0 && buySetup <= 9) {
-					const isNine = buySetup === 9;
+				// Check for Completed Setup (9)
+				if (buySetup === 9) {
 					markers.push({
 						time: data[i].time,
 						position: "belowBar",
-						color: isNine ? "#00C853" : "#B0BEC5",
-						shape: isNine ? "arrowUp" : "circle",
-						text: isNine ? "BUY" : `${buySetup}`,
-						size: isNine ? 2 : 1,
+						color: "#00C853",
+						shape: "arrowUp",
+						text: "9",
+						size: 2,
 					});
+
+					// Start Buy Countdown, Cancel Sell Countdown
+					activeBuyCountdown = true;
+					buyCountdown = 0;
+					activeSellCountdown = false;
+					sellCountdown = 0;
+
+					buySetup = 0; // Reset setup count
+				} else if (buySetup > 0) {
+					// Optional: Show intermediate numbers 1-8?
+					// Keeping it clean: only show 9 for Setup, but logic tracks internal count.
 				}
 
-				if (sellSetup > 0 && sellSetup <= 9) {
-					const isNine = sellSetup === 9;
+				if (sellSetup === 9) {
 					markers.push({
 						time: data[i].time,
 						position: "aboveBar",
-						color: isNine ? "#D50000" : "#B0BEC5",
-						shape: isNine ? "arrowDown" : "circle",
-						text: isNine ? "SELL" : `${sellSetup}`,
-						size: isNine ? 2 : 1,
+						color: "#D50000",
+						shape: "arrowDown",
+						text: "9",
+						size: 2,
 					});
+
+					// Start Sell Countdown, Cancel Buy Countdown
+					activeSellCountdown = true;
+					sellCountdown = 0;
+					activeBuyCountdown = false;
+					buyCountdown = 0;
+
+					sellSetup = 0; // Reset setup count
 				}
 
-				if (buySetup === 9) buySetup = 0;
-				if (sellSetup === 9) sellSetup = 0;
+				// --- 2. COUNTDOWN PHASE (1-13) ---
+				// Rules:
+				// Buy Countdown: Close <= Low of 2 bars earlier
+				// Sell Countdown: Close >= High of 2 bars earlier
+				if (activeBuyCountdown && i >= 2) {
+					const lowLag2 = data[i - 2].low;
+					if (currentClose <= lowLag2) {
+						buyCountdown++;
+						if (buyCountdown === 13) {
+							markers.push({
+								time: data[i].time,
+								position: "belowBar",
+								color: "#FFD600", // Gold/Yellow for 13
+								shape: "square",
+								text: "13",
+								size: 2,
+							});
+							activeBuyCountdown = false; // Reset after 13
+							buyCountdown = 0;
+						}
+					}
+				}
+
+				if (activeSellCountdown && i >= 2) {
+					const highLag2 = data[i - 2].high;
+					if (currentClose >= highLag2) {
+						sellCountdown++;
+						if (sellCountdown === 13) {
+							markers.push({
+								time: data[i].time,
+								position: "aboveBar",
+								color: "#FFD600", // Gold/Yellow for 13
+								shape: "square",
+								text: "13",
+								size: 2,
+							});
+							activeSellCountdown = false; // Reset after 13
+							sellCountdown = 0;
+						}
+					}
+				}
 			}
 
 			markersPrimitive.setMarkers(
