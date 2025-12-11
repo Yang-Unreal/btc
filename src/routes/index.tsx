@@ -1,6 +1,7 @@
 import { Title } from "@solidjs/meta";
-import type { Component} from "solid-js";
+import type { Component } from "solid-js";
 import BTCChart from "~/components/BTCChart";
+import MacroData from "~/components/MacroData";
 
 // --- Custom Icons ---
 
@@ -74,7 +75,7 @@ const IconTerminal: Component<{ class?: string }> = (props) => (
 
 export default function Home() {
 	return (
-		<div class="min-h-screen flex flex-col font-sans selection:bg-indigo-500/20 selection:text-indigo-900">
+		<div class="min-h-screen flex flex-col font-sans selection:bg-indigo-500/20 selection:text-indigo-900 bg-[#f8fafc]">
 			<Title>Bitcoin Insight | Institutional Analytics</Title>
 
 			{/* Navigation Bar */}
@@ -171,12 +172,13 @@ export default function Home() {
 						</div>
 					</div>
 
-					{/* Main Chart Component - Seamless Integration */}
-					<div class="mb-24 relative z-10">
-						{/* The BTCChart component handles its own internal container styling (white bg, shadow) 
-                so we just provide a clean wrapper to control width/spacing. */}
+					{/* Main Chart Component */}
+					<div class="mb-12 relative z-10">
 						<BTCChart />
 					</div>
+
+					{/* Macro Data Section */}
+					<MacroData />
 
 					{/* Feature Grid */}
 					<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
