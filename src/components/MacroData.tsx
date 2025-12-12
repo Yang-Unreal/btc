@@ -1,6 +1,7 @@
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, type JSX, onCleanup, onMount, Show } from "solid-js";
 
-// Icons
+// --- Icons ---
+
 const IconBank = (props: { class?: string }) => (
 	<svg
 		class={props.class}
@@ -9,7 +10,7 @@ const IconBank = (props: { class?: string }) => (
 		stroke="currentColor"
 		stroke-width="2"
 	>
-		<title>Bank Icon</title>
+		<title>Bank</title>
 		<path
 			stroke-linecap="round"
 			stroke-linejoin="round"
@@ -26,7 +27,7 @@ const IconScale = (props: { class?: string }) => (
 		stroke="currentColor"
 		stroke-width="2"
 	>
-		<title>Scale Icon</title>
+		<title>Scale</title>
 		<path
 			stroke-linecap="round"
 			stroke-linejoin="round"
@@ -43,7 +44,7 @@ const IconGlobe = (props: { class?: string }) => (
 		stroke="currentColor"
 		stroke-width="2"
 	>
-		<title>Globe Icon</title>
+		<title>Globe</title>
 		<path
 			stroke-linecap="round"
 			stroke-linejoin="round"
@@ -60,7 +61,7 @@ const IconRefresh = (props: { class?: string }) => (
 		stroke="currentColor"
 		stroke-width="2"
 	>
-		<title>Refresh Icon</title>
+		<title>Refresh</title>
 		<path
 			stroke-linecap="round"
 			stroke-linejoin="round"
@@ -69,56 +70,174 @@ const IconRefresh = (props: { class?: string }) => (
 	</svg>
 );
 
+
+// --- Types & Helpers ---
+
+type ImpactLevel = "Bullish" | "Neutral" | "Bearish";
+
+interface AnalysisResult {
+	label: string;
+	description: string;
+	impact: ImpactLevel;
+	color: string;
+	bgColor: string;
+	correlationType: "Inverse" | "Direct";
+}
+
 export default function MacroData() {
 	const [dxy, setDxy] = createSignal<number | null>(null);
 	const [us10y, setUs10y] = createSignal<number | null>(null);
 	const [realRate, setRealRate] = createSignal<number | null>(null);
 	const [impliedFedRate, setImpliedFedRate] = createSignal<number | null>(null);
+
 	const [loading, setLoading] = createSignal(true);
-	const [error, setError] = createSignal(false);
+	const [lastUpdated, setLastUpdated] = createSignal<Date | null>(null);
 
 	// Directions for UI flash
 	const [dxyDir, setDxyDir] = createSignal<"up" | "down" | null>(null);
-	const [yieldDir, setYieldDir] = createSignal<"up" | "down" | null>(null);
+
+	// --- Analytical Logic ---
+	const analyzeDXY = (val: number | null): AnalysisResult => {
+		if (val === null)
+			return {
+				label: "--",
+				description: "No Data",
+				impact: "Neutral",
+				color: "text-slate-400",
+				bgColor: "bg-slate-100",
+				correlationType: "Inverse",
+			};
+
+		if (val > 103)
+			return {
+				label: "Headwind",
+				description: "Strong Dollar typically suppresses BTC price.",
+				impact: "Bearish",
+				color: "text-rose-600",
+				bgColor: "bg-rose-50",
+				correlationType: "Inverse",
+			};
+		if (val < 99)
+			return {
+				label: "Tailwind",
+				description: "Weak Dollar encourages asset speculation.",
+				impact: "Bullish",
+				color: "text-emerald-600",
+				bgColor: "bg-emerald-50",
+				correlationType: "Inverse",
+			};
+		return {
+			label: "Neutral",
+			description: "Dollar strength is within normal bounds.",
+			impact: "Neutral",
+			color: "text-slate-600",
+			bgColor: "bg-slate-50",
+			correlationType: "Inverse",
+		};
+	};
+
+	const analyzeYields = (val: number | null): AnalysisResult => {
+		if (val === null)
+			return {
+				label: "--",
+				description: "No Data",
+				impact: "Neutral",
+				color: "text-slate-400",
+				bgColor: "bg-slate-100",
+				correlationType: "Inverse",
+			};
+
+		if (val > 1.8)
+			return {
+				label: "Restrictive",
+				description: "High real yields compete with non-yielding assets.",
+				impact: "Bearish",
+				color: "text-rose-600",
+				bgColor: "bg-rose-50",
+				correlationType: "Inverse",
+			};
+		if (val < 0.5)
+			return {
+				label: "Accommodative",
+				description: "Low real yields boost Bitcoin appeal.",
+				impact: "Bullish",
+				color: "text-emerald-600",
+				bgColor: "bg-emerald-50",
+				correlationType: "Inverse",
+			};
+		return {
+			label: "Moderate",
+			description: "Yields are neither stimulating nor choking risk.",
+			impact: "Neutral",
+			color: "text-slate-600",
+			bgColor: "bg-slate-50",
+			correlationType: "Inverse",
+		};
+	};
+
+	const analyzeFed = (val: number | null): AnalysisResult => {
+		// Fed funds context depends heavily on trend, but simplified:
+		// High rates (>4.5%) are generally risk-off
+		if (val === null)
+			return {
+				label: "--",
+				description: "No Data",
+				impact: "Neutral",
+				color: "text-slate-400",
+				bgColor: "bg-slate-100",
+				correlationType: "Inverse",
+			};
+
+		if (val > 4.5)
+			return {
+				label: "Tight Policy",
+				description: "Cost of capital is high, reducing liquidity.",
+				impact: "Bearish",
+				color: "text-rose-600",
+				bgColor: "bg-rose-50",
+				correlationType: "Inverse",
+			};
+		if (val < 2.5)
+			return {
+				label: "Loose Policy",
+				description: "Cheap money fuels crypto markets.",
+				impact: "Bullish",
+				color: "text-emerald-600",
+				bgColor: "bg-emerald-50",
+				correlationType: "Inverse",
+			};
+		return {
+			label: "Neutral",
+			description: "Rates are near the neutral anchor.",
+			impact: "Neutral",
+			color: "text-amber-600",
+			bgColor: "bg-amber-50",
+			correlationType: "Inverse",
+		};
+	};
 
 	const fetchData = async () => {
 		setLoading(true);
 		try {
-			// Add cache buster to prevent caching of old 0 values
 			const res = await fetch(`/api/macro?t=${Date.now()}`);
 			if (!res.ok) throw new Error("API Error");
 
 			const data = await res.json();
-
-			if (data.dxy === null) {
-				setError(true);
-			} else {
-				setError(false);
-				// Update logic with direction detection
+			if (data.dxy !== null) {
 				setDxy((prev) => {
 					if (prev !== null && data.dxy !== prev)
 						setDxyDir(data.dxy > prev ? "up" : "down");
 					return data.dxy;
 				});
-
-				setUs10y((prev) => {
-					if (prev !== null && data.us10y !== prev)
-						setYieldDir(data.us10y > prev ? "up" : "down");
-					return data.us10y;
-				});
-
+				setUs10y(data.us10y);
 				setRealRate(data.realRate);
 				setImpliedFedRate(data.impliedFedRate);
+				setLastUpdated(new Date());
 			}
 
-			// Reset flashes
-			setTimeout(() => {
-				setDxyDir(null);
-				setYieldDir(null);
-			}, 1500);
+			setTimeout(() => setDxyDir(null), 1500);
 		} catch (e) {
 			console.error("Failed to fetch macro data", e);
-			setError(true);
 		} finally {
 			setLoading(false);
 		}
@@ -126,179 +245,175 @@ export default function MacroData() {
 
 	onMount(() => {
 		fetchData();
-		// Poll every 30s to be safe with rate limits
-		const timer = setInterval(fetchData, 30000);
+		const timer = setInterval(fetchData, 60000); // 1 min poll
 		onCleanup(() => clearInterval(timer));
 	});
 
 	return (
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-			{/* 1. Fed Policy Card */}
-			<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:shadow-md transition-shadow">
-				<div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-					<IconBank class="w-24 h-24 text-indigo-600" />
+		<div class="mb-12">
+			{/* Section Header */}
+			<div class="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
+				<div>
+					<h2 class="text-2xl font-bold text-slate-900 tracking-tight">
+						Macroeconomic Environment
+					</h2>
+					<p class="text-slate-500 mt-1 max-w-2xl">
+						Bitcoin does not exist in a vacuum. These global metrics
+						historically drive institutional liquidity flows.
+					</p>
 				</div>
+				<button
+					type="button"
+					onClick={() => fetchData()}
+					class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 shadow-sm rounded-lg text-sm font-medium text-slate-600 hover:text-indigo-600 hover:border-indigo-100 transition-all active:scale-95"
+				>
+					<IconRefresh class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`} />
+					{loading() ? "Updating..." : "Refresh Data"}
+				</button>
+			</div>
 
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-						<IconBank class="w-5 h-5" />
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+				{/* 1. DXY Card */}
+				<MacroCard
+					title="U.S. Dollar Index (DXY)"
+					icon={<IconGlobe class="w-6 h-6 text-white" />}
+					iconBg="bg-indigo-500"
+					value={dxy()}
+					format="0.000"
+					direction={dxyDir()}
+					analysis={analyzeDXY(dxy())}
+					loading={loading()}
+				/>
+
+				{/* 2. Real Yields Card */}
+				<MacroCard
+					title="Real 10Yields"
+					icon={<IconScale class="w-6 h-6 text-white" />}
+					iconBg="bg-cyan-500"
+					value={realRate()}
+					format="0.00"
+					suffix="%"
+					analysis={analyzeYields(realRate())}
+					loading={loading()}
+					extraContext={(() => { const val = us10y(); return val ? `Nominal: ${val.toFixed(2)}%` : undefined; })()}
+				/>
+
+				{/* 3. Fed Rates Card */}
+				<MacroCard
+					title="Implied Fed Rate"
+					icon={<IconBank class="w-6 h-6 text-white" />}
+					iconBg="bg-violet-500"
+					value={impliedFedRate()}
+					format="0.00"
+					suffix="%"
+					analysis={analyzeFed(impliedFedRate())}
+					loading={loading()}
+				/>
+			</div>
+
+			<div class="mt-4 flex justify-end">
+				<span class="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
+					Last Updated:{" "}
+					{lastUpdated() ? lastUpdated()?.toLocaleTimeString() : "--:--"}
+				</span>
+			</div>
+		</div>
+	);
+}
+
+// --- Sub-Component for consistent card layout ---
+
+interface MacroCardProps {
+	title: string;
+	icon: JSX.Element;
+	iconBg: string;
+	value: number | null;
+	format?: string;
+	suffix?: string;
+	direction?: "up" | "down" | null;
+	analysis: AnalysisResult;
+	loading: boolean;
+	extraContext?: string;
+}
+
+function MacroCard(props: MacroCardProps) {
+	return (
+		<div class="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-100 transition-all duration-300 relative overflow-hidden flex flex-col h-full">
+			{/* Header */}
+			<div class="p-6 pb-2">
+				<div class="flex justify-between items-start mb-4">
+					<div class="flex items-center gap-3">
+						<div
+							class={`w-10 h-10 rounded-xl ${props.iconBg} shadow-sm flex items-center justify-center`}
+						>
+							{props.icon}
+						</div>
+						<div>
+							<h3 class="font-bold text-slate-800 leading-tight">
+								{props.title}
+							</h3>
+							<div class="flex items-center gap-1 mt-0.5">
+								<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded-sm">
+									{props.analysis.correlationType}
+								</span>
+								<span class="text-[10px] text-slate-400 font-medium">
+									Correlation to BTC
+								</span>
+							</div>
+						</div>
 					</div>
-					<h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">
-						Fed Implied Rate
-					</h3>
 				</div>
 
-				<div class="flex flex-col gap-1">
+				{/* Main Value */}
+				<div class="flex items-baseline gap-2 mb-1">
 					<Show
-						when={!loading() && !error()}
+						when={!props.loading && props.value !== null}
 						fallback={
-							<div class="h-9 w-32 bg-slate-100 animate-pulse rounded my-1"></div>
+							<div class="h-10 w-32 bg-slate-100 animate-pulse rounded my-1" />
 						}
 					>
-						<div class="text-3xl font-bold text-slate-900 tracking-tight">
-							{impliedFedRate()?.toFixed(2)}%
+						<div
+							class={`text-4xl font-extrabold tracking-tight ${props.direction === "up" ? "text-emerald-500" : props.direction === "down" ? "text-rose-500" : "text-slate-900"}`}
+						>
+							{props.value?.toFixed(props.format === "0.000" ? 3 : 2)}
+							{props.suffix}
 						</div>
 					</Show>
-					<Show when={error()}>
-						<span class="text-sm text-rose-500 font-medium">
-							Data Unavailable
+					<Show when={props.extraContext}>
+						<span class="text-xs text-slate-400 font-mono">
+							{props.extraContext}
 						</span>
 					</Show>
-					<div class="flex items-center gap-2 text-xs font-medium text-slate-500">
-						Market pricing via 30D Futures
-					</div>
-				</div>
-
-				<div class="mt-6 pt-4 border-t border-slate-100 grid grid-cols-2 gap-4">
-					<div>
-						<div class="text-[10px] text-slate-400 uppercase font-bold mb-0.5">
-							Structure
-						</div>
-						<div class="text-sm font-semibold text-slate-700">Inverted</div>
-					</div>
-					<div>
-						<div class="text-[10px] text-slate-400 uppercase font-bold mb-0.5">
-							Sentiment
-						</div>
-						<div class="text-sm font-semibold text-slate-700 flex items-center gap-1">
-							<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Dovish
-						</div>
-					</div>
 				</div>
 			</div>
 
-			{/* 2. Real Rates Card */}
-			<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:shadow-md transition-shadow">
-				<div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-					<IconScale class="w-24 h-24 text-cyan-600" />
-				</div>
+			{/* Divider */}
+			<div class="w-full h-px bg-slate-100 my-0"></div>
 
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-10 h-10 rounded-full bg-cyan-50 flex items-center justify-center text-cyan-600">
-						<IconScale class="w-5 h-5" />
-					</div>
-					<h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">
-						Real Yields (10Y)
-					</h3>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<Show
-						when={!loading() && !error()}
-						fallback={
-							<div class="h-9 w-32 bg-slate-100 animate-pulse rounded my-1"></div>
-						}
-					>
-						<div
-							class={`text-3xl font-bold tracking-tight transition-colors duration-500 ${yieldDir() === "up" ? "text-emerald-500" : yieldDir() === "down" ? "text-rose-500" : "text-slate-900"}`}
+			{/* Analysis Section (Bottom Half) */}
+			<div class="p-6 pt-4 bg-slate-50/30 grow flex flex-col justify-end">
+				<div>
+					<div class="flex justify-between items-center mb-2">
+						<span class="text-xs font-bold text-slate-500 uppercase tracking-wide">
+							Bitcoin Impact
+						</span>
+						<span
+							class={`text-xs font-bold px-2 py-1 rounded-full border ${props.analysis.bgColor} ${props.analysis.color} border-current border-opacity-20`}
 						>
-							{realRate()?.toFixed(2)}%
-						</div>
-					</Show>
-					<Show when={error()}>
-						<span class="text-sm text-rose-500 font-medium">--</span>
-					</Show>
-					<div class="text-xs text-slate-500">
-						<Show when={!loading() && us10y() !== null}>
-							Nominal 10Y ({us10y()?.toFixed(2)}%) - 2.5% CPI
-						</Show>
+							{props.analysis.impact}
+						</span>
 					</div>
-				</div>
 
-				<div class="mt-6 pt-4 border-t border-slate-100">
-					<div class="w-full bg-slate-100 rounded-full h-1.5 mb-2 overflow-hidden">
+					{/* Status Bar */}
+					<div class="w-full h-1.5 bg-slate-200 rounded-full mb-3 overflow-hidden">
 						<div
-							class="bg-linear-to-r from-cyan-400 to-blue-500 h-1.5 rounded-full transition-all duration-1000"
-							style={{
-								width: `${Math.min(Math.max(((realRate() || 0) / 3) * 100, 0), 100)}%`,
-							}}
+							class={`h-full rounded-full ${props.analysis.impact === "Bullish" ? "bg-emerald-500 w-full" : props.analysis.impact === "Bearish" ? "bg-rose-500 w-full" : "bg-slate-400 w-1/2 mx-auto"}`}
 						></div>
 					</div>
-					<div class="flex justify-between text-[10px] text-slate-400 font-bold uppercase">
-						<span>Loose (&lt;0.5%)</span>
-						<span>Tight (&gt;2.0%)</span>
-					</div>
-				</div>
-			</div>
 
-			{/* 3. DXY Card */}
-			<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:shadow-md transition-shadow">
-				<div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-					<IconGlobe class="w-24 h-24 text-emerald-600" />
-				</div>
-
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
-						<IconGlobe class="w-5 h-5" />
-					</div>
-					<h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">
-						DXY Index
-					</h3>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<Show
-						when={!loading() && !error()}
-						fallback={
-							<div class="h-9 w-32 bg-slate-100 animate-pulse rounded my-1"></div>
-						}
-					>
-						<div
-							class={`text-3xl font-bold tracking-tight transition-colors duration-500 ${dxyDir() === "up" ? "text-emerald-500" : dxyDir() === "down" ? "text-rose-500" : "text-slate-900"}`}
-						>
-							{dxy()?.toFixed(3)}
-						</div>
-					</Show>
-					<Show when={error()}>
-						<span class="text-sm text-rose-500 font-medium">
-							Check Connection
-						</span>
-					</Show>
-					<div class="flex items-center gap-1 text-xs font-medium text-slate-500">
-						<span
-							class={`font-bold ${dxyDir() === "up" ? "text-emerald-500" : dxyDir() === "down" ? "text-rose-500" : "text-slate-400"}`}
-						>
-							{dxyDir() === "up" ? "▲" : dxyDir() === "down" ? "▼" : "•"}
-						</span>
-						Global USD Strength
-					</div>
-				</div>
-
-				<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-					<div class="text-xs text-slate-500 flex items-center gap-1">
-						<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-						Real-Time Data
-					</div>
-					<button
-						type="button"
-						onClick={() => fetchData()}
-						class="text-slate-400 hover:text-indigo-600 transition-colors"
-						title="Refresh Data"
-					>
-						<IconRefresh
-							class={`w-4 h-4 ${loading() ? "animate-spin text-indigo-600" : ""}`}
-						/>
-					</button>
+					<p class="text-sm text-slate-600 leading-relaxed">
+						{props.analysis.description}
+					</p>
 				</div>
 			</div>
 		</div>
