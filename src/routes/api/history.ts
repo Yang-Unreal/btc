@@ -1,18 +1,21 @@
-
-
 import { json } from "@solidjs/router";
 import type { APIEvent } from "@solidjs/start/server";
 
 // Kraken OHLC item: [time, open, high, low, close, vwap, volume, count]
 type KrakenOHLCItem = [number, string, string, string, string, string, string, number];
 
-const PAIR = "XXBTZUSD";
+// Mapping for REST API IDs
+const PAIR_MAP: Record<string, string> = {
+	USD: "XXBTZUSD",
+	EUR: "XXBTZEUR",
+	GBP: "XXBTZGBP",
+};
 
 const mapIntervalToKraken = (interval: string): number => {
 	// Kraken API interval values are in minutes
 	const map: Record<string, number> = {
 		"1m": 1, 
-		"3m": 5, // Closest match
+		"3m": 5,
 		"5m": 5, 
 		"15m": 15, 
 		"30m": 30,
@@ -31,24 +34,21 @@ const mapIntervalToKraken = (interval: string): number => {
 export async function GET({ request }: APIEvent) {
 	const url = new URL(request.url);
 	const interval = url.searchParams.get("interval") || "1h";
-	const toParam = url.searchParams.get("to"); // Timestamp in Milliseconds
+	const currency = url.searchParams.get("currency") || "USD"; // Default to USD
+	const toParam = url.searchParams.get("to");
 
+	const krakenPair = PAIR_MAP[currency] || PAIR_MAP.USD;
 	const krakenInterval = mapIntervalToKraken(interval);
 
 	// Kraken API URL
-	let krakenUrl = `https://api.kraken.com/0/public/OHLC?pair=${PAIR}&interval=${krakenInterval}`;
+	let krakenUrl = `https://api.kraken.com/0/public/OHLC?pair=${krakenPair}&interval=${krakenInterval}`;
 
 	// Pagination Logic
 	if (toParam) {
 		const toTimeMs = parseInt(toParam);
 		const toTimeSec = Math.floor(toTimeMs / 1000);
-
-		// Kraken returns approximately 720 candles per request.
-		// To get the "previous page" ending at 'toTime', we calculate a 'since' 
-		// timestamp that is 720 intervals in the past.
-		const lookbackWindow = 720 * (krakenInterval * 60); // 720 candles * seconds per candle
+		const lookbackWindow = 720 * (krakenInterval * 60); 
 		const sinceTimestamp = toTimeSec - lookbackWindow;
-
 		krakenUrl += `&since=${sinceTimestamp}`;
 	}
 
@@ -56,7 +56,6 @@ export async function GET({ request }: APIEvent) {
 		const response = await fetch(krakenUrl);
 		
 		if (!response.ok) {
-			// If Kraken fails (e.g., Rate limit), return empty to stop UI spinner safely
 			return json([]);
 		}
 
@@ -64,11 +63,14 @@ export async function GET({ request }: APIEvent) {
 		
 		if (data.error && data.error.length > 0) {
 			console.warn("Kraken API Warning:", data.error);
-			// Often "EService:Unavailable" or similar. Return empty.
 			return json([]);
 		}
 
-		const result = data.result?.[PAIR];
+		// Kraken returns data keyed by the Pair Name. 
+		// Since the Pair Name changes based on request (XXBTZUSD, XXBTZEUR), access dynamically.
+		const resultKeys = Object.keys(data.result || {});
+		const result = resultKeys.length > 0 ? data.result[resultKeys[0]] : [];
+
 		if (!Array.isArray(result)) {
 			return json([]);
 		}
@@ -82,12 +84,9 @@ export async function GET({ request }: APIEvent) {
 			parseFloat(item[4]),
 		]);
 
-		// STRICT FILTERING:
-		// When using 'since', Kraken returns data starting FROM that time.
-		// We must filter out any data that overlaps with what we already have (data >= toParam).
 		if (toParam) {
 			const limitTime = parseInt(toParam);
-			mappedData = mappedData.filter((d) => d[0] < limitTime);
+			mappedData = mappedData.filter((d: number[]) => d[0] < limitTime);
 		}
 
 		return json(mappedData);
