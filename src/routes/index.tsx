@@ -75,7 +75,7 @@ const IconTerminal: Component<{ class?: string }> = (props) => (
 
 export default function Home() {
 	return (
-		<div class="min-h-screen flex flex-col font-sans selection:bg-indigo-500/20 selection:text-indigo-900 bg-[#f8fafc]">
+		<div class="min-h-screen flex flex-col font-sans selection:bg-indigo-500/20 selection:text-indigo-900 bg-[#f8fafc] overflow-x-hidden">
 			<Title>Bitcoin Insight | Institutional Analytics</Title>
 
 			{/* Navigation Bar */}
@@ -109,7 +109,7 @@ export default function Home() {
 					{/* Hero Section */}
 					<div class="text-center max-w-4xl mx-auto mb-16 relative">
 						{/* Decorative background blur */}
-						<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-indigo-500/10 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
+						<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[600px] h-[300px] bg-indigo-500/10 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
 
 						<h1 class="text-5xl sm:text-6xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-8 leading-[1.1]">
 							Market Clarity in <br class="hidden sm:block" />
