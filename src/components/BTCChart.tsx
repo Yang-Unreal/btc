@@ -104,6 +104,40 @@ const IconWifiOff = () => (
 	</svg>
 );
 
+const IconChevronDown = () => (
+	<svg
+		class="w-4 h-4 ml-1"
+		fill="none"
+		viewBox="0 0 24 24"
+		stroke="currentColor"
+	>
+		<title>Chevron Down</title>
+		<path
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			stroke-width="2"
+			d="M19 9l-7 7-7-7"
+		/>
+	</svg>
+);
+
+const IconLayers = () => (
+	<svg
+		class="w-4 h-4 mr-2"
+		fill="none"
+		viewBox="0 0 24 24"
+		stroke="currentColor"
+	>
+		<title>Layers</title>
+		<path
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			stroke-width="2"
+			d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+		/>
+	</svg>
+);
+
 export default function BTCChart() {
 	let chartContainer: HTMLDivElement | undefined;
 	let chart: IChartApi | undefined;
@@ -126,6 +160,10 @@ export default function BTCChart() {
 	const [error, setError] = createSignal<string | null>(null);
 	const [interval, setInterval] = createSignal<Interval>("1h");
 	const [isMobile, setIsMobile] = createSignal(false);
+
+	// Dropdown States
+	const [showIntervalMenu, setShowIntervalMenu] = createSignal(false);
+	const [showIndicatorMenu, setShowIndicatorMenu] = createSignal(false);
 
 	const [tooltip, setTooltip] = createSignal<TooltipData | null>(null);
 	// Current live price for header display
@@ -963,84 +1001,197 @@ export default function BTCChart() {
 			{/* Top Bar: Asset Info & Main Controls */}
 			<div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center p-5 border-b border-slate-100 bg-white">
 				{/* Left: Asset Ticker & Price */}
-				<div class="flex items-center gap-4 mb-4 lg:mb-0">
-					<div class="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-white font-bold">
-						₿
-					</div>
-					<div>
-						<div class="flex items-center gap-2">
-							<h2 class="text-lg font-bold text-slate-800 tracking-tight leading-none">
-								Bitcoin <span class="text-slate-400 font-normal">/ USD</span>
-							</h2>
-							<div class="flex items-center px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200">
-								{wsConnected() ? <IconPulse /> : <IconWifiOff />}
-								<span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-									{wsConnected() ? "Live" : "Offline"}
-								</span>
+				<div class="flex items-center gap-4 mb-4 lg:mb-0 justify-between lg:justify-start">
+					<div class="flex items-center gap-4">
+						<div class="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-white font-bold">
+							₿
+						</div>
+						<div>
+							<div class="flex items-center gap-2">
+								<h2 class="text-lg font-bold text-slate-800 tracking-tight leading-none">
+									Bitcoin <span class="text-slate-400 font-normal">/ USD</span>
+								</h2>
+								<div class="flex items-center px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200">
+									{wsConnected() ? <IconPulse /> : <IconWifiOff />}
+									<span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+										{wsConnected() ? "Live" : "Offline"}
+									</span>
+								</div>
+							</div>
+							<div
+								class={`text-2xl font-mono font-bold tracking-tight leading-tight transition-colors duration-300 ${priceColor()}`}
+							>
+								$
+								{currentPrice().toLocaleString(undefined, {
+									minimumFractionDigits: 2,
+									maximumFractionDigits: 2,
+								})}
 							</div>
 						</div>
-						<div
-							class={`text-2xl font-mono font-bold tracking-tight leading-tight transition-colors duration-300 ${priceColor()}`}
-						>
-							$
-							{currentPrice().toLocaleString(undefined, {
-								minimumFractionDigits: 2,
-								maximumFractionDigits: 2,
-							})}
-						</div>
 					</div>
+
+					{/* Mobile: Interval Dropdown Trigger aligned right */}
+					<Show when={isMobile()}>
+						<div class="relative z-30">
+							<button
+								onClick={() => setShowIntervalMenu(!showIntervalMenu())}
+								type="button"
+								class="flex items-center justify-between gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700 transition-colors"
+							>
+								{intervals.find((i) => i.value === interval())?.label}
+								<IconChevronDown />
+							</button>
+
+							<Show when={showIntervalMenu()}>
+								<button
+									type="button"
+									class="fixed inset-0 z-40 cursor-default border-none bg-transparent p-0 m-0"
+									onClick={() => setShowIntervalMenu(false)}
+									onKeyDown={(e) => { if (e.key === 'Escape') setShowIntervalMenu(false); }}
+									tabIndex={-1}
+									aria-label="Close interval menu"
+								/>
+								<div class="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50">
+									<div class="py-1">
+										<For each={intervals}>
+											{(opt) => (
+												<button
+													type="button"
+													class={`w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors ${interval() === opt.value ? "text-indigo-600 bg-slate-50" : "text-slate-600"}`}
+													onClick={() => {
+														setInterval(opt.value);
+														setShowIntervalMenu(false);
+													}}
+												>
+													{opt.label}
+												</button>
+											)}
+										</For>
+									</div>
+								</div>
+							</Show>
+						</div>
+					</Show>
 				</div>
 
-				{/* Right: Timeframes */}
-				<div class="flex bg-slate-100 p-1 rounded-lg self-start lg:self-auto overflow-x-auto max-w-full">
-					<For each={intervals}>
-						{(opt) => (
-							<button
-								type="button"
-								class={`px-3 py-1.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap ${interval() === opt.value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
-								onClick={() => setInterval(opt.value)}
-							>
-								{opt.label}
-							</button>
-						)}
-					</For>
-				</div>
+				{/* Desktop: Horizontal Timeframes */}
+				<Show when={!isMobile()}>
+					<div class="flex bg-slate-100 p-1 rounded-lg self-start lg:self-auto overflow-x-auto max-w-full">
+						<For each={intervals}>
+							{(opt) => (
+								<button
+									type="button"
+									class={`px-3 py-1.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap ${interval() === opt.value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
+									onClick={() => setInterval(opt.value)}
+								>
+									{opt.label}
+								</button>
+							)}
+						</For>
+					</div>
+				</Show>
 			</div>
 
-			{/* Secondary Bar: Indicators (Chips) */}
-			<div class="px-5 py-3 border-b border-slate-100 bg-slate-50/50 overflow-x-auto no-scrollbar">
-				<div class="flex items-center gap-2">
-					<span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2 shrink-0">
-						Indicators
-					</span>
+			{/* Secondary Bar: Indicators */}
+			<div class="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
+				{/* Desktop: Horizontal Chips */}
+				<Show when={!isMobile()}>
+					<div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+						<span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2 shrink-0">
+							Indicators
+						</span>
+						<For each={indicatorConfig}>
+							{(ind) => (
+								<button
+									type="button"
+									onClick={() =>
+										setIndicators((prev) => ({
+											...prev,
+											[ind.key]: !prev[ind.key],
+										}))
+									}
+									class={`
+										group flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-200 shrink-0 select-none
+										${
+											indicators()[ind.key]
+												? `bg-white ${ind.textColor} ${ind.borderColor} shadow-sm ring-1 ring-inset ${ind.borderColor} bg-opacity-100`
+												: "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+										}
+									`}
+								>
+									<span
+										class={`w-2 h-2 rounded-full ${ind.color} ${indicators()[ind.key] ? "opacity-100" : "opacity-40 group-hover:opacity-70"}`}
+									></span>
+									{ind.label}
+								</button>
+							)}
+						</For>
+					</div>
+				</Show>
 
-					<For each={indicatorConfig}>
-						{(ind) => (
+				{/* Mobile: Indicators Dropdown */}
+				<Show when={isMobile()}>
+					<div class="relative z-20">
+						<button
+							onClick={() => setShowIndicatorMenu(!showIndicatorMenu())}
+							type="button"
+							class="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+						>
+							<IconLayers />
+							Customize Indicators
+							<span class="bg-indigo-100 text-indigo-700 text-[10px] px-1.5 py-0.5 rounded-full ml-1">
+								{Object.values(indicators()).filter(Boolean).length}
+							</span>
+							<IconChevronDown />
+						</button>
+
+						<Show when={showIndicatorMenu()}>
 							<button
 								type="button"
-								onClick={() =>
-									setIndicators((prev) => ({
-										...prev,
-										[ind.key]: !prev[ind.key],
-									}))
-								}
-								class={`
-									group flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-200 shrink-0 select-none
-									${
-										indicators()[ind.key]
-											? `bg-white ${ind.textColor} ${ind.borderColor} shadow-sm ring-1 ring-inset ${ind.borderColor} bg-opacity-100`
-											: "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-									}
-								`}
-							>
-								<span
-									class={`w-2 h-2 rounded-full ${ind.color} ${indicators()[ind.key] ? "opacity-100" : "opacity-40 group-hover:opacity-70"}`}
-								></span>
-								{ind.label}
-							</button>
-						)}
-					</For>
-				</div>
+								class="fixed inset-0 z-40 cursor-default border-none bg-transparent p-0 m-0"
+								onClick={() => setShowIndicatorMenu(false)}
+								onKeyDown={(e) => { if (e.key === 'Escape') setShowIndicatorMenu(false); }}
+								tabIndex={-1}
+								aria-label="Close indicator menu"
+							/>
+							<div class="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 p-2">
+								<div class="space-y-1">
+									<For each={indicatorConfig}>
+										{(ind) => (
+											<button
+												type="button"
+												onClick={(e) => {
+													e.stopPropagation();
+													setIndicators((prev) => ({
+														...prev,
+														[ind.key]: !prev[ind.key],
+													}))
+												}}
+												class={`
+													w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors
+													${indicators()[ind.key] ? "bg-slate-50" : "hover:bg-slate-50"}
+												`}
+											>
+												<div class="flex items-center gap-2">
+													<span class={`w-2.5 h-2.5 rounded-full ${ind.color}`}></span>
+													<span class={`${indicators()[ind.key] ? "font-semibold text-slate-900" : "text-slate-600"}`}>
+														{ind.label}
+													</span>
+												</div>
+												{indicators()[ind.key] && (
+													<svg class="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+														<title>Selected</title>
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+													</svg>
+												)}
+											</button>
+										)}
+									</For>
+								</div>
+							</div>
+						</Show>
+					</div>
+				</Show>
 			</div>
 
 			{/* Chart Area */}
