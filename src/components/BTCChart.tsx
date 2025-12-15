@@ -42,6 +42,25 @@ const CURRENCIES: CurrencyConfig[] = [
 	{ code: "GBP", symbol: "£", wsPair: "XBT/GBP", locale: "en-GB" },
 ];
 
+interface AssetConfig {
+	symbol: string;
+	name: string;
+	krakenId: string; // Used for WS pair construction
+}
+
+const SUPPORTED_ASSETS: AssetConfig[] = [
+	{ symbol: "BTC", name: "Bitcoin", krakenId: "XBT" },
+	{ symbol: "ETH", name: "Ethereum", krakenId: "ETH" },
+	{ symbol: "SOL", name: "Solana", krakenId: "SOL" },
+	{ symbol: "XRP", name: "XRP", krakenId: "XRP" },
+	{ symbol: "DOGE", name: "Dogecoin", krakenId: "XDG" },
+	{ symbol: "ADA", name: "Cardano", krakenId: "ADA" },
+	{ symbol: "DOT", name: "Polkadot", krakenId: "DOT" },
+	{ symbol: "LINK", name: "Chainlink", krakenId: "LINK" },
+	{ symbol: "LTC", name: "Litecoin", krakenId: "LTC" },
+	{ symbol: "BCH", name: "Bitcoin Cash", krakenId: "BCH" },
+];
+
 // ... [Existing Interfaces for TooltipData, FNGData, etc. remain unchanged] ...
 interface TooltipData {
 	x: number;
@@ -139,13 +158,15 @@ export default function BTCChart() {
 	
 	// NEW: Currency State
 	const [activeCurrency, setActiveCurrency] = createSignal<CurrencyConfig>(CURRENCIES[0]);
+	const [activeAsset, setActiveAsset] = createSignal<AssetConfig>(SUPPORTED_ASSETS[0]);
 
 	const [isMobile, setIsMobile] = createSignal(false);
 
 	// Dropdown States
 	const [showIntervalMenu, setShowIntervalMenu] = createSignal(false);
 	const [showIndicatorMenu, setShowIndicatorMenu] = createSignal(false);
-	const [showCurrencyMenu, setShowCurrencyMenu] = createSignal(false); // New Dropdown
+	const [showCurrencyMenu, setShowCurrencyMenu] = createSignal(false);
+	const [showAssetMenu, setShowAssetMenu] = createSignal(false);
 
 	const [tooltip, setTooltip] = createSignal<TooltipData | null>(null);
 	const [currentPrice, setCurrentPrice] = createSignal<number>(0);
@@ -309,10 +330,10 @@ export default function BTCChart() {
 	};
 
 	// --- Modified Fetch History ---
-	const fetchHistoricalData = async (activeInterval: Interval, currency: CurrencyCode): Promise<BTCData[]> => {
+	const fetchHistoricalData = async (activeInterval: Interval, currency: CurrencyCode, assetSymbol: string): Promise<BTCData[]> => {
 		try {
-			// Pass currency to API
-			const url = `/api/history?interval=${activeInterval}&currency=${currency}`;
+			// Pass currency and symbol to API
+			const url = `/api/history?interval=${activeInterval}&currency=${currency}&symbol=${assetSymbol}`;
 			const response = await fetch(url);
 			if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
 			const data = await response.json();
@@ -367,9 +388,11 @@ export default function BTCChart() {
 	};
 
 	// --- Modified WebSocket Connection ---
-	const connectWebSocket = (activeInterval: Interval, currencyConfig: CurrencyConfig) => {
+	const connectWebSocket = (activeInterval: Interval, currencyConfig: CurrencyConfig, assetConfig: AssetConfig) => {
 		if (ws) ws.close();
 		ws = new WebSocket("wss://ws.kraken.com");
+		
+		const wsPair = `${assetConfig.krakenId}/${currencyConfig.code}`;
 
 		ws.onopen = () => {
 			setWsConnected(true);
@@ -377,7 +400,7 @@ export default function BTCChart() {
 			ws?.send(
 				JSON.stringify({
 					event: "subscribe",
-					pair: [currencyConfig.wsPair], // Dynamic Pair
+					pair: [wsPair], // Dynamic Pair
 					subscription: { name: "ohlc", interval: krakenInterval },
 				}),
 			);
@@ -393,7 +416,8 @@ export default function BTCChart() {
 				if (Array.isArray(data) && data[1] && candlestickSeries) {
 					// Ensure we are processing the correct pair (last element usually string pair name)
 					const pairName = data[data.length - 1]; 
-					if (pairName !== currencyConfig.wsPair) return;
+					const currentWsPair = `${assetConfig.krakenId}/${currencyConfig.code}`;
+					if (pairName !== currentWsPair) return;
 
 					const kline = data[1];
 					const endTime = parseFloat(kline[1]);
@@ -481,7 +505,7 @@ export default function BTCChart() {
 	};
 
 	// --- Load Data ---
-	const loadData = async (activeInterval: Interval, currencyConfig: CurrencyConfig) => {
+	const loadData = async (activeInterval: Interval, currencyConfig: CurrencyConfig, assetConfig: AssetConfig) => {
 		if (!candlestickSeries) return;
 		setIsLoading(true);
 		setError(null);
@@ -496,7 +520,7 @@ export default function BTCChart() {
 			if (s) s.setData([]);
 		});
 
-		const history = await fetchHistoricalData(activeInterval, currencyConfig.code);
+		const history = await fetchHistoricalData(activeInterval, currencyConfig.code, assetConfig.symbol);
 		
 		if (history.length > 0) {
 			candlestickSeries.setData(history);
@@ -506,7 +530,7 @@ export default function BTCChart() {
 			updateTDMarkers(history);
 		}
 		
-		connectWebSocket(activeInterval, currencyConfig);
+		connectWebSocket(activeInterval, currencyConfig, assetConfig);
 		setIsLoading(false);
 	};
 
@@ -616,7 +640,7 @@ export default function BTCChart() {
 		});
 
 		// Initial Load
-		loadData(interval(), activeCurrency());
+		loadData(interval(), activeCurrency(), activeAsset());
 
 		const handleResize = () => {
 			if (chart && chartContainer) {
@@ -712,8 +736,8 @@ export default function BTCChart() {
 
 	// --- React to Interval OR Currency Change ---
 	createEffect(() => {
-		// Dependencies: interval(), activeCurrency()
-		if (candlestickSeries) loadData(interval(), activeCurrency());
+		// Dependencies: interval(), activeCurrency(), activeAsset()
+		if (candlestickSeries) loadData(interval(), activeCurrency(), activeAsset());
 	});
 
 	return (
@@ -723,15 +747,56 @@ export default function BTCChart() {
 				<div class="flex items-center gap-3 sm:gap-4 mb-4 lg:mb-0 justify-between lg:justify-start">
 					<div class="flex items-center gap-3 sm:gap-4">
 						<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-900 flex items-center justify-center text-white font-bold text-sm sm:text-base">
-							₿
+							{activeAsset().symbol[0]}
 						</div>
 						<div>
 							<div class="flex items-center gap-2 relative">
-								<h2 class="text-base sm:text-lg font-bold text-slate-800 tracking-tight leading-none">
-									<span class="hidden sm:inline">Bitcoin</span>
-									<span class="sm:hidden">BTC</span>
-									<span class="text-slate-400 font-normal hidden sm:inline">/</span>
-								</h2>
+								{/* Asset Dropdown */}
+								<div class="relative">
+									<button
+										type="button"
+										onClick={() => setShowAssetMenu(!showAssetMenu())}
+										class="flex items-center gap-1 text-base sm:text-lg font-bold text-slate-800 tracking-tight leading-none hover:text-indigo-600 transition-colors"
+									>
+										<span class="hidden sm:inline">{activeAsset().name}</span>
+										<span class="sm:hidden">{activeAsset().symbol}</span>
+										<IconChevronDown />
+									</button>
+									<Show when={showAssetMenu()}>
+										<div
+											class="fixed inset-0 z-40 cursor-default"
+											onClick={() => setShowAssetMenu(false)}
+											onKeyDown={(e) => {
+												if (e.key === 'Enter' || e.key === ' ') {
+													setShowAssetMenu(false);
+													e.preventDefault();
+												}
+											}}
+											role="button"
+											aria-label="Close asset menu"
+											tabIndex={0}
+										/>
+										<div class="absolute left-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 py-1 max-h-64 overflow-y-auto">
+											<For each={SUPPORTED_ASSETS}>
+												{(asset) => (
+													<button
+														type="button"
+														class={`w-full text-left px-3 py-2 text-sm font-bold hover:bg-slate-50 flex items-center justify-between ${activeAsset().symbol === asset.symbol ? "text-indigo-600 bg-slate-50" : "text-slate-600"}`}
+														onClick={() => {
+															setActiveAsset(asset);
+															setShowAssetMenu(false);
+														}}
+													>
+														<span>{asset.name}</span>
+														<span class="text-xs text-slate-400">{asset.symbol}</span>
+													</button>
+												)}
+											</For>
+										</div>
+									</Show>
+								</div>
+								
+								<span class="text-slate-400 font-normal hidden sm:inline">/</span>
 								
 								{/* Currency Selector */}
 								<div class="relative">

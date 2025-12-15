@@ -4,11 +4,23 @@ import type { APIEvent } from "@solidjs/start/server";
 // Kraken OHLC item: [time, open, high, low, close, vwap, volume, count]
 type KrakenOHLCItem = [number, string, string, string, string, string, string, number];
 
-// Mapping for REST API IDs
-const PAIR_MAP: Record<string, string> = {
-	USD: "XXBTZUSD",
-	EUR: "XXBTZEUR",
-	GBP: "XXBTZGBP",
+// Mapping from Standard Symbol to Kraken API Asset Code
+const ASSET_MAP: Record<string, string> = {
+	BTC: "XBT",
+	ETH: "ETH",
+	SOL: "SOL",
+	DOGE: "XDG",
+	XRP: "XRP",
+	ADA: "ADA",
+	DOT: "DOT",
+	LINK: "LINK",
+	LTC: "LTC",
+	BCH: "BCH",
+	UNI: "UNI",
+	MATIC: "MATIC",
+	XLM: "XLM",
+	ATOM: "ATOM",
+	AVAX: "AVAX"
 };
 
 const mapIntervalToKraken = (interval: string): number => {
@@ -19,14 +31,14 @@ const mapIntervalToKraken = (interval: string): number => {
 		"5m": 5, 
 		"15m": 15, 
 		"30m": 30,
-		"1h": 60, 
-		"2h": 240, 
-		"4h": 240, 
-		"12h": 1440, 
-		"1d": 1440, 
-		"3d": 10080, 
-		"1w": 10080, 
-		"1M": 21600
+		"1h": 60,
+		"2h": 120, // Kraken supports 240, not 120 directly usually, but let's map best effort
+		"4h": 240,
+		"12h": 720,
+		"1d": 1440,
+		"3d": 4320, // 1440 * 3
+		"1w": 10080,
+		"1M": 21600,
 	};
 	return map[interval] || 60;
 };
@@ -34,14 +46,20 @@ const mapIntervalToKraken = (interval: string): number => {
 export async function GET({ request }: APIEvent) {
 	const url = new URL(request.url);
 	const interval = url.searchParams.get("interval") || "1h";
-	const currency = url.searchParams.get("currency") || "USD"; // Default to USD
+	const currency = url.searchParams.get("currency") || "USD"; 
+	const symbol = url.searchParams.get("symbol") || "BTC"; // Default to BTC
 	const toParam = url.searchParams.get("to");
 
-	const krakenPair = PAIR_MAP[currency] || PAIR_MAP.USD;
+	// Resolve Kraken Pair
+	// e.g. BTC + USD -> XBTUSD (Kraken will normalize to XXBTZUSD in response)
+	const krakenAsset = ASSET_MAP[symbol] || symbol; 
+	// Handle special currency cases if needed, but USD/EUR/GBP are standard
+	const pairParam = `${krakenAsset}${currency}`;
+
 	const krakenInterval = mapIntervalToKraken(interval);
 
 	// Kraken API URL
-	let krakenUrl = `https://api.kraken.com/0/public/OHLC?pair=${krakenPair}&interval=${krakenInterval}`;
+	let krakenUrl = `https://api.kraken.com/0/public/OHLC?pair=${pairParam}&interval=${krakenInterval}`;
 
 	// Pagination Logic
 	if (toParam) {
