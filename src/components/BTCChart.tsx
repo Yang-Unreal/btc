@@ -719,16 +719,18 @@ export default function BTCChart() {
 	return (
 		<div class="my-4 md:my-8 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden font-sans ring-1 ring-slate-100">
 			{/* Top Bar */}
-			<div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center p-5 border-b border-slate-100 bg-white">
-				<div class="flex items-center gap-4 mb-4 lg:mb-0 justify-between lg:justify-start">
-					<div class="flex items-center gap-4">
-						<div class="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-white font-bold">
+			<div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center p-3 sm:p-5 border-b border-slate-100 bg-white">
+				<div class="flex items-center gap-3 sm:gap-4 mb-4 lg:mb-0 justify-between lg:justify-start">
+					<div class="flex items-center gap-3 sm:gap-4">
+						<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-900 flex items-center justify-center text-white font-bold text-sm sm:text-base">
 							₿
 						</div>
 						<div>
 							<div class="flex items-center gap-2 relative">
-								<h2 class="text-lg font-bold text-slate-800 tracking-tight leading-none">
-									Bitcoin <span class="text-slate-400 font-normal">/</span>
+								<h2 class="text-base sm:text-lg font-bold text-slate-800 tracking-tight leading-none">
+									<span class="hidden sm:inline">Bitcoin</span>
+									<span class="sm:hidden">BTC</span>
+									<span class="text-slate-400 font-normal hidden sm:inline">/</span>
 								</h2>
 								
 								{/* Currency Selector */}
@@ -736,7 +738,7 @@ export default function BTCChart() {
 									<button
 										type="button"
 										onClick={() => setShowCurrencyMenu(!showCurrencyMenu())}
-										class="flex items-center gap-1 text-slate-500 font-bold hover:text-slate-800 transition-colors"
+										class="flex items-center gap-1 text-slate-500 font-bold hover:text-slate-800 transition-colors text-xs sm:text-sm"
 									>
 										{activeCurrency().code}
 										<IconChevronDown />
@@ -776,16 +778,16 @@ export default function BTCChart() {
 								</div>
 
 								{/* Connection Status */}
-								<div class="flex items-center px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 ml-2">
+								<div class="flex items-center px-1.5 py-0.5 sm:px-2 rounded-full bg-slate-100 border border-slate-200 ml-1 sm:ml-2">
 									{wsConnected() ? <IconPulse /> : <IconWifiOff />}
-									<span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+									<span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden sm:inline">
 										{wsConnected() ? "Live" : "Offline"}
 									</span>
 								</div>
 							</div>
 							
 							{/* Price Display */}
-							<div class={`text-2xl font-mono font-bold tracking-tight leading-tight transition-colors duration-300 ${priceColor()}`}>
+							<div class={`text-xl sm:text-2xl font-mono font-bold tracking-tight leading-tight transition-colors duration-300 ${priceColor()}`}>
 								{new Intl.NumberFormat(activeCurrency().locale, { style: 'currency', currency: activeCurrency().code }).format(currentPrice())}
 							</div>
 						</div>
@@ -796,7 +798,7 @@ export default function BTCChart() {
 							<button
 								type="button"
 								onClick={() => setShowIntervalMenu(!showIntervalMenu())}
-								class="flex items-center justify-between gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700 transition-colors"
+								class="flex items-center justify-between gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs sm:text-sm font-bold text-slate-700 transition-colors"
 							>
 								{intervals.find((i) => i.value === interval())?.label}
 								<IconChevronDown />
