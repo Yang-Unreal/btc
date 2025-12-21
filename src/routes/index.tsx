@@ -2,6 +2,7 @@ import { Title } from "@solidjs/meta";
 import type { Component } from "solid-js";
 import BTCChart from "~/components/BTCChart";
 import MacroData from "~/components/MacroData";
+import AssetTable from "~/components/AssetTable";
 
 // --- Custom Icons ---
 
@@ -179,6 +180,9 @@ export default function Home() {
 
 					{/* Macro Data Section */}
 					<MacroData />
+
+					{/* Asset Table Section */}
+					<AssetTable />
 
 					{/* Feature Grid */}
 					<div class="grid grid-cols-1 md:grid-cols-3 gap-8">

@@ -59,6 +59,9 @@ const SUPPORTED_ASSETS: AssetConfig[] = [
 	{ symbol: "LINK", name: "Chainlink", krakenId: "LINK" },
 	{ symbol: "LTC", name: "Litecoin", krakenId: "LTC" },
 	{ symbol: "BCH", name: "Bitcoin Cash", krakenId: "BCH" },
+	{ symbol: "RENDER", name: "Render", krakenId: "RENDER" },
+	{ symbol: "AKT", name: "Akash Network", krakenId: "AKT" },
+	{ symbol: "EWT", name: "Energy Web Token", krakenId: "EWT" },
 ];
 
 // ... [Existing Interfaces for TooltipData, FNGData, etc. remain unchanged] ...
