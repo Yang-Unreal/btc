@@ -52,22 +52,14 @@ const SUPPORTED_ASSETS: AssetConfig[] = [
 	{ symbol: "BTC", name: "Bitcoin", krakenId: "XBT" },
 	{ symbol: "ETH", name: "Ethereum", krakenId: "ETH" },
 	{ symbol: "SOL", name: "Solana", krakenId: "SOL" },
-	{ symbol: "XRP", name: "XRP", krakenId: "XRP" },
 	{ symbol: "DOGE", name: "Dogecoin", krakenId: "XDG" },
-	{ symbol: "ADA", name: "Cardano", krakenId: "ADA" },
-	{ symbol: "DOT", name: "Polkadot", krakenId: "DOT" },
 	{ symbol: "LINK", name: "Chainlink", krakenId: "LINK" },
-	{ symbol: "LTC", name: "Litecoin", krakenId: "LTC" },
-	{ symbol: "BCH", name: "Bitcoin Cash", krakenId: "BCH" },
 	{ symbol: "RENDER", name: "Render", krakenId: "RENDER" },
 	{ symbol: "AKT", name: "Akash Network", krakenId: "AKT" },
 	{ symbol: "EWT", name: "Energy Web Token", krakenId: "EWT" },
 	{ symbol: "AAVE", name: "Aave", krakenId: "AAVE" },
-	{ symbol: "KAS", name: "Kaspa", krakenId: "KAS" },
 	{ symbol: "TON", name: "Toncoin", krakenId: "TON" },
-	{ symbol: "XMR", name: "Monero", krakenId: "XMR" },
 	{ symbol: "HNT", name: "Helium", krakenId: "HNT" },
-	{ symbol: "AR", name: "Arweave", krakenId: "AR" },
 ];
 
 // ... [Existing Interfaces for TooltipData, FNGData, etc. remain unchanged] ...

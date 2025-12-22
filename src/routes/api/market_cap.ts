@@ -1,27 +1,18 @@
 import { json } from "@solidjs/router";
-import type { APIEvent } from "@solidjs/start/server";
 
 // Mapping: Internal Symbol -> CoinGecko API ID
 const COINGECKO_MAP: Record<string, string> = {
 	BTC: "bitcoin",
 	ETH: "ethereum",
 	SOL: "solana",
-	XRP: "ripple",
 	DOGE: "dogecoin",
-	ADA: "cardano",
-	DOT: "polkadot",
 	LINK: "chainlink",
-	LTC: "litecoin",
-	BCH: "bitcoin-cash",
 	RENDER: "render-token",
 	AKT: "akash-network",
 	EWT: "energy-web-token",
 	AAVE: "aave",
-	KAS: "kaspa",
 	TON: "toncoin",
-	XMR: "monero",
 	HNT: "helium",
-	AR: "arweave",
 };
 
 // Basic CoinGecko Response Type

@@ -10,26 +10,17 @@ const ASSET_MAP: Record<string, string> = {
 	ETH: "ETH",
 	SOL: "SOL",
 	DOGE: "XDG",
-	XRP: "XRP",
-	ADA: "ADA",
-	DOT: "DOT",
 	LINK: "LINK",
-	LTC: "LTC",
-	BCH: "BCH",
 	UNI: "UNI",
 	MATIC: "MATIC",
-	XLM: "XLM",
 	ATOM: "ATOM",
 	AVAX: "AVAX",
 	RENDER: "RENDER",
 	AKT: "AKT",
 	EWT: "EWT",
 	AAVE: "AAVE",
-	KAS: "KAS",
 	TON: "TON",
-	XMR: "XMR",
 	HNT: "HNT",
-	AR: "AR"
 };
 
 const mapIntervalToKraken = (interval: string): number => {
