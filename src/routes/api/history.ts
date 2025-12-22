@@ -23,7 +23,13 @@ const ASSET_MAP: Record<string, string> = {
 	AVAX: "AVAX",
 	RENDER: "RENDER",
 	AKT: "AKT",
-	EWT: "EWT"
+	EWT: "EWT",
+	AAVE: "AAVE",
+	KAS: "KAS",
+	TON: "TON",
+	XMR: "XMR",
+	HNT: "HNT",
+	AR: "AR"
 };
 
 const mapIntervalToKraken = (interval: string): number => {

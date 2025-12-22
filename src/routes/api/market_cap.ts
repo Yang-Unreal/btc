@@ -16,6 +16,12 @@ const COINGECKO_MAP: Record<string, string> = {
 	RENDER: "render-token",
 	AKT: "akash-network",
 	EWT: "energy-web-token",
+	AAVE: "aave",
+	KAS: "kaspa",
+	TON: "toncoin",
+	XMR: "monero",
+	HNT: "helium",
+	AR: "arweave",
 };
 
 // Basic CoinGecko Response Type

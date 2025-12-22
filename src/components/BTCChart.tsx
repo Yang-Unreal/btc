@@ -62,6 +62,12 @@ const SUPPORTED_ASSETS: AssetConfig[] = [
 	{ symbol: "RENDER", name: "Render", krakenId: "RENDER" },
 	{ symbol: "AKT", name: "Akash Network", krakenId: "AKT" },
 	{ symbol: "EWT", name: "Energy Web Token", krakenId: "EWT" },
+	{ symbol: "AAVE", name: "Aave", krakenId: "AAVE" },
+	{ symbol: "KAS", name: "Kaspa", krakenId: "KAS" },
+	{ symbol: "TON", name: "Toncoin", krakenId: "TON" },
+	{ symbol: "XMR", name: "Monero", krakenId: "XMR" },
+	{ symbol: "HNT", name: "Helium", krakenId: "HNT" },
+	{ symbol: "AR", name: "Arweave", krakenId: "AR" },
 ];
 
 // ... [Existing Interfaces for TooltipData, FNGData, etc. remain unchanged] ...
