@@ -1,8 +1,12 @@
 import { Title } from "@solidjs/meta";
 import type { Component } from "solid-js";
-import BTCChart from "~/components/BTCChart";
-import MacroData from "~/components/MacroData";
 import AssetTable from "~/components/AssetTable";
+import BTCChart from "~/components/BTCChart";
+import DerivativesTrigger from "~/components/DerivativesTrigger";
+import FuelGauge from "~/components/FuelGauge";
+import LiquidityEngine from "~/components/LiquidityEngine";
+import OnChainTruth from "~/components/OnChainTruth";
+import PredictionRoutine from "~/components/PredictionRoutine";
 
 // --- Custom Icons ---
 
@@ -178,8 +182,20 @@ export default function Home() {
 						<BTCChart />
 					</div>
 
-					{/* Macro Data Section */}
-					<MacroData />
+					{/* Daily Prediction Routine - Summary at Top */}
+					<PredictionRoutine />
+
+					{/* Level 1: Global Liquidity */}
+					<LiquidityEngine />
+
+					{/* Level 2: New Money Inflow */}
+					<FuelGauge />
+
+					{/* Level 3: On-Chain Truth */}
+					<OnChainTruth />
+
+					{/* Level 4: Derivatives & Sentiment */}
+					<DerivativesTrigger />
 
 					{/* Asset Table Section */}
 					<AssetTable />

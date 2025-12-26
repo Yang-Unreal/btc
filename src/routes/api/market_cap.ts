@@ -18,6 +18,8 @@ const COINGECKO_MAP: Record<string, string> = {
 	AAVE: "aave",
 	TON: "toncoin",
 	HNT: "helium",
+	KAS: "kaspa",
+	NIGHT: "midnight-3",
 };
 
 // Basic CoinGecko Response Type

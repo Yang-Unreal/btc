@@ -26,6 +26,8 @@ const ASSET_MAP: Record<string, string> = {
 	AAVE: "AAVE",
 	TON: "TON",
 	HNT: "HNT",
+	KAS: "KAS",
+	NIGHT: "NIGHT",
 };
 
 const mapIntervalToKraken = (interval: string): number => {
