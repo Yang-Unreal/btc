@@ -158,9 +158,9 @@ export default function FuelGauge() {
 	});
 
 	return (
-		<div class="mb-10">
+		<div class="">
 			{/* Section Header */}
-			<div class="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
+			<div class="flex flex-col md:flex-row md:items-end justify-between mb-5 gap-4">
 				<div>
 					<div class="flex items-center gap-2 mb-2">
 						<span class="px-2 py-1 text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 rounded-full">
@@ -187,9 +187,9 @@ export default function FuelGauge() {
 			</div>
 
 			{/* Two Column Layout */}
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 				{/* Stablecoin Supply Card */}
-				<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+				<div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 overflow-hidden">
 					<div class="p-6">
 						<div class="flex items-center gap-3 mb-4">
 							<div class="w-12 h-12 rounded-xl bg-linear-to-br from-emerald-500 to-teal-500 shadow-sm flex items-center justify-center">
@@ -300,7 +300,7 @@ export default function FuelGauge() {
 				</div>
 
 				{/* ETF Flows Card */}
-				<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+				<div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 overflow-hidden">
 					<div class="p-6">
 						<div class="flex items-center justify-between mb-4">
 							<div class="flex items-center gap-3">

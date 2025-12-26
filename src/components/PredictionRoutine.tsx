@@ -212,10 +212,10 @@ export default function PredictionRoutine() {
 	};
 
 	return (
-		<div class="mb-10">
-			<div class="bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl shadow-xl overflow-hidden border border-slate-700">
+		<div class="">
+			<div class="bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl shadow-xl shadow-slate-900/10 overflow-hidden border border-slate-700/50">
 				{/* Header */}
-				<div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+				<div class="px-6 py-4 border-b border-slate-700/60 flex items-center justify-between">
 					<div class="flex items-center gap-3">
 						<span class="text-2xl">🎯</span>
 						<div>

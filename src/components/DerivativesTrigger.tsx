@@ -152,9 +152,9 @@ export default function DerivativesTrigger() {
 	};
 
 	return (
-		<div class="mb-10">
+		<div class="">
 			{/* Section Header */}
-			<div class="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
+			<div class="flex flex-col md:flex-row md:items-end justify-between mb-5 gap-4">
 				<div>
 					<div class="flex items-center gap-2 mb-2">
 						<span class="px-2 py-1 text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-700 rounded-full">
@@ -188,9 +188,9 @@ export default function DerivativesTrigger() {
 			</div>
 
 			{/* Cards Grid */}
-			<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 				{/* Open Interest Card */}
-				<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+				<div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 overflow-hidden">
 					<div class="p-6">
 						<div class="flex items-center gap-3 mb-5">
 							<div class="w-11 h-11 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 shadow-sm flex items-center justify-center">
@@ -285,7 +285,7 @@ export default function DerivativesTrigger() {
 				</div>
 
 				{/* Funding Rates Card */}
-				<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+				<div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 overflow-hidden">
 					<div class="p-6">
 						<div class="flex items-center gap-3 mb-5">
 							<div class="w-11 h-11 rounded-xl bg-linear-to-br from-orange-500 to-rose-500 shadow-sm flex items-center justify-center">
@@ -409,7 +409,7 @@ export default function DerivativesTrigger() {
 				</div>
 
 				{/* Long/Short Ratio Card */}
-				<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+				<div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 overflow-hidden">
 					<div class="p-6">
 						<div class="flex items-center gap-3 mb-5">
 							<div class="w-11 h-11 rounded-xl bg-linear-to-br from-violet-500 to-purple-600 shadow-sm flex items-center justify-center">

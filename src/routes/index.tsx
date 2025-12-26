@@ -80,15 +80,15 @@ const IconTerminal: Component<{ class?: string }> = (props) => (
 
 export default function Home() {
 	return (
-		<div class="min-h-screen flex flex-col font-sans selection:bg-indigo-500/20 selection:text-indigo-900 bg-[#f8fafc] overflow-x-hidden">
+		<div class="min-h-screen flex flex-col font-sans selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
 			<Title>Bitcoin Insight | Institutional Analytics</Title>
 
 			{/* Navigation Bar */}
-			<nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
+			<nav class="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
 				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div class="flex justify-between items-center h-16">
-						<div class="flex items-center gap-2.5">
-							<div class="w-9 h-9 bg-linear-to-br from-indigo-600 to-violet-600 rounded-lg shadow-sm flex items-center justify-center text-white">
+						<div class="flex items-center gap-3">
+							<div class="w-10 h-10 bg-linear-to-br from-indigo-600 via-indigo-500 to-violet-600 rounded-xl shadow-md shadow-indigo-500/20 flex items-center justify-center text-white">
 								<IconTerminal class="w-5 h-5" />
 							</div>
 							<span class="font-bold text-xl tracking-tight text-slate-800">
@@ -97,12 +97,12 @@ export default function Home() {
 						</div>
 
 						<div class="flex gap-4 items-center">
-							<div class="hidden md:flex items-center px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100 text-xs font-semibold uppercase tracking-wide gap-2">
+							<div class="hidden md:flex items-center px-3.5 py-1.5 bg-emerald-50/80 text-emerald-700 rounded-full border border-emerald-200/60 text-xs font-semibold uppercase tracking-wide gap-2 shadow-sm">
 								<span class="relative flex h-2 w-2">
 									<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
 									<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
 								</span>
-								System Operational
+								Live
 							</div>
 						</div>
 					</div>
@@ -110,23 +110,23 @@ export default function Home() {
 			</nav>
 
 			<main class="grow">
-				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
 					{/* Hero Section */}
-					<div class="text-center max-w-4xl mx-auto mb-16 relative">
-						{/* Decorative background blur */}
-						<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[600px] h-[300px] bg-indigo-500/10 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
+					<div class="text-center max-w-4xl mx-auto mb-12 relative">
+						{/* Decorative background blur - more natural gradient */}
+						<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[700px] h-[350px] bg-linear-to-r from-indigo-500/8 via-violet-500/6 to-blue-500/8 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
 
-						<h1 class="text-5xl sm:text-6xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-8 leading-[1.1]">
+						<h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight mb-6 leading-[1.1]">
 							Market Clarity in <br class="hidden sm:block" />
-							<span class="text-transparent bg-clip-text bg-linear-to-r from-indigo-600 via-violet-600 to-blue-500">
+							<span class="text-transparent bg-clip-text bg-linear-to-r from-indigo-600 via-violet-500 to-blue-600">
 								Every Candle.
 							</span>
 						</h1>
 
-						<p class="text-lg md:text-xl text-slate-600 leading-relaxed max-w-2xl mx-auto mb-10">
+						<p class="text-base md:text-lg text-slate-500 leading-relaxed max-w-2xl mx-auto mb-8">
 							Institutional-grade technical analysis. Combining real-time
 							WebSocket feeds, dynamic
-							<span class="font-semibold text-slate-800 mx-1">
+							<span class="font-semibold text-slate-700 mx-1">
 								TD Sequential
 							</span>{" "}
 							indicators, and multi-frame volatility metrics.
@@ -178,106 +178,117 @@ export default function Home() {
 					</div>
 
 					{/* Main Chart Component */}
-					<div class="mb-12 relative z-10">
+					<div class="mb-10 relative z-10">
 						<BTCChart />
 					</div>
 
-					{/* Daily Prediction Routine - Summary at Top */}
-					<PredictionRoutine />
+					{/* Dashboard Sections with smooth visual flow */}
+					<div class="space-y-8">
+						{/* Daily Prediction Routine - Summary at Top */}
+						<section class="rounded-3xl p-6 -mx-2 sm:mx-0 bg-linear-to-br from-slate-900/2 to-slate-800/1">
+							<PredictionRoutine />
+						</section>
 
-					{/* Level 1: Global Liquidity */}
-					<LiquidityEngine />
+						{/* Level 1: Global Liquidity */}
+						<section class="rounded-3xl p-6 -mx-2 sm:mx-0 bg-linear-to-br from-indigo-500/2 to-violet-500/1">
+							<LiquidityEngine />
+						</section>
 
-					{/* Level 2: New Money Inflow */}
-					<FuelGauge />
+						{/* Level 2: New Money Inflow */}
+						<section class="rounded-3xl p-6 -mx-2 sm:mx-0 bg-linear-to-br from-emerald-500/2 to-teal-500/1">
+							<FuelGauge />
+						</section>
 
-					{/* Level 3: On-Chain Truth */}
-					<OnChainTruth />
+						{/* Level 3: On-Chain Truth */}
+						<section class="rounded-3xl p-6 -mx-2 sm:mx-0 bg-linear-to-br from-cyan-500/2 to-blue-500/1">
+							<OnChainTruth />
+						</section>
 
-					{/* Level 4: Derivatives & Sentiment */}
-					<DerivativesTrigger />
+						{/* Level 4: Derivatives & Sentiment */}
+						<section class="rounded-3xl p-6 -mx-2 sm:mx-0 bg-linear-to-br from-rose-500/2 to-orange-500/1">
+							<DerivativesTrigger />
+						</section>
 
-					{/* Asset Table Section */}
-					<AssetTable />
+						{/* Asset Table Section */}
+						<section class="rounded-3xl p-6 -mx-2 sm:mx-0">
+							<AssetTable />
+						</section>
+					</div>
 
 					{/* Feature Grid */}
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-						{/* Feature 1 */}
-						<div class="group p-8 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-							<div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-								<IconChart class="w-32 h-32 text-indigo-600" />
+					<div class="mt-16 mb-8">
+						<div class="grid grid-cols-1 md:grid-cols-3 gap-6 stagger-children">
+							{/* Feature 1 */}
+							<div class="group p-7 bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-100/80 shadow-sm hover:shadow-lg hover:bg-white hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden">
+								<div class="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
+									<IconChart class="w-28 h-28 text-indigo-600" />
+								</div>
+								<div class="w-11 h-11 bg-linear-to-br from-indigo-50 to-indigo-100/50 rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+									<IconChart class="w-5 h-5 text-indigo-600" />
+								</div>
+								<h3 class="text-lg font-bold text-slate-900 mb-2">
+									Technical Precision
+								</h3>
+								<p class="text-slate-500 text-sm leading-relaxed">
+									Advanced charting with configurable EMA ribbons, RSI
+									oscillators, and Fear & Greed indexing.
+								</p>
 							</div>
-							<div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-								<IconChart class="w-6 h-6 text-indigo-600" />
-							</div>
-							<h3 class="text-xl font-bold text-slate-900 mb-3">
-								Technical Precision
-							</h3>
-							<p class="text-slate-500 text-sm leading-relaxed">
-								Advanced charting engine featuring configurable EMA ribbons
-								(20-200), RSI oscillators, and Fear & Greed indexing to pinpoint
-								trend reversals.
-							</p>
-						</div>
 
-						{/* Feature 2 */}
-						<div class="group p-8 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-							<div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-								<IconLightning class="w-32 h-32 text-cyan-600" />
+							{/* Feature 2 */}
+							<div class="group p-7 bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-100/80 shadow-sm hover:shadow-lg hover:bg-white hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden">
+								<div class="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
+									<IconLightning class="w-28 h-28 text-cyan-600" />
+								</div>
+								<div class="w-11 h-11 bg-linear-to-br from-cyan-50 to-cyan-100/50 rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+									<IconLightning class="w-5 h-5 text-cyan-600" />
+								</div>
+								<h3 class="text-lg font-bold text-slate-900 mb-2">
+									Live Synchronization
+								</h3>
+								<p class="text-slate-500 text-sm leading-relaxed">
+									Direct WebSocket to Kraken for real-time price action.
+									Historical data backfills seamlessly.
+								</p>
 							</div>
-							<div class="w-12 h-12 bg-cyan-50 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-								<IconLightning class="w-6 h-6 text-cyan-600" />
-							</div>
-							<h3 class="text-xl font-bold text-slate-900 mb-3">
-								Live Synchronization
-							</h3>
-							<p class="text-slate-500 text-sm leading-relaxed">
-								Direct WebSocket connection to Kraken ensures you see price
-								action as it happens. Historical data backfills seamlessly for
-								deep analysis.
-							</p>
-						</div>
 
-						{/* Feature 3 */}
-						<div class="group p-8 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-							<div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-								<IconRadar class="w-32 h-32 text-emerald-600" />
+							{/* Feature 3 */}
+							<div class="group p-7 bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-100/80 shadow-sm hover:shadow-lg hover:bg-white hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden">
+								<div class="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
+									<IconRadar class="w-28 h-28 text-emerald-600" />
+								</div>
+								<div class="w-11 h-11 bg-linear-to-br from-emerald-50 to-emerald-100/50 rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+									<IconRadar class="w-5 h-5 text-emerald-600" />
+								</div>
+								<h3 class="text-lg font-bold text-slate-900 mb-2">
+									Algorithmic Signals
+								</h3>
+								<p class="text-slate-500 text-sm leading-relaxed">
+									TD Sequential logic identifies Setup (9) and Exhaustion (13)
+									patterns for precise entries.
+								</p>
 							</div>
-							<div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-								<IconRadar class="w-6 h-6 text-emerald-600" />
-							</div>
-							<h3 class="text-xl font-bold text-slate-900 mb-3">
-								Algorithmic Signals
-							</h3>
-							<p class="text-slate-500 text-sm leading-relaxed">
-								Built-in TD Sequential logic automatically identifies Setup (9)
-								and Exhaustion (13) patterns, giving you institutional-grade
-								entry and exit signals.
-							</p>
 						</div>
 					</div>
 				</div>
 			</main>
 
-			<footer class="border-t border-slate-200 bg-white">
-				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-					<div class="flex flex-col md:flex-row justify-between items-center gap-6">
-						<div class="flex items-center gap-2">
-							<div class="w-6 h-6 bg-slate-200 rounded-md flex items-center justify-center text-slate-500 text-xs font-bold">
+			<footer class="border-t border-slate-200/60 bg-white/60 backdrop-blur-sm">
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+					<div class="flex flex-col md:flex-row justify-between items-center gap-5">
+						<div class="flex items-center gap-2.5">
+							<div class="w-7 h-7 bg-linear-to-br from-slate-200 to-slate-300 rounded-lg flex items-center justify-center text-slate-600 text-xs font-bold shadow-sm">
 								B
 							</div>
 							<span class="text-slate-600 font-semibold">BTC Insight</span>
 						</div>
 
-						<p class="text-slate-400 text-sm text-center md:text-right max-w-md">
-							Market data provided by Kraken API. This dashboard is for
-							educational purposes only and does not constitute financial
-							advice.
+						<p class="text-slate-400 text-sm text-center md:text-right max-w-md leading-relaxed">
+							Market data by Kraken API. For educational purposes only.
 						</p>
 					</div>
-					<div class="mt-8 pt-8 border-t border-slate-100 text-center text-xs text-slate-300">
-						&copy; {new Date().getFullYear()} BTC Insight Analysis Dashboard.
-						All rights reserved.
+					<div class="mt-6 pt-6 border-t border-slate-100/80 text-center text-xs text-slate-300">
+						&copy; {new Date().getFullYear()} BTC Insight. All rights reserved.
 					</div>
 				</div>
 			</footer>

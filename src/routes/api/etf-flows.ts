@@ -1,31 +1,40 @@
 import { json } from "@solidjs/router";
 
-// ETF Flow data - Using demo data with realistic patterns
-// In production, this would connect to Coinglass or SoSoValue API
+// ETF Flow data - Demo data with realistic patterns
+// NOTE: No free public API exists for Bitcoin ETF flows
+// Paid options: Coinglass API, SoSoValue API
+// This uses realistic simulated data based on historical patterns
 
 interface ETFFlowDay {
 	date: string;
-	flow: number; // Positive = inflow, Negative = outflow
+	flow: number; // Positive = inflow, Negative = outflow (millions USD)
 	cumulative: number;
 }
 
+// Generate realistic ETF flows based on date patterns
 function generateRealisticFlows(): ETFFlowDay[] {
 	const flows: ETFFlowDay[] = [];
 	const today = new Date();
-	let cumulative = 0;
+	let cumulative = 35000; // Starting cumulative ~$35B total inflows since launch
 
 	// Generate last 14 days of realistic ETF flow data
 	for (let i = 13; i >= 0; i--) {
 		const date = new Date(today);
 		date.setDate(date.getDate() - i);
 
-		// Skip weekends
+		// Skip weekends (ETFs don't trade)
 		if (date.getDay() === 0 || date.getDay() === 6) continue;
 
-		// Realistic flow patterns: mostly positive with occasional outflows
-		// Range: -500M to +800M per day
-		const baseFlow = Math.random() * 400 - 100; // Slight positive bias
-		const volatility = (Math.random() - 0.3) * 300;
+		// Realistic flow patterns based on market conditions
+		// Range: -500M to +800M per day, slight positive bias in bull market
+		const dayOfWeek = date.getDay();
+
+		// Monday/Friday tend to have more volatility
+		const volatilityMult = dayOfWeek === 1 || dayOfWeek === 5 ? 1.3 : 1.0;
+
+		// Base flow with positive bias
+		const baseFlow = 50 + Math.random() * 200; // $50-250M base inflow
+		const volatility = (Math.random() - 0.35) * 400 * volatilityMult;
 		const flow = Math.round(baseFlow + volatility);
 
 		cumulative += flow;
@@ -76,7 +85,8 @@ export async function GET() {
 			totalFlow: flows[flows.length - 1]?.cumulative || 0,
 			signal,
 			signalLabel,
-			isDemo: true, // Flag to show this is demo data
+			isDemo: true, // Clearly marked as demo - no free API available
+			demoNote: "ETF flow data requires paid API (Coinglass/SoSoValue)",
 			timestamp: Date.now(),
 		});
 	} catch (error) {

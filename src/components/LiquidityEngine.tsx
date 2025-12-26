@@ -269,7 +269,7 @@ const IndicatorCard: Component<IndicatorCardProps> = (props) => {
 	const colors = () => getSignalColors(props.signal);
 
 	return (
-		<div class="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
+		<div class="group bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 hover:shadow-md transition-all duration-300 overflow-hidden">
 			{/* Header */}
 			<div class="p-5 pb-3">
 				<div class="flex justify-between items-start mb-3">
@@ -383,9 +383,9 @@ export default function LiquidityEngine() {
 	const fedAnalysis = () => analyzeFedRate(data().impliedFedRate);
 
 	return (
-		<div class="mb-10">
+		<div class="">
 			{/* Section Header */}
-			<div class="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
+			<div class="flex flex-col md:flex-row md:items-end justify-between mb-5 gap-4">
 				<div>
 					<div class="flex items-center gap-2 mb-2">
 						<span class="px-2 py-1 text-xs font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 rounded-full">
@@ -412,7 +412,7 @@ export default function LiquidityEngine() {
 			</div>
 
 			{/* Cards Grid */}
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 				<IndicatorCard
 					title="U.S. Dollar Index (DXY)"
 					value={data().dxy}
