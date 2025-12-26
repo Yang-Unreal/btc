@@ -1,4 +1,5 @@
 import { json } from "@solidjs/router";
+import { apiCache, CACHE_DURATIONS } from "~/lib/cache";
 
 // Derivatives data from real public APIs
 // Primary: OKX (works globally)
@@ -133,6 +134,14 @@ async function fetchOKXLongShortRatio(): Promise<{
 }
 
 export async function GET() {
+	const cacheKey = "derivatives_data";
+
+	// Check cache first
+	const cachedData = apiCache.get(cacheKey);
+	if (cachedData) {
+		return json(cachedData);
+	}
+
 	try {
 		// Fetch all data in parallel
 		const [btcPrice, okxOI, okxFR, deribitFR, lsRatio] = await Promise.all([
@@ -181,30 +190,35 @@ export async function GET() {
 
 		const data: DerivativesData = {
 			openInterest: {
-				total: Number(oiUSD.toFixed(2)),
+				total: Number(oiUSD.toFixed(4)),
 				change24h: 0,
-				btcEquivalent: Math.round(estimatedTotalOiBTC),
+				btcEquivalent: Number(estimatedTotalOiBTC.toFixed(4)),
 			},
 			fundingRate: {
-				avg: Number(avgFunding.toFixed(4)),
-				okx: Number(okxFunding.toFixed(4)),
-				deribit: Number(deribitFunding.toFixed(4)),
+				avg: Number(avgFunding.toFixed(6)),
+				okx: Number(okxFunding.toFixed(6)),
+				deribit: Number(deribitFunding.toFixed(6)),
 			},
 			longShortRatio: {
-				ratio: Number(ratio.toFixed(2)),
-				longs: Number(longs.toFixed(1)),
-				shorts: Number(shorts.toFixed(1)),
+				ratio: Number(ratio.toFixed(4)),
+				longs: Number(longs.toFixed(2)),
+				shorts: Number(shorts.toFixed(2)),
 			},
 			signal,
 			signalColor,
 			priceOiDivergence,
 		};
 
-		return json({
+		const result = {
 			...data,
 			source: okxOI ? "okx" : "estimated",
 			timestamp: Date.now(),
-		});
+		};
+
+		// Cache the result
+		apiCache.set(cacheKey, result, CACHE_DURATIONS.PRICE_DATA);
+
+		return json(result);
 	} catch (error) {
 		console.error("Derivatives API Error:", error);
 		return json({ error: "Failed to fetch derivatives data" }, { status: 500 });

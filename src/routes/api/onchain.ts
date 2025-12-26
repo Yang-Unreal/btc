@@ -1,4 +1,5 @@
 import { json } from "@solidjs/router";
+import { apiCache, CACHE_DURATIONS } from "~/lib/cache";
 
 // On-Chain metrics from public APIs
 // Sources: Blockchain.com Charts API, CoinGecko
@@ -101,6 +102,14 @@ function calculateZScore(mvrv: number): number {
 }
 
 export async function GET() {
+	const cacheKey = "onchain_data";
+
+	// Check cache first
+	const cachedData = apiCache.get(cacheKey);
+	if (cachedData) {
+		return json(cachedData);
+	}
+
 	try {
 		const [btcPrice, mvrvRaw, marketData] = await Promise.all([
 			fetchBTCPrice(),
@@ -164,15 +173,15 @@ export async function GET() {
 
 		const data: OnChainData = {
 			mvrv: {
-				zScore: Number(mvrvZScore.toFixed(2)),
-				rawValue: Number(mvrvValue.toFixed(2)),
+				zScore: Number(mvrvZScore.toFixed(4)),
+				rawValue: Number(mvrvValue.toFixed(4)),
 				signal: mvrvSignal,
 				signalColor: mvrvColor,
 			},
 			exchangeBalance: {
 				btc: estimatedExchangeBTC,
-				change7d: Number(change7d.toFixed(2)),
-				change30d: Number(change30d.toFixed(2)),
+				change7d: Number(change7d.toFixed(4)),
+				change30d: Number(change30d.toFixed(4)),
 				signal: exchangeSignal,
 				signalColor: exchangeColor,
 				isEstimate: true, // Clearly marked as estimate
@@ -181,17 +190,22 @@ export async function GET() {
 				sth: sthRealized,
 				lth: lthRealized,
 				current: btcPrice,
-				sthRatio: Number(sthRatio.toFixed(2)),
-				lthRatio: Number(lthRatio.toFixed(2)),
+				sthRatio: Number(sthRatio.toFixed(4)),
+				lthRatio: Number(lthRatio.toFixed(4)),
 				trendBroken,
 			},
 		};
 
-		return json({
+		const result = {
 			...data,
 			mvrvSource: mvrvRaw !== null ? "blockchain.info" : "estimated",
 			timestamp: Date.now(),
-		});
+		};
+
+		// Cache the result
+		apiCache.set(cacheKey, result, CACHE_DURATIONS.PRICE_DATA);
+
+		return json(result);
 	} catch (error) {
 		console.error("On-Chain API Error:", error);
 		return json({ error: "Failed to fetch on-chain data" }, { status: 500 });

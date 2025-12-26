@@ -831,13 +831,11 @@ export default function BTCChart() {
 			title: "",
 		});
 
-		chart
-			.priceScale("oscillators")
-			.applyOptions({
-				scaleMargins: { top: 0.8, bottom: 0 },
-				visible: false,
-				borderVisible: false,
-			});
+		chart.priceScale("oscillators").applyOptions({
+			scaleMargins: { top: 0.8, bottom: 0 },
+			visible: false,
+			borderVisible: false,
+		});
 
 		chart.subscribeCrosshairMove((param: MouseEventParams) => {
 			if (!chartContainer || !candlestickSeries) return;
@@ -861,7 +859,7 @@ export default function BTCChart() {
 			}
 			const safeFixed = (
 				val: number | null | undefined,
-				digits: number = 2,
+				digits: number = 6,
 			) => {
 				if (val === null || val === undefined || Number.isNaN(val)) return "—";
 				return val.toFixed(digits);
@@ -974,12 +972,10 @@ export default function BTCChart() {
 			chart
 				.priceScale("right")
 				.applyOptions({ scaleMargins: { top: 0.1, bottom: 0.3 } });
-			chart
-				.priceScale("oscillators")
-				.applyOptions({
-					visible: true,
-					scaleMargins: { top: 0.75, bottom: 0.05 },
-				});
+			chart.priceScale("oscillators").applyOptions({
+				visible: true,
+				scaleMargins: { top: 0.75, bottom: 0.05 },
+			});
 		} else {
 			chart
 				.priceScale("right")
@@ -1177,10 +1173,7 @@ export default function BTCChart() {
 							<div
 								class={`text-xl sm:text-2xl font-mono font-bold tracking-tight leading-tight transition-colors duration-300 ${priceColor()}`}
 							>
-								{new Intl.NumberFormat(activeCurrency().locale, {
-									style: "currency",
-									currency: activeCurrency().code,
-								}).format(currentPrice())}
+								{`${activeCurrency().symbol}${currentPrice().toFixed(6)}`}
 							</div>
 						</div>
 					</div>
