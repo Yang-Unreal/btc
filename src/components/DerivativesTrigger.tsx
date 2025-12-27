@@ -154,20 +154,26 @@ export default function DerivativesTrigger() {
 	return (
 		<div class="">
 			{/* Section Header */}
-			<div class="flex flex-col md:flex-row md:items-end justify-between mb-5 gap-4">
+			<div class="flex flex-col md:flex-row md:items-start justify-between mb-8 gap-4 border-b border-slate-100 pb-6">
 				<div>
 					<div class="flex items-center gap-2 mb-2">
-						<span class="px-2 py-1 text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-700 rounded-full">
-							Level 4
+						<span class="text-[10px] font-black text-rose-500 uppercase tracking-widest bg-rose-50 px-2 py-0.5 rounded">
+							Tactical Level 04
 						</span>
-						<span class="text-xs text-slate-400 font-medium">The Trigger</span>
+						<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+							Derivatives Trigger
+						</span>
 					</div>
-					<h2 class="text-2xl font-bold text-slate-900 tracking-tight">
+					<h2 class="text-3xl font-black text-slate-900 tracking-tight">
 						Derivatives & Sentiment
 					</h2>
-					<p class="text-slate-500 mt-1 max-w-2xl text-sm">
-						Tells you if a move is organic or a "Fakeout". Derivatives set the
-						noise (volatility).
+					<p class="text-slate-500 mt-2 max-w-2xl text-sm font-medium">
+						Institutional-grade signal filtering. Identifying{" "}
+						<span class="text-slate-800 font-bold">Organic Movement</span> vs.{" "}
+						<span class="text-slate-800 font-bold">
+							Volatility-Driven Volatility
+						</span>
+						.
 					</p>
 				</div>
 				<div class="flex items-center gap-2">
@@ -188,13 +194,13 @@ export default function DerivativesTrigger() {
 			</div>
 
 			{/* Cards Grid */}
-			<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 				{/* Open Interest Card */}
-				<div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 overflow-hidden">
+				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden transition-all hover:bg-white hover:shadow-sm">
 					<div class="p-6">
 						<div class="flex items-center gap-3 mb-5">
-							<div class="w-11 h-11 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 shadow-sm flex items-center justify-center">
-								<IconChart class="w-5 h-5 text-white" />
+							<div class="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
+								<IconChart class="w-5 h-5 text-indigo-600" />
 							</div>
 							<div>
 								<h3 class="font-bold text-slate-800">Open Interest</h3>
@@ -252,10 +258,10 @@ export default function DerivativesTrigger() {
 										<div
 											class={`p-3 rounded-lg ${
 												currentData.priceOiDivergence === "Healthy"
-													? "bg-emerald-50 border border-emerald-200"
+													? "bg-emerald-50 border border-emerald-50"
 													: currentData.priceOiDivergence === "Weak Rally"
-														? "bg-amber-50 border border-amber-200"
-														: "bg-slate-50 border border-slate-200"
+														? "bg-amber-50 border border-amber-50"
+														: "bg-slate-50 border border-slate-50"
 											}`}
 										>
 											<div class="text-xs font-bold mb-1 text-slate-600">
@@ -285,11 +291,11 @@ export default function DerivativesTrigger() {
 				</div>
 
 				{/* Funding Rates Card */}
-				<div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 overflow-hidden">
+				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden transition-all hover:bg-white hover:shadow-sm">
 					<div class="p-6">
 						<div class="flex items-center gap-3 mb-5">
-							<div class="w-11 h-11 rounded-xl bg-linear-to-br from-orange-500 to-rose-500 shadow-sm flex items-center justify-center">
-								<IconFire class="w-5 h-5 text-white" />
+							<div class="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
+								<IconFire class="w-5 h-5 text-indigo-600" />
 							</div>
 							<div>
 								<h3 class="font-bold text-slate-800">Funding Rate</h3>
@@ -325,7 +331,7 @@ export default function DerivativesTrigger() {
 
 										{/* Heat Gauge */}
 										<div class="relative mb-4">
-											<div class="h-4 rounded-full bg-linear-to-r from-emerald-400 via-amber-300 to-rose-500 overflow-hidden shadow-inner">
+											<div class="h-4 rounded-full bg-slate-100 overflow-hidden shadow-inner">
 												{/* Pointer */}
 												<div
 													class="absolute top-0 w-1.5 h-4 bg-slate-900 rounded shadow-md transition-all duration-500"
@@ -380,10 +386,10 @@ export default function DerivativesTrigger() {
 								<div
 									class={`p-4 border-t ${
 										currentData.signalColor === "rose"
-											? "bg-rose-50 border-rose-200"
+											? "bg-rose-50 border-rose-100"
 											: currentData.signalColor === "emerald"
-												? "bg-emerald-50 border-emerald-200"
-												: "bg-slate-50 border-slate-200"
+												? "bg-emerald-50 border-emerald-100"
+												: "bg-slate-50 border-slate-100"
 									}`}
 								>
 									<div class="flex justify-between items-center">
@@ -409,11 +415,11 @@ export default function DerivativesTrigger() {
 				</div>
 
 				{/* Long/Short Ratio Card */}
-				<div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 overflow-hidden">
+				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden transition-all hover:bg-white hover:shadow-sm">
 					<div class="p-6">
 						<div class="flex items-center gap-3 mb-5">
-							<div class="w-11 h-11 rounded-xl bg-linear-to-br from-violet-500 to-purple-600 shadow-sm flex items-center justify-center">
-								<IconScale class="w-5 h-5 text-white" />
+							<div class="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
+								<IconScale class="w-5 h-5 text-indigo-600" />
 							</div>
 							<div>
 								<h3 class="font-bold text-slate-800">Long/Short Ratio</h3>
@@ -501,14 +507,14 @@ export default function DerivativesTrigger() {
 			</div>
 
 			{/* Warning Note */}
-			<div class="mt-5 p-4 bg-linear-to-r from-rose-50 to-orange-50 border border-rose-100 rounded-xl">
+			<div class="mt-5 p-4 bg-slate-50 border border-slate-100 rounded-xl">
 				<div class="flex items-start gap-3">
-					<span class="text-2xl">🎯</span>
+					<span class="text-xl">🎯</span>
 					<div>
-						<p class="text-sm font-semibold text-rose-800 mb-1">
+						<p class="text-sm font-semibold text-slate-800 mb-1">
 							Check the Temperature
 						</p>
-						<p class="text-sm text-rose-700">
+						<p class="text-sm text-slate-600">
 							<strong>
 								High positive funding = Everyone is long → Crash risk.
 							</strong>{" "}

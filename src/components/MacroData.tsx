@@ -70,7 +70,6 @@ const IconRefresh = (props: { class?: string }) => (
 	</svg>
 );
 
-
 // --- Types & Helpers ---
 
 type ImpactLevel = "Bullish" | "Neutral" | "Bearish";
@@ -276,8 +275,7 @@ export default function MacroData() {
 				{/* 1. DXY Card */}
 				<MacroCard
 					title="U.S. Dollar Index (DXY)"
-					icon={<IconGlobe class="w-6 h-6 text-white" />}
-					iconBg="bg-indigo-500"
+					icon={<IconGlobe class="w-6 h-6 text-indigo-600" />}
 					value={dxy()}
 					format="0.000"
 					direction={dxyDir()}
@@ -287,22 +285,23 @@ export default function MacroData() {
 
 				{/* 2. Real Yields Card */}
 				<MacroCard
-					title="Real 10Yields"
-					icon={<IconScale class="w-6 h-6 text-white" />}
-					iconBg="bg-cyan-500"
+					title="Real 10Y Yields"
+					icon={<IconScale class="w-6 h-6 text-indigo-600" />}
 					value={realRate()}
 					format="0.00"
 					suffix="%"
 					analysis={analyzeYields(realRate())}
 					loading={loading()}
-					extraContext={(() => { const val = us10y(); return val ? `Nominal: ${val.toFixed(2)}%` : undefined; })()}
+					extraContext={(() => {
+						const val = us10y();
+						return val ? `Nominal: ${val.toFixed(2)}%` : undefined;
+					})()}
 				/>
 
 				{/* 3. Fed Rates Card */}
 				<MacroCard
 					title="Implied Fed Rate"
-					icon={<IconBank class="w-6 h-6 text-white" />}
-					iconBg="bg-violet-500"
+					icon={<IconBank class="w-6 h-6 text-indigo-600" />}
 					value={impliedFedRate()}
 					format="0.00"
 					suffix="%"
@@ -326,7 +325,6 @@ export default function MacroData() {
 interface MacroCardProps {
 	title: string;
 	icon: JSX.Element;
-	iconBg: string;
 	value: number | null;
 	format?: string;
 	suffix?: string;
@@ -338,26 +336,24 @@ interface MacroCardProps {
 
 function MacroCard(props: MacroCardProps) {
 	return (
-		<div class="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-100 transition-all duration-300 relative overflow-hidden flex flex-col h-full">
+		<div class="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col h-full">
 			{/* Header */}
 			<div class="p-6 pb-2">
-				<div class="flex justify-between items-start mb-4">
-					<div class="flex items-center gap-3">
-						<div
-							class={`w-10 h-10 rounded-xl ${props.iconBg} shadow-sm flex items-center justify-center`}
-						>
+				<div class="flex justify-between items-start mb-5">
+					<div class="flex items-center gap-4">
+						<div class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 shadow-xs flex items-center justify-center">
 							{props.icon}
 						</div>
 						<div>
 							<h3 class="font-bold text-slate-800 leading-tight">
 								{props.title}
 							</h3>
-							<div class="flex items-center gap-1 mt-0.5">
-								<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded-sm">
+							<div class="flex items-center gap-1.5 mt-1">
+								<span class="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-1.5 py-0.5 rounded">
 									{props.analysis.correlationType}
 								</span>
-								<span class="text-[10px] text-slate-400 font-medium">
-									Correlation to BTC
+								<span class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+									Correlation
 								</span>
 							</div>
 						</div>
@@ -365,22 +361,22 @@ function MacroCard(props: MacroCardProps) {
 				</div>
 
 				{/* Main Value */}
-				<div class="flex items-baseline gap-2 mb-1">
+				<div class="flex items-baseline gap-2 mb-2">
 					<Show
 						when={!props.loading && props.value !== null}
 						fallback={
-							<div class="h-10 w-32 bg-slate-100 animate-pulse rounded my-1" />
+							<div class="h-10 w-32 bg-slate-50 animate-pulse rounded-lg my-1" />
 						}
 					>
 						<div
-							class={`text-4xl font-extrabold tracking-tight ${props.direction === "up" ? "text-emerald-500" : props.direction === "down" ? "text-rose-500" : "text-slate-900"}`}
+							class={`text-4xl font-black tracking-tight ${props.direction === "up" ? "text-emerald-500" : props.direction === "down" ? "text-rose-500" : "text-slate-800"}`}
 						>
 							{props.value?.toFixed(props.format === "0.000" ? 3 : 2)}
 							{props.suffix}
 						</div>
 					</Show>
 					<Show when={props.extraContext}>
-						<span class="text-xs text-slate-400 font-mono">
+						<span class="text-xs text-slate-400 font-mono font-bold">
 							{props.extraContext}
 						</span>
 					</Show>
@@ -388,30 +384,30 @@ function MacroCard(props: MacroCardProps) {
 			</div>
 
 			{/* Divider */}
-			<div class="w-full h-px bg-slate-100 my-0"></div>
+			<div class="w-full h-px bg-slate-50 mx-0"></div>
 
 			{/* Analysis Section (Bottom Half) */}
-			<div class="p-6 pt-4 bg-slate-50/30 grow flex flex-col justify-end">
+			<div class="p-6 pt-5 bg-slate-50/50 grow flex flex-col justify-end">
 				<div>
-					<div class="flex justify-between items-center mb-2">
-						<span class="text-xs font-bold text-slate-500 uppercase tracking-wide">
-							Bitcoin Impact
+					<div class="flex justify-between items-center mb-3">
+						<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+							Macro Impact
 						</span>
 						<span
-							class={`text-xs font-bold px-2 py-1 rounded-full border ${props.analysis.bgColor} ${props.analysis.color} border-current border-opacity-20`}
+							class={`text-[10px] font-black px-2 py-0.5 rounded-full border ${props.analysis.bgColor} ${props.analysis.color} border-current border-opacity-20`}
 						>
-							{props.analysis.impact}
+							{props.analysis.impact.toUpperCase()}
 						</span>
 					</div>
 
 					{/* Status Bar */}
-					<div class="w-full h-1.5 bg-slate-200 rounded-full mb-3 overflow-hidden">
+					<div class="w-full h-1.5 bg-slate-100 rounded-full mb-4 overflow-hidden shadow-xs">
 						<div
-							class={`h-full rounded-full ${props.analysis.impact === "Bullish" ? "bg-emerald-500 w-full" : props.analysis.impact === "Bearish" ? "bg-rose-500 w-full" : "bg-slate-400 w-1/2 mx-auto"}`}
+							class={`h-full rounded-full transition-all duration-700 ${props.analysis.impact === "Bullish" ? "bg-emerald-500 w-full" : props.analysis.impact === "Bearish" ? "bg-rose-500 w-full" : "bg-slate-300 w-1/2 mx-auto"}`}
 						></div>
 					</div>
 
-					<p class="text-sm text-slate-600 leading-relaxed">
+					<p class="text-xs text-slate-500 leading-relaxed font-medium">
 						{props.analysis.description}
 					</p>
 				</div>

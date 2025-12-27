@@ -160,20 +160,23 @@ export default function FuelGauge() {
 	return (
 		<div class="">
 			{/* Section Header */}
-			<div class="flex flex-col md:flex-row md:items-end justify-between mb-5 gap-4">
+			<div class="flex flex-col md:flex-row md:items-start justify-between mb-8 gap-4 border-b border-slate-100 pb-6">
 				<div>
 					<div class="flex items-center gap-2 mb-2">
-						<span class="px-2 py-1 text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 rounded-full">
-							Level 2
+						<span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded">
+							Tactical Level 02
 						</span>
-						<span class="text-xs text-slate-400 font-medium">The Fuel</span>
+						<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+							New Money Inflow
+						</span>
 					</div>
-					<h2 class="text-2xl font-bold text-slate-900 tracking-tight">
-						New Money Inflow
+					<h2 class="text-3xl font-black text-slate-900 tracking-tight">
+						Liquidity Inflow
 					</h2>
-					<p class="text-slate-500 mt-1 max-w-2xl text-sm">
-						Price goes up when new money enters. Track stablecoin "dry powder"
-						and institutional ETF flows.
+					<p class="text-slate-500 mt-2 max-w-2xl text-sm font-medium">
+						Monitoring "Dry Powder" and institutional commitment.{" "}
+						<span class="text-slate-800 font-bold">Inflows</span> indicate price
+						floor support.
 					</p>
 				</div>
 				<button
@@ -187,13 +190,13 @@ export default function FuelGauge() {
 			</div>
 
 			{/* Two Column Layout */}
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 				{/* Stablecoin Supply Card */}
-				<div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 overflow-hidden">
+				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden">
 					<div class="p-6">
 						<div class="flex items-center gap-3 mb-4">
-							<div class="w-12 h-12 rounded-xl bg-linear-to-br from-emerald-500 to-teal-500 shadow-sm flex items-center justify-center">
-								<IconCoin class="w-6 h-6 text-white" />
+							<div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center">
+								<IconCoin class="w-6 h-6 text-indigo-600" />
 							</div>
 							<div>
 								<h3 class="font-bold text-slate-800">Stablecoin Supply</h3>
@@ -261,7 +264,7 @@ export default function FuelGauge() {
 												<span>Redeeming</span>
 												<span>Minting</span>
 											</div>
-											<div class="h-2 bg-slate-200 rounded-full overflow-hidden">
+											<div class="h-2 bg-slate-100 rounded-full overflow-hidden">
 												<div
 													class={`h-full transition-all duration-500 ${data.signal === "Bullish" ? "bg-emerald-500" : data.signal === "Bearish" ? "bg-rose-500" : "bg-slate-400"}`}
 													style={{
@@ -300,12 +303,12 @@ export default function FuelGauge() {
 				</div>
 
 				{/* ETF Flows Card */}
-				<div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 overflow-hidden">
+				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden">
 					<div class="p-6">
 						<div class="flex items-center justify-between mb-4">
 							<div class="flex items-center gap-3">
-								<div class="w-12 h-12 rounded-xl bg-linear-to-br from-violet-500 to-purple-600 shadow-sm flex items-center justify-center">
-									<IconBuilding class="w-6 h-6 text-white" />
+								<div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center">
+									<IconBuilding class="w-6 h-6 text-indigo-600" />
 								</div>
 								<div>
 									<h3 class="font-bold text-slate-800">ETF Net Flows</h3>
@@ -315,7 +318,7 @@ export default function FuelGauge() {
 								</div>
 							</div>
 							<Show when={etfData()?.isDemo}>
-								<span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-amber-100 text-amber-600 rounded">
+								<span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-slate-100 text-slate-500 rounded">
 									Demo
 								</span>
 							</Show>
@@ -359,7 +362,7 @@ export default function FuelGauge() {
 														return (
 															<div class="flex-1 flex flex-col items-center justify-end h-full group relative">
 																<div
-																	class={`w-full rounded-t transition-all ${day.flow >= 0 ? "bg-emerald-400 hover:bg-emerald-500" : "bg-rose-400 hover:bg-rose-500"}`}
+																	class={`w-full rounded-t transition-all ${day.flow >= 0 ? "bg-emerald-500" : "bg-rose-500"}`}
 																	style={{ height: `${Math.max(height, 5)}%` }}
 																/>
 																{/* Tooltip */}
@@ -438,14 +441,14 @@ export default function FuelGauge() {
 			</div>
 
 			{/* Insight Note */}
-			<div class="mt-5 p-4 bg-linear-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl">
+			<div class="mt-5 p-4 bg-slate-50 border border-slate-100 rounded-xl">
 				<div class="flex items-start gap-3">
-					<span class="text-2xl">⛽</span>
+					<span class="text-xl">⛽</span>
 					<div>
-						<p class="text-sm font-semibold text-emerald-800 mb-1">
+						<p class="text-sm font-semibold text-slate-800 mb-1">
 							Check the Fuel Every Morning
 						</p>
-						<p class="text-sm text-emerald-700">
+						<p class="text-sm text-slate-600">
 							<strong>
 								Stablecoin rising + ETF inflows = New money entering.
 							</strong>{" "}

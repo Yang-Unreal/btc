@@ -96,13 +96,14 @@ interface TooltipData {
 	ema150?: string;
 	ema200?: string;
 	rsi?: string;
+	rsiDivergence?: string;
 	fng?: string;
 	fngClass?: string;
 	tdLabel?: string;
 	tdColor?: string;
 	tdDescription?: string;
 	snapY: number;
-	currencySymbol: string; // Add symbol to tooltip
+	currencySymbol: string;
 }
 
 // ... [Existing Interfaces for FNGData, TDState, etc. remain unchanged] ...
@@ -117,6 +118,12 @@ interface TDState {
 	type: "buy" | "sell";
 	stage: "setup" | "countdown";
 	description: string;
+}
+
+interface DivergenceState {
+	type: "bullish" | "bearish";
+	priceAction: string;
+	rsiAction: string;
 }
 
 interface ISeriesMarkersPrimitive {
@@ -227,10 +234,10 @@ export default function BTCChart() {
 
 	const [indicators, setIndicators] = createSignal<Record<string, boolean>>({
 		ema20: false,
-		ema60: false,
+		ema60: true,
 		ema120: false,
 		ema150: false,
-		ema200: false,
+		ema200: true,
 		rsi: false,
 		fng: false,
 		tdSeq: true,
@@ -239,8 +246,11 @@ export default function BTCChart() {
 	const [btcData, setBtcData] = createSignal<BTCData[]>([]);
 	const [fngCache, setFngCache] = createSignal<Map<number, number>>(new Map());
 	const [tdMap, setTdMap] = createSignal<Map<number, TDState>>(new Map());
+	const [divMap, setDivMap] = createSignal<Map<number, DivergenceState>>(
+		new Map(),
+	);
 
-	// EMA Cache signals (omitted for brevity, assume they exist as in original)
+	// EMA Cache signals
 	const [lastEMA20, setLastEMA20] = createSignal<number | null>(null);
 	const [lastEMA60, setLastEMA60] = createSignal<number | null>(null);
 	const [lastEMA120, setLastEMA120] = createSignal<number | null>(null);
@@ -268,23 +278,23 @@ export default function BTCChart() {
 		{
 			key: "ema60",
 			label: "EMA 60",
-			color: "bg-[#4CAF50]",
-			textColor: "text-[#4CAF50]",
-			borderColor: "border-[#4CAF50]",
+			color: "bg-[#10B981]",
+			textColor: "text-[#10B981]",
+			borderColor: "border-[#10B981]",
 		},
 		{
 			key: "ema120",
 			label: "EMA 120",
-			color: "bg-[#FF9800]",
-			textColor: "text-[#FF9800]",
-			borderColor: "border-[#FF9800]",
+			color: "bg-[#F59E0B]",
+			textColor: "text-[#F59E0B]",
+			borderColor: "border-[#F59E0B]",
 		},
 		{
 			key: "ema150",
 			label: "EMA 150",
-			color: "bg-[#F44336]",
-			textColor: "text-[#F44336]",
-			borderColor: "border-[#F44336]",
+			color: "bg-[#EC4899]",
+			textColor: "text-[#EC4899]",
+			borderColor: "border-[#EC4899]",
 		},
 		{
 			key: "ema200",
@@ -360,12 +370,10 @@ export default function BTCChart() {
 		return rsiArray;
 	};
 
-	const updateTDMarkers = (data: BTCData[]) => {
-		if (!markersPrimitive) return;
+	const calculateTDMarkers = (data: BTCData[]) => {
 		if (!indicators().tdSeq || data.length < 5) {
-			markersPrimitive.setMarkers([]);
 			setTdMap(new Map());
-			return;
+			return [];
 		}
 		const markers: SeriesMarker<UTCTimestamp>[] = [];
 		const tempMap = new Map<number, TDState>();
@@ -484,10 +492,85 @@ export default function BTCChart() {
 				}
 			}
 		}
-		markersPrimitive.setMarkers(
-			markers.sort((a, b) => (a.time as number) - (b.time as number)),
-		);
 		setTdMap(tempMap);
+		return markers;
+	};
+
+	const calculateDivergenceMarkers = (data: BTCData[]) => {
+		if (!indicators().rsi || data.length < 50) return [];
+
+		const rsiValues = calculateRSI(
+			data.map((d) => d.close),
+			14,
+		);
+		const markers: SeriesMarker<UTCTimestamp>[] = [];
+		const newDivMap = new Map<number, DivergenceState>();
+
+		for (let i = 20; i < data.length - 2; i++) {
+			const pClose = data[i].close;
+			const rVal = rsiValues[i];
+			if (Number.isNaN(rVal)) continue;
+
+			if (rVal > 70) {
+				for (let j = i - 15; j < i - 5; j++) {
+					if (j < 0) continue;
+					const prevR = rsiValues[j];
+					const prevP = data[j].close;
+					if (pClose > prevP && rVal < prevR && prevR > 70) {
+						markers.push({
+							time: data[i].time,
+							position: "aboveBar",
+							color: "#EF4444",
+							shape: "arrowDown",
+							size: 1,
+						});
+						newDivMap.set(data[i].time as number, {
+							type: "bearish",
+							priceAction: "Higher High",
+							rsiAction: "Lower High",
+						});
+						break;
+					}
+				}
+			}
+
+			if (rVal < 30) {
+				for (let j = i - 15; j < i - 5; j++) {
+					if (j < 0) continue;
+					const prevR = rsiValues[j];
+					const prevP = data[j].close;
+					if (pClose < prevP && rVal > prevR && prevR < 30) {
+						markers.push({
+							time: data[i].time,
+							position: "belowBar",
+							color: "#10B981",
+							shape: "arrowUp",
+							size: 1,
+						});
+						newDivMap.set(data[i].time as number, {
+							type: "bullish",
+							priceAction: "Lower Low",
+							rsiAction: "Higher Low",
+						});
+						break;
+					}
+				}
+			}
+		}
+
+		setDivMap(newDivMap);
+		return markers;
+	};
+
+	const refreshAllMarkers = (data: BTCData[]) => {
+		if (!markersPrimitive) return;
+		const tdMarkers = calculateTDMarkers(data);
+		const divMarkers = calculateDivergenceMarkers(data);
+
+		const allMarkers = [...tdMarkers, ...divMarkers].sort(
+			(a, b) => (a.time as number) - (b.time as number),
+		);
+		markersPrimitive.setMarkers(allMarkers);
 	};
 
 	// --- Modified Fetch History ---
@@ -686,7 +769,7 @@ export default function BTCChart() {
 				fngSeries.update({ time: newData.time, value: val });
 			}
 		}
-		updateTDMarkers(currentData);
+		refreshAllMarkers(currentData);
 	};
 
 	// --- Load Data ---
@@ -734,7 +817,7 @@ export default function BTCChart() {
 			setBtcData(history);
 			setCurrentPrice(history[history.length - 1].close);
 			chart?.timeScale().fitContent();
-			updateTDMarkers(history);
+			refreshAllMarkers(history);
 		}
 
 		connectWebSocket(activeInterval, currencyConfig, assetConfig);
@@ -796,9 +879,9 @@ export default function BTCChart() {
 			});
 
 		ema20Series = createLineSeries("#2196F3");
-		ema60Series = createLineSeries("#4CAF50");
-		ema120Series = createLineSeries("#FF9800");
-		ema150Series = createLineSeries("#F44336");
+		ema60Series = createLineSeries("#10B981");
+		ema120Series = createLineSeries("#F59E0B");
+		ema150Series = createLineSeries("#EC4899");
 		ema200Series = createLineSeries("#9C27B0");
 
 		const oscillatorOptions = {
@@ -908,6 +991,8 @@ export default function BTCChart() {
 					tdColor = "bg-amber-50 text-amber-700 border-amber-100";
 			}
 
+			const divStatus = divMap().get(Number(param.time));
+
 			setTooltip({
 				x: param.point.x,
 				y: param.point.y,
@@ -933,6 +1018,9 @@ export default function BTCChart() {
 				tdLabel: tdStatus?.label,
 				tdColor: tdColor,
 				tdDescription: tdStatus?.description,
+				rsiDivergence: divStatus
+					? `${divStatus.type === "bullish" ? "Bull" : "Bear"} Div: ${divStatus.priceAction} / RSI ${divStatus.rsiAction}`
+					: undefined,
 				currencySymbol: activeCurrency().symbol, // Use active currency symbol
 			});
 		});
@@ -983,7 +1071,7 @@ export default function BTCChart() {
 			chart.priceScale("oscillators").applyOptions({ visible: false });
 		}
 
-		updateTDMarkers(currentData);
+		refreshAllMarkers(currentData);
 
 		if (currentInd.fng) {
 			fetchFNGData().then(() => {
@@ -1182,8 +1270,13 @@ export default function BTCChart() {
 						<div class="relative z-30">
 							<button
 								type="button"
-								onClick={() => setShowIntervalMenu(!showIntervalMenu())}
-								class="flex items-center justify-between gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs sm:text-sm font-bold text-slate-700 transition-colors"
+								onClick={() => {
+									setShowIntervalMenu(!showIntervalMenu());
+									setShowAssetMenu(false);
+									setShowCurrencyMenu(false);
+									setShowIndicatorMenu(false);
+								}}
+								class="flex items-center justify-between gap-1.5 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
 							>
 								{intervals.find((i) => i.value === interval())?.label}
 								<IconChevronDown />
@@ -1191,7 +1284,7 @@ export default function BTCChart() {
 
 							<Show when={showIntervalMenu()}>
 								<div
-									class="fixed inset-0 z-40 cursor-default"
+									class="fixed inset-0 z-40"
 									onClick={() => setShowIntervalMenu(false)}
 									onKeyDown={(e) => {
 										if (e.key === "Enter" || e.key === " ") {
@@ -1203,12 +1296,12 @@ export default function BTCChart() {
 									aria-label="Close interval menu"
 									tabIndex={0}
 								/>
-								<div class="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 py-1">
+								<div class="absolute right-0 mt-2 w-36 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 py-2">
 									<For each={intervals}>
 										{(opt) => (
 											<button
 												type="button"
-												class={`w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors ${interval() === opt.value ? "text-indigo-600 bg-slate-50" : "text-slate-600"}`}
+												class={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 transition-colors ${interval() === opt.value ? "text-indigo-600 bg-indigo-50/50" : "text-slate-600"}`}
 												onClick={() => {
 													setInterval(opt.value);
 													setShowIntervalMenu(false);
@@ -1225,12 +1318,12 @@ export default function BTCChart() {
 				</div>
 
 				<Show when={!isMobile()}>
-					<div class="flex bg-slate-100 p-1 rounded-lg self-start lg:self-auto overflow-x-auto max-w-full">
+					<div class="flex bg-slate-50 border border-slate-100 p-1 rounded-xl self-start lg:self-auto overflow-x-auto max-w-full shadow-xs">
 						<For each={intervals}>
 							{(opt) => (
 								<button
 									type="button"
-									class={`px-3 py-1.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap ${interval() === opt.value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
+									class={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 whitespace-nowrap ${interval() === opt.value ? "bg-white text-indigo-600 shadow-sm border border-slate-100" : "text-slate-500 hover:text-slate-800 hover:bg-white/50"}`}
 									onClick={() => setInterval(opt.value)}
 								>
 									{opt.label}
@@ -1242,11 +1335,11 @@ export default function BTCChart() {
 			</div>
 
 			{/* Secondary Bar: Indicators */}
-			<div class="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
+			<div class="px-6 py-4 border-b border-slate-100 bg-slate-50/30 backdrop-blur-sm">
 				<Show when={!isMobile()}>
 					<div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
-						<span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2 shrink-0">
-							Indicators
+						<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-3 shrink-0">
+							Overlay Indicators
 						</span>
 						<For each={indicatorConfig}>
 							{(ind) => (
@@ -1258,10 +1351,10 @@ export default function BTCChart() {
 											[ind.key]: !prev[ind.key],
 										}))
 									}
-									class={`group flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-200 shrink-0 select-none ${indicators()[ind.key] ? `bg-white ${ind.textColor} ${ind.borderColor} shadow-sm ring-1 ring-inset ${ind.borderColor} bg-opacity-100` : "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}
+									class={`group flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all duration-200 shrink-0 select-none ${indicators()[ind.key] ? `bg-white ${ind.textColor} border-indigo-200 shadow-xs ring-1 ring-indigo-50` : "bg-white/50 text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700"}`}
 								>
 									<span
-										class={`w-2 h-2 rounded-full ${ind.color} ${indicators()[ind.key] ? "opacity-100" : "opacity-40 group-hover:opacity-70"}`}
+										class={`w-2 h-2 rounded-full ${ind.color} ${indicators()[ind.key] ? "opacity-100 shadow-xs" : "opacity-30 group-hover:opacity-60"}`}
 									></span>
 									{ind.label}
 								</button>
@@ -1274,18 +1367,24 @@ export default function BTCChart() {
 					<div class="relative z-20">
 						<button
 							type="button"
-							onClick={() => setShowIndicatorMenu(!showIndicatorMenu())}
-							class="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+							onClick={() => {
+								setShowIndicatorMenu(!showIndicatorMenu());
+								setShowAssetMenu(false);
+								setShowCurrencyMenu(false);
+								setShowIntervalMenu(false);
+							}}
+							class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200"
 						>
-							<IconLayers /> Customize Indicators
-							<span class="bg-indigo-100 text-indigo-700 text-[10px] px-1.5 py-0.5 rounded-full ml-1">
+							<IconLayers />
+							<span>Customize Indicators</span>
+							<span class="bg-indigo-600 text-white text-[9px] px-1.5 py-0.5 rounded-full ml-1">
 								{Object.values(indicators()).filter(Boolean).length}
 							</span>
 							<IconChevronDown />
 						</button>
 						<Show when={showIndicatorMenu()}>
 							<div
-								class="fixed inset-0 z-40 cursor-default"
+								class="fixed inset-0 z-40"
 								onClick={() => setShowIndicatorMenu(false)}
 								onKeyDown={(e) => {
 									if (e.key === "Enter" || e.key === " ") {
@@ -1297,7 +1396,10 @@ export default function BTCChart() {
 								aria-label="Close indicator menu"
 								tabIndex={0}
 							/>
-							<div class="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 p-2 space-y-1">
+							<div class="absolute left-0 mt-2 w-60 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 p-2 space-y-1">
+								<div class="px-3 py-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">
+									Active Chart Overlays
+								</div>
 								<For each={indicatorConfig}>
 									{(ind) => (
 										<button
@@ -1309,34 +1411,25 @@ export default function BTCChart() {
 													[ind.key]: !prev[ind.key],
 												}));
 											}}
-											class={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors ${indicators()[ind.key] ? "bg-slate-50" : "hover:bg-slate-50"}`}
+											class={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors ${indicators()[ind.key] ? "bg-indigo-50/40" : "hover:bg-slate-50"}`}
 										>
-											<div class="flex items-center gap-2">
+											<div class="flex items-center gap-3">
 												<span
-													class={`w-2.5 h-2.5 rounded-full ${ind.color}`}
+													class={`w-2.5 h-2.5 rounded-full ${ind.color} ${indicators()[ind.key] ? "shadow-xs" : "opacity-40"}`}
 												></span>
 												<span
-													class={`${indicators()[ind.key] ? "font-semibold text-slate-900" : "text-slate-600"}`}
+													class={`font-bold ${indicators()[ind.key] ? "text-slate-900" : "text-slate-500"}`}
 												>
 													{ind.label}
 												</span>
 											</div>
-											{indicators()[ind.key] && (
-												<svg
-													class="w-4 h-4 text-indigo-600"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke="currentColor"
-												>
-													<title>Selected</title>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M5 13l4 4L19 7"
-													/>
-												</svg>
-											)}
+											<div
+												class={`w-8 h-4 rounded-full transition-colors relative ${indicators()[ind.key] ? "bg-indigo-500" : "bg-slate-200"}`}
+											>
+												<div
+													class={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${indicators()[ind.key] ? "left-4.5" : "left-0.5"}`}
+												/>
+											</div>
 										</button>
 									)}
 								</For>
@@ -1349,30 +1442,30 @@ export default function BTCChart() {
 			{/* Chart Area */}
 			<div class="relative h-[400px] md:h-[500px] w-full group cursor-crosshair touch-action-none bg-white">
 				<Show when={isLoading()}>
-					<div class="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-all">
-						<div class="flex flex-col items-center gap-3">
-							<div class="w-10 h-10 border-[3px] border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div>
-							<span class="text-xs font-semibold text-slate-500 uppercase tracking-widest animate-pulse">
-								Loading Data...
+					<div class="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-xs transition-all">
+						<div class="flex flex-col items-center gap-4">
+							<div class="w-12 h-12 border-4 border-slate-100 border-t-indigo-500 rounded-full animate-spin shadow-xs"></div>
+							<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">
+								Syncing Market...
 							</span>
 						</div>
 					</div>
 				</Show>
 				<Show when={error()}>
 					<div class="absolute inset-0 z-20 flex items-center justify-center bg-white/90">
-						<div class="flex items-center gap-2 text-rose-600 font-medium bg-rose-50 px-4 py-3 rounded-xl border border-rose-100 shadow-sm">
+						<div class="flex items-center gap-3 text-rose-600 font-bold bg-rose-50 px-5 py-4 rounded-2xl border border-rose-100 shadow-sm">
 							<svg
 								class="w-5 h-5"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke="currentColor"
 							>
-								<title>Warning</title>
+								<title>Error</title>
 								<path
 									stroke-linecap="round"
 									stroke-linejoin="round"
 									stroke-width="2"
-									d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+									d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 								/>
 							</svg>
 							{error()}
@@ -1387,78 +1480,85 @@ export default function BTCChart() {
 					{(t) => (
 						<>
 							<div
-								class="hidden md:block absolute w-3 h-3 bg-indigo-600 rounded-full border-2 border-white shadow-sm pointer-events-none z-10 transition-transform duration-75 ease-out"
+								class="hidden md:block absolute w-3.5 h-3.5 bg-indigo-600 rounded-full border-3 border-white shadow-md pointer-events-none z-10 transition-transform duration-75 ease-out"
 								style={{
 									top: "0",
 									left: "0",
-									transform: `translate(${t().x - 6}px, ${t().snapY - 6}px)`,
+									transform: `translate(${t().x - 7}px, ${t().snapY - 7}px)`,
 								}}
 							/>
 							<div
-								class={`absolute z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-2xl p-4 text-xs transition-all duration-100 ease-out flex flex-col gap-3 ${isMobile() ? "top-2 left-2 right-2 rounded-xl border-t-4 border-t-indigo-500" : "rounded-xl w-72"}`}
+								class={`absolute z-30 pointer-events-none bg-white/98 backdrop-blur-md border border-slate-200/60 shadow-xl p-4 transition-all duration-100 ease-out flex flex-col gap-4 ${isMobile() ? "top-4 left-4 right-4 rounded-2xl border-l-4 border-l-indigo-500" : "rounded-2xl w-72"}`}
 								style={
 									!isMobile()
 										? {
 												top: "0",
 												left: "0",
-												transform: `translate(${Math.min(Math.max(10, t().x + 20), (chartContainer?.clientWidth ?? 800) - 300)}px, ${Math.min(Math.max(10, t().y - 50), 350)}px)`,
+												transform: `translate(${Math.min(Math.max(16, t().x + 24), (chartContainer?.clientWidth ?? 800) - 312)}px, ${Math.min(Math.max(16, t().y - 64), (chartContainer?.clientHeight ?? 500) - 300)}px)`,
 											}
 										: {}
 								}
 							>
-								<div class="flex justify-between items-center pb-2 border-b border-slate-100">
-									<div class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+								<div class="flex justify-between items-center pb-3 border-b border-slate-50">
+									<div class="text-slate-400 font-black uppercase tracking-widest text-[10px]">
 										{t().time}
+									</div>
+									<div
+										class={`px-2 py-0.5 rounded text-[10px] font-black ${t().changeColor === "text-emerald-600" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}
+									>
+										{t().changeColor === "text-emerald-600" ? "BULL" : "BEAR"}
 									</div>
 								</div>
 
 								<Show when={t().tdLabel}>
 									<div
-										class={`px-3 py-2 rounded-md border flex flex-col ${t().tdColor}`}
+										class={`px-3 py-2.5 rounded-xl border flex flex-col gap-1 ${t().tdColor?.replace("bg-", "bg-opacity-50 bg-") || ""}`}
 									>
-										<span class="font-bold text-[11px] flex items-center gap-1.5">
-											<span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
+										<span class="font-black text-[11px] flex items-center gap-2">
+											<span class="w-2 h-2 rounded-full bg-current animate-pulse shadow-xs"></span>
 											{t().tdLabel}
 										</span>
-										<span class="text-[10px] opacity-90 leading-tight mt-0.5">
+										<span class="text-[10px] font-semibold opacity-80 leading-relaxed">
 											{t().tdDescription}
 										</span>
 									</div>
 								</Show>
 
-								<div class="grid grid-cols-2 gap-x-4 gap-y-2">
-									<div class="flex justify-between items-baseline">
-										<span class="text-[10px] text-slate-400 font-bold uppercase">
+								<div class="grid grid-cols-2 gap-x-6 gap-y-3">
+									<div class="flex flex-col gap-0.5">
+										<span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
 											Open
 										</span>
-										<span class="font-mono text-slate-700 font-medium">
+										<span class="font-mono text-slate-700 font-bold text-sm">
 											{t().currencySymbol}
 											{t().open}
 										</span>
 									</div>
-									<div class="flex justify-between items-baseline">
-										<span class="text-[10px] text-slate-400 font-bold uppercase">
+									<div class="flex flex-col gap-0.5">
+										<span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
 											High
 										</span>
-										<span class="font-mono text-slate-700 font-medium">
+										<span class="font-mono text-slate-700 font-bold text-sm">
 											{t().currencySymbol}
 											{t().high}
 										</span>
 									</div>
-									<div class="flex justify-between items-baseline">
-										<span class="text-[10px] text-slate-400 font-bold uppercase">
+									<div class="flex flex-col gap-0.5">
+										<span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
 											Low
 										</span>
-										<span class="font-mono text-slate-700 font-medium">
+										<span class="font-mono text-slate-700 font-bold text-sm">
 											{t().currencySymbol}
 											{t().low}
 										</span>
 									</div>
-									<div class="flex justify-between items-baseline">
-										<span class="text-[10px] text-slate-400 font-bold uppercase">
+									<div class="flex flex-col gap-0.5">
+										<span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
 											Close
 										</span>
-										<span class={`font-mono font-bold ${t().changeColor}`}>
+										<span
+											class={`font-mono font-black text-sm ${t().changeColor}`}
+										>
 											{t().currencySymbol}
 											{t().close}
 										</span>
@@ -1472,63 +1572,79 @@ export default function BTCChart() {
 									t().ema200 ||
 									t().rsi ||
 									t().fng) && (
-									<div class="border-t border-slate-100 pt-3 space-y-1.5">
-										<Show when={t().ema20}>
-											<div class="flex justify-between items-center text-[#2196F3]">
-												<span class="font-bold">EMA 20</span>{" "}
-												<span class="font-mono">{t().ema20}</span>
-											</div>
-										</Show>
-										<Show when={t().ema60}>
-											<div class="flex justify-between items-center text-[#4CAF50]">
-												<span class="font-bold">EMA 60</span>{" "}
-												<span class="font-mono">{t().ema60}</span>
-											</div>
-										</Show>
-										<Show when={t().ema120}>
-											<div class="flex justify-between items-center text-[#FF9800]">
-												<span class="font-bold">EMA 120</span>{" "}
-												<span class="font-mono">{t().ema120}</span>
-											</div>
-										</Show>
-										<Show when={t().ema150}>
-											<div class="flex justify-between items-center text-[#F44336]">
-												<span class="font-bold">EMA 150</span>{" "}
-												<span class="font-mono">{t().ema150}</span>
-											</div>
-										</Show>
-										<Show when={t().ema200}>
-											<div class="flex justify-between items-center text-[#9C27B0]">
-												<span class="font-bold">EMA 200</span>{" "}
-												<span class="font-mono">{t().ema200}</span>
-											</div>
-										</Show>
-										<Show
-											when={
-												(t().ema20 ||
-													t().ema60 ||
-													t().ema120 ||
-													t().ema150 ||
-													t().ema200) &&
-												(t().rsi || t().fng)
-											}
-										>
-											<div class="h-px bg-slate-100 my-1"></div>
-										</Show>
-										<Show when={t().rsi}>
-											<div class="flex justify-between items-center text-[#7E57C2]">
-												<span class="font-bold">RSI (14)</span>{" "}
-												<span class="font-mono">{t().rsi}</span>
-											</div>
-										</Show>
-										<Show when={t().fng}>
-											<div
-												class={`flex justify-between items-center ${t().fngClass}`}
-											>
-												<span class="font-bold">Fear & Greed</span>{" "}
-												<span class="font-mono">{t().fng}</span>
-											</div>
-										</Show>
+									<div class="border-t border-slate-50 pt-3 space-y-2">
+										<div class="flex flex-wrap gap-x-4 gap-y-2">
+											<Show when={t().ema20}>
+												<div class="flex items-center gap-1.5 text-[10px]">
+													<span class="w-2 h-2 rounded-full bg-[#2196F3] shadow-xs"></span>
+													<span class="text-slate-400 font-bold">E20</span>
+													<span class="font-mono text-slate-700 font-bold">
+														{t().ema20}
+													</span>
+												</div>
+											</Show>
+											<Show when={t().ema60}>
+												<div class="flex items-center gap-1.5 text-[10px]">
+													<span class="w-2 h-2 rounded-full bg-[#10B981] shadow-xs"></span>
+													<span class="text-slate-400 font-bold">E60</span>
+													<span class="font-mono text-slate-700 font-bold">
+														{t().ema60}
+													</span>
+												</div>
+											</Show>
+											<Show when={t().ema120}>
+												<div class="flex items-center gap-1.5 text-[10px]">
+													<span class="w-2 h-2 rounded-full bg-[#F59E0B] shadow-xs"></span>
+													<span class="text-slate-400 font-bold">E120</span>
+													<span class="font-mono text-slate-700 font-bold">
+														{t().ema120}
+													</span>
+												</div>
+											</Show>
+											<Show when={t().ema150}>
+												<div class="flex items-center gap-1.5 text-[10px]">
+													<span class="w-2 h-2 rounded-full bg-[#EC4899] shadow-xs"></span>
+													<span class="text-slate-400 font-bold">E150</span>
+													<span class="font-mono text-slate-700 font-bold">
+														{t().ema150}
+													</span>
+												</div>
+											</Show>
+											<Show when={t().ema200}>
+												<div class="flex items-center gap-1.5 text-[10px]">
+													<span class="w-2 h-2 rounded-full bg-[#9C27B0] shadow-xs"></span>
+													<span class="text-slate-400 font-bold">E200</span>
+													<span class="font-mono text-slate-700 font-bold">
+														{t().ema200}
+													</span>
+												</div>
+											</Show>
+											<Show when={t().rsi}>
+												<div class="flex flex-col gap-1">
+													<div class="flex items-center gap-1.5 text-[10px]">
+														<span class="w-2 h-2 rounded-full bg-[#7E57C2] shadow-xs"></span>
+														<span class="text-slate-400 font-bold">RSI</span>
+														<span class="font-mono text-slate-700 font-bold">
+															{t().rsi}
+														</span>
+													</div>
+													<Show when={t().rsiDivergence}>
+														<div class="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 italic">
+															{t().rsiDivergence}
+														</div>
+													</Show>
+												</div>
+											</Show>
+											<Show when={t().fng}>
+												<div class="flex items-center gap-1.5 text-[10px]">
+													<span class="w-2 h-2 rounded-full bg-[#F7931A] shadow-xs"></span>
+													<span class="text-slate-400 font-bold">F&G</span>
+													<span class={`font-black ${t().fngClass}`}>
+														{t().fng}
+													</span>
+												</div>
+											</Show>
+										</div>
 									</div>
 								)}
 							</div>

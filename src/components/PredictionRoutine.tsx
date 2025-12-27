@@ -212,172 +212,117 @@ export default function PredictionRoutine() {
 	};
 
 	return (
-		<div class="">
-			<div class="bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl shadow-xl shadow-slate-900/10 overflow-hidden border border-slate-700/50">
-				{/* Header */}
-				<div class="px-6 py-4 border-b border-slate-700/60 flex items-center justify-between">
-					<div class="flex items-center gap-3">
-						<span class="text-2xl">🎯</span>
-						<div>
-							<h2 class="text-lg font-bold text-white tracking-tight">
-								Daily Prediction Routine
-							</h2>
-							<p class="text-xs text-slate-400">
-								Check these 3 things every morning
-							</p>
-						</div>
+		<div class="space-y-6">
+			{/* Header */}
+			<div class="flex items-center justify-between pb-4 border-b border-slate-100">
+				<div class="flex items-center gap-3">
+					<div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white text-xl">
+						🎯
 					</div>
-					<Show when={!loading()}>
-						<div
-							class={`px-4 py-1.5 rounded-full ${overallSignal().bgColor} text-white font-bold text-sm shadow-lg`}
-						>
-							{overallSignal().signal}
-						</div>
-					</Show>
-				</div>
-
-				{/* Checks Grid */}
-				<div class="p-6">
-					<Show
-						when={!loading()}
-						fallback={
-							<div class="space-y-4">
-								<div class="h-12 bg-slate-700 animate-pulse rounded-lg" />
-								<div class="h-12 bg-slate-700 animate-pulse rounded-lg" />
-								<div class="h-12 bg-slate-700 animate-pulse rounded-lg" />
-							</div>
-						}
-					>
-						<div class="space-y-4">
-							{/* Fuel Check */}
-							<div
-								class={`flex items-center gap-4 p-4 rounded-xl border ${
-									fuelCheck().status === "bullish"
-										? "bg-emerald-500/10 border-emerald-500/30"
-										: fuelCheck().status === "bearish"
-											? "bg-rose-500/10 border-rose-500/30"
-											: "bg-slate-700/50 border-slate-600"
-								}`}
-							>
-								<span class="text-2xl">{fuelCheck().icon}</span>
-								<div class="flex-1">
-									<div class="flex items-center gap-2 mb-0.5">
-										<span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
-											⛽ Fuel
-										</span>
-									</div>
-									<div class="text-sm font-semibold text-white">
-										{fuelCheck().label}
-									</div>
-								</div>
-								<div
-									class={`px-3 py-1 rounded-full text-xs font-bold ${
-										fuelCheck().status === "bullish"
-											? "bg-emerald-500/20 text-emerald-400"
-											: fuelCheck().status === "bearish"
-												? "bg-rose-500/20 text-rose-400"
-												: "bg-slate-600 text-slate-300"
-									}`}
-								>
-									{fuelCheck().status === "bullish"
-										? "Bullish"
-										: fuelCheck().status === "bearish"
-											? "Bearish"
-											: "Neutral"}
-								</div>
-							</div>
-
-							{/* Whales Check */}
-							<div
-								class={`flex items-center gap-4 p-4 rounded-xl border ${
-									whaleCheck().status === "bullish"
-										? "bg-emerald-500/10 border-emerald-500/30"
-										: whaleCheck().status === "bearish"
-											? "bg-rose-500/10 border-rose-500/30"
-											: "bg-slate-700/50 border-slate-600"
-								}`}
-							>
-								<span class="text-2xl">{whaleCheck().icon}</span>
-								<div class="flex-1">
-									<div class="flex items-center gap-2 mb-0.5">
-										<span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
-											🐋 Whales
-										</span>
-									</div>
-									<div class="text-sm font-semibold text-white">
-										{whaleCheck().label}
-									</div>
-								</div>
-								<div
-									class={`px-3 py-1 rounded-full text-xs font-bold ${
-										whaleCheck().status === "bullish"
-											? "bg-emerald-500/20 text-emerald-400"
-											: whaleCheck().status === "bearish"
-												? "bg-rose-500/20 text-rose-400"
-												: "bg-slate-600 text-slate-300"
-									}`}
-								>
-									{whaleCheck().status === "bullish"
-										? "Bullish"
-										: whaleCheck().status === "bearish"
-											? "Bearish"
-											: "Neutral"}
-								</div>
-							</div>
-
-							{/* Temperature Check */}
-							<div
-								class={`flex items-center gap-4 p-4 rounded-xl border ${
-									tempCheck().status === "bullish"
-										? "bg-emerald-500/10 border-emerald-500/30"
-										: tempCheck().status === "caution"
-											? "bg-amber-500/10 border-amber-500/30"
-											: "bg-slate-700/50 border-slate-600"
-								}`}
-							>
-								<span class="text-2xl">{tempCheck().icon}</span>
-								<div class="flex-1">
-									<div class="flex items-center gap-2 mb-0.5">
-										<span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
-											🌡️ Temperature
-										</span>
-									</div>
-									<div class="text-sm font-semibold text-white">
-										{tempCheck().label}
-									</div>
-								</div>
-								<div
-									class={`px-3 py-1 rounded-full text-xs font-bold ${
-										tempCheck().status === "bullish"
-											? "bg-emerald-500/20 text-emerald-400"
-											: tempCheck().status === "caution"
-												? "bg-amber-500/20 text-amber-400"
-												: "bg-slate-600 text-slate-300"
-									}`}
-								>
-									{tempCheck().status === "bullish"
-										? "Healthy"
-										: tempCheck().status === "caution"
-											? "Caution"
-											: "Neutral"}
-								</div>
-							</div>
-						</div>
-					</Show>
-				</div>
-
-				{/* Golden Rule Footer */}
-				<div class="px-6 py-4 bg-slate-800/50 border-t border-slate-700">
-					<div class="flex items-start gap-3">
-						<span class="text-lg">💡</span>
-						<p class="text-xs text-slate-400 leading-relaxed">
-							<strong class="text-slate-300">The Golden Rule:</strong> Liquidity
-							(M2) sets the Direction. On-Chain sets the Floor. Derivatives set
-							the Noise. Master these three, and you'll know the trend before
-							the K-line paints it.
+					<div>
+						<h2 class="text-xl font-black text-slate-900 tracking-tight leading-none mb-1">
+							Daily Pulse
+						</h2>
+						<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+							Aggregate Market Bias
 						</p>
 					</div>
 				</div>
+				<Show when={!loading()}>
+					<div
+						class={`px-4 py-1.5 rounded-full ${overallSignal().bgColor} text-white font-black text-[10px] uppercase tracking-widest shadow-sm`}
+					>
+						{overallSignal().signal}
+					</div>
+				</Show>
+			</div>
+
+			{/* Checks List */}
+			<div class="space-y-4">
+				<Show
+					when={!loading()}
+					fallback={
+						<div class="space-y-4">
+							<div class="h-12 bg-slate-50 animate-pulse rounded-xl" />
+							<div class="h-12 bg-slate-50 animate-pulse rounded-xl" />
+						</div>
+					}
+				>
+					{/* Fuel Check */}
+					<div class="flex items-center gap-4 p-4 rounded-xl bg-slate-50/50 border border-slate-100">
+						<span class="text-2xl">{fuelCheck().icon}</span>
+						<div class="flex-1">
+							<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+								Liquidity Fuel
+							</p>
+							<p class="text-xs font-bold text-slate-800">
+								{fuelCheck().label}
+							</p>
+						</div>
+						<span
+							class={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-white border border-slate-100 ${
+								fuelCheck().status === "bullish"
+									? "text-emerald-600"
+									: "text-slate-400"
+							}`}
+						>
+							{fuelCheck().status}
+						</span>
+					</div>
+
+					{/* Whale Check */}
+					<div class="flex items-center gap-4 p-4 rounded-xl bg-slate-50/50 border border-slate-100">
+						<span class="text-2xl">{whaleCheck().icon}</span>
+						<div class="flex-1">
+							<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+								Whale Activity
+							</p>
+							<p class="text-xs font-bold text-slate-800">
+								{whaleCheck().label}
+							</p>
+						</div>
+						<span
+							class={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-white border border-slate-100 ${
+								whaleCheck().status === "bullish"
+									? "text-emerald-600"
+									: "text-slate-400"
+							}`}
+						>
+							{whaleCheck().status}
+						</span>
+					</div>
+
+					{/* Temperature Check */}
+					<div class="flex items-center gap-4 p-4 rounded-xl bg-slate-50/50 border border-slate-100">
+						<span class="text-2xl">{tempCheck().icon}</span>
+						<div class="flex-1">
+							<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+								Market Heat
+							</p>
+							<p class="text-xs font-bold text-slate-800">
+								{tempCheck().label}
+							</p>
+						</div>
+						<span
+							class={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-white border border-slate-100 ${
+								tempCheck().status === "bullish"
+									? "text-emerald-600"
+									: "text-amber-600"
+							}`}
+						>
+							{tempCheck().status}
+						</span>
+					</div>
+				</Show>
+			</div>
+
+			{/* Analysis Logic Footer */}
+			<div class="p-4 bg-slate-900 rounded-xl text-slate-400 text-[10px] leading-relaxed">
+				<p class="font-bold text-slate-200 uppercase tracking-widest mb-1">
+					The Logic:
+				</p>
+				Macro Trends set direction. On-chain sets the floor. Derivatives set the
+				noise. Align daily with the highest probability trend.
 			</div>
 		</div>
 	);

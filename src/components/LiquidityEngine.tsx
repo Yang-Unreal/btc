@@ -1,10 +1,10 @@
 import {
 	type Component,
 	createSignal,
+	type JSX,
 	onCleanup,
 	onMount,
 	Show,
-	type JSX,
 } from "solid-js";
 
 // --- Icons ---
@@ -149,6 +149,7 @@ interface IndicatorCardProps {
 	correlation: "Inverse" | "Direct";
 	loading: boolean;
 	trend?: "up" | "down" | null;
+	isDemo?: boolean;
 }
 
 // --- Signal Colors ---
@@ -287,6 +288,11 @@ const IndicatorCard: Component<IndicatorCardProps> = (props) => {
 								<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded-sm">
 									{props.correlation}
 								</span>
+								<Show when={props.isDemo}>
+									<span class="text-[9px] font-black text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
+										Demo
+									</span>
+								</Show>
 								<span class="text-[10px] text-slate-400">to BTC</span>
 							</div>
 						</div>
@@ -311,9 +317,14 @@ const IndicatorCard: Component<IndicatorCardProps> = (props) => {
 							}`}
 						>
 							{typeof props.value === "number"
-								? props.value.toFixed(2)
+								? props.value >= 1000
+									? (props.value / 1000).toFixed(2) + "T"
+									: props.value.toFixed(2)
 								: props.value}
-							{props.suffix}
+							{props.suffix &&
+							(typeof props.value !== "number" || props.value < 1000)
+								? props.suffix
+								: ""}
 						</span>
 						<Show when={props.trend}>
 							{props.trend === "up" ? (
@@ -412,12 +423,12 @@ export default function LiquidityEngine() {
 			</div>
 
 			{/* Cards Grid */}
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 				<IndicatorCard
 					title="U.S. Dollar Index (DXY)"
 					value={data().dxy}
-					icon={<IconGlobe class="w-5 h-5 text-white" />}
-					iconBg="bg-indigo-500"
+					icon={<IconGlobe class="w-5 h-5 text-indigo-600" />}
+					iconBg="bg-slate-50"
 					signal={dxyAnalysis().signal}
 					signalLabel={dxyAnalysis().label}
 					description={dxyAnalysis().desc}
@@ -429,8 +440,8 @@ export default function LiquidityEngine() {
 					title="10Y Treasury Yield"
 					value={data().us10y}
 					suffix="%"
-					icon={<IconChartBar class="w-5 h-5 text-white" />}
-					iconBg="bg-cyan-500"
+					icon={<IconChartBar class="w-5 h-5 text-indigo-600" />}
+					iconBg="bg-slate-50"
 					signal={yieldsAnalysis().signal}
 					signalLabel={yieldsAnalysis().label}
 					description={yieldsAnalysis().desc}
@@ -442,8 +453,8 @@ export default function LiquidityEngine() {
 					title="Real Interest Rate"
 					value={data().realRate}
 					suffix="%"
-					icon={<IconDollar class="w-5 h-5 text-white" />}
-					iconBg="bg-amber-500"
+					icon={<IconDollar class="w-5 h-5 text-indigo-600" />}
+					iconBg="bg-slate-50"
 					signal={realRateAnalysis().signal}
 					signalLabel={realRateAnalysis().label}
 					description={realRateAnalysis().desc}
@@ -455,8 +466,8 @@ export default function LiquidityEngine() {
 					title="Implied Fed Rate"
 					value={data().impliedFedRate}
 					suffix="%"
-					icon={<IconBank class="w-5 h-5 text-white" />}
-					iconBg="bg-violet-500"
+					icon={<IconBank class="w-5 h-5 text-indigo-600" />}
+					iconBg="bg-slate-50"
 					signal={fedAnalysis().signal}
 					signalLabel={fedAnalysis().label}
 					description={fedAnalysis().desc}
@@ -466,14 +477,14 @@ export default function LiquidityEngine() {
 			</div>
 
 			{/* Golden Rule Note */}
-			<div class="mt-5 p-4 bg-linear-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-xl">
+			<div class="mt-5 p-4 bg-slate-50 border border-slate-100 rounded-xl">
 				<div class="flex items-start gap-3">
-					<span class="text-2xl">💡</span>
+					<span class="text-xl">💡</span>
 					<div>
-						<p class="text-sm font-semibold text-amber-800 mb-1">
+						<p class="text-sm font-semibold text-slate-800 mb-1">
 							The Golden Rule
 						</p>
-						<p class="text-sm text-amber-700">
+						<p class="text-sm text-slate-600">
 							<strong>DXY falling + Yields falling = Bullish for BTC.</strong>{" "}
 							Global Liquidity sets the direction of the cycle.
 						</p>
