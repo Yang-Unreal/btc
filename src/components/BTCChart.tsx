@@ -3,6 +3,8 @@ import {
 	CandlestickSeries,
 	createChart,
 	createSeriesMarkers,
+	type HistogramData,
+	HistogramSeries,
 	type IChartApi,
 	type ISeriesApi,
 	type LineData,
@@ -20,8 +22,8 @@ import {
 	Show,
 } from "solid-js";
 
-type BTCData = CandlestickData<UTCTimestamp>;
-type RawKlineData = [number, number, number, number, number];
+type BTCData = CandlestickData<UTCTimestamp> & { volume?: number };
+type RawKlineData = [number, number, number, number, number, number];
 type Interval =
 	| "1m"
 	| "3m"
@@ -89,6 +91,7 @@ interface TooltipData {
 	high: string;
 	low: string;
 	close: string;
+	volume: string;
 	changeColor: string;
 	ema20?: string;
 	ema60?: string;
@@ -193,6 +196,7 @@ export default function BTCChart() {
 	let chartContainer: HTMLDivElement | undefined;
 	let chart: IChartApi | undefined;
 	let candlestickSeries: ISeriesApi<"Candlestick"> | undefined;
+	let volumeSeries: ISeriesApi<"Histogram"> | undefined;
 	let markersPrimitive: ISeriesMarkersPrimitive | undefined;
 
 	// Indicator Series Refs
@@ -595,6 +599,7 @@ export default function BTCChart() {
 				high: item[2],
 				low: item[3],
 				close: item[4],
+				volume: item[5],
 			}));
 
 			return mappedData.sort(
@@ -695,6 +700,7 @@ export default function BTCChart() {
 						high: parseFloat(kline[3]),
 						low: parseFloat(kline[4]),
 						close: parseFloat(kline[5]),
+						volume: parseFloat(kline[7]),
 					};
 
 					const price = newData.close;
@@ -704,6 +710,16 @@ export default function BTCChart() {
 					setCurrentPrice(price);
 
 					candlestickSeries.update(newData);
+					if (volumeSeries && newData.volume) {
+						volumeSeries.update({
+							time: newData.time,
+							value: newData.volume,
+							color:
+								newData.close >= newData.open
+									? "rgba(16, 185, 129, 0.5)"
+									: "rgba(239, 68, 68, 0.5)",
+						});
+					}
 					setBtcData((prev) => {
 						const last = prev[prev.length - 1];
 						if (last && last.time === newData.time) {
@@ -784,6 +800,7 @@ export default function BTCChart() {
 
 		setBtcData([]);
 		candlestickSeries.setData([]);
+		if (volumeSeries) volumeSeries.setData([]);
 		setTdMap(new Map());
 
 		// Reset indicators
@@ -814,6 +831,17 @@ export default function BTCChart() {
 
 		if (history.length > 0) {
 			candlestickSeries.setData(history);
+			if (volumeSeries) {
+				const volumeData = history.map((d) => ({
+					time: d.time,
+					value: d.volume || 0,
+					color:
+						d.close >= d.open
+							? "rgba(16, 185, 129, 0.5)"
+							: "rgba(239, 68, 68, 0.5)",
+				}));
+				volumeSeries.setData(volumeData);
+			}
 			setBtcData(history);
 			setCurrentPrice(history[history.length - 1].close);
 			chart?.timeScale().fitContent();
@@ -852,7 +880,7 @@ export default function BTCChart() {
 			},
 			rightPriceScale: {
 				borderColor: "#e2e8f0",
-				scaleMargins: { top: 0.1, bottom: 0.1 },
+				scaleMargins: { top: 0.1, bottom: 0.2 }, // Added bottom margin for volume
 			},
 			handleScale: { axisPressedMouseMove: true },
 			handleScroll: { vertTouchDrag: false },
@@ -864,6 +892,27 @@ export default function BTCChart() {
 			borderVisible: false,
 			wickUpColor: "#10b981",
 			wickDownColor: "#ef4444",
+			priceFormat: {
+				type: "price",
+				precision: 5,
+				minMove: 0.00001,
+			},
+		});
+
+		volumeSeries = chart.addSeries(HistogramSeries, {
+			color: "#26a69a",
+			priceFormat: {
+				type: "volume",
+			},
+			priceScaleId: "volume",
+		});
+
+		chart.priceScale("volume").applyOptions({
+			scaleMargins: {
+				top: 0.8,
+				bottom: 0,
+			},
+			visible: false,
 		});
 
 		markersPrimitive = createSeriesMarkers(
@@ -960,6 +1009,13 @@ export default function BTCChart() {
 				return undefined;
 			};
 
+			const volumeVal = volumeSeries
+				? (param.seriesData.get(volumeSeries) as HistogramData)
+				: undefined;
+			const formattedVolume = volumeVal
+				? (Math.round(volumeVal.value * 100) / 100).toLocaleString()
+				: "—";
+
 			const rsiVal = rsiSeries
 				? (param.seriesData.get(rsiSeries) as LineData)
 				: undefined;
@@ -1001,6 +1057,7 @@ export default function BTCChart() {
 				high: safeFixed(candle.high),
 				low: safeFixed(candle.low),
 				close: safeFixed(candle.close),
+				volume: formattedVolume,
 				changeColor:
 					candle.close >= candle.open ? "text-emerald-600" : "text-rose-500",
 				ema20: indicators().ema20 ? getVal(ema20Series) : undefined,
@@ -1561,6 +1618,14 @@ export default function BTCChart() {
 										>
 											{t().currencySymbol}
 											{t().close}
+										</span>
+									</div>
+									<div class="flex flex-col gap-0.5 col-span-2 mt-1 pt-1 border-t border-slate-50">
+										<span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+											Volume
+										</span>
+										<span class="font-mono text-slate-700 font-bold text-xs">
+											{t().volume}
 										</span>
 									</div>
 								</div>

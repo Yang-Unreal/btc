@@ -2,7 +2,16 @@ import { json } from "@solidjs/router";
 import type { APIEvent } from "@solidjs/start/server";
 
 // Kraken OHLC item: [time, open, high, low, close, vwap, volume, count]
-type KrakenOHLCItem = [number, string, string, string, string, string, string, number];
+type KrakenOHLCItem = [
+	number,
+	string,
+	string,
+	string,
+	string,
+	string,
+	string,
+	number,
+];
 
 // Mapping from Standard Symbol to Kraken API Asset Code
 const ASSET_MAP: Record<string, string> = {
@@ -33,10 +42,10 @@ const ASSET_MAP: Record<string, string> = {
 const mapIntervalToKraken = (interval: string): number => {
 	// Kraken API interval values are in minutes
 	const map: Record<string, number> = {
-		"1m": 1, 
+		"1m": 1,
 		"3m": 5,
-		"5m": 5, 
-		"15m": 15, 
+		"5m": 5,
+		"15m": 15,
 		"30m": 30,
 		"1h": 60,
 		"2h": 120, // Kraken supports 240, not 120 directly usually, but let's map best effort
@@ -53,13 +62,13 @@ const mapIntervalToKraken = (interval: string): number => {
 export async function GET({ request }: APIEvent) {
 	const url = new URL(request.url);
 	const interval = url.searchParams.get("interval") || "1h";
-	const currency = url.searchParams.get("currency") || "USD"; 
+	const currency = url.searchParams.get("currency") || "USD";
 	const symbol = url.searchParams.get("symbol") || "BTC"; // Default to BTC
 	const toParam = url.searchParams.get("to");
 
 	// Resolve Kraken Pair
 	// e.g. BTC + USD -> XBTUSD (Kraken will normalize to XXBTZUSD in response)
-	const krakenAsset = ASSET_MAP[symbol] || symbol; 
+	const krakenAsset = ASSET_MAP[symbol] || symbol;
 	// Handle special currency cases if needed, but USD/EUR/GBP are standard
 	const pairParam = `${krakenAsset}${currency}`;
 
@@ -72,26 +81,26 @@ export async function GET({ request }: APIEvent) {
 	if (toParam) {
 		const toTimeMs = parseInt(toParam);
 		const toTimeSec = Math.floor(toTimeMs / 1000);
-		const lookbackWindow = 720 * (krakenInterval * 60); 
+		const lookbackWindow = 720 * (krakenInterval * 60);
 		const sinceTimestamp = toTimeSec - lookbackWindow;
 		krakenUrl += `&since=${sinceTimestamp}`;
 	}
 
 	try {
 		const response = await fetch(krakenUrl);
-		
+
 		if (!response.ok) {
 			return json([]);
 		}
 
 		const data = await response.json();
-		
+
 		if (data.error && data.error.length > 0) {
 			console.warn("Kraken API Warning:", data.error);
 			return json([]);
 		}
 
-		// Kraken returns data keyed by the Pair Name. 
+		// Kraken returns data keyed by the Pair Name.
 		// Since the Pair Name changes based on request (XXBTZUSD, XXBTZEUR), access dynamically.
 		const resultKeys = Object.keys(data.result || {});
 		const result = resultKeys.length > 0 ? data.result[resultKeys[0]] : [];
@@ -107,6 +116,7 @@ export async function GET({ request }: APIEvent) {
 			parseFloat(item[2]),
 			parseFloat(item[3]),
 			parseFloat(item[4]),
+			parseFloat(item[6]), // Volume
 		]);
 
 		if (toParam) {
