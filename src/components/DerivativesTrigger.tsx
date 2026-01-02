@@ -155,14 +155,14 @@ export default function DerivativesTrigger() {
 		<div class="my-8 md:my-12">
 			{/* Section Header - Institutional Style */}
 			<div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6 border-l-4 border-rose-500 pl-6 py-2">
-				<div>
-					<div class="flex items-center gap-3 mb-3">
+				<div class="min-w-0">
+					<div class="flex items-center gap-3 mb-3 flex-wrap">
 						<span class="badge-directive text-rose-500 border-rose-500/30 bg-rose-500/5">
 							Tactical_Level_04
 						</span>
 						<span class="label-mono opacity-40">Derivatives_Command</span>
 					</div>
-					<h2 class="text-4xl font-black text-white tracking-tighter uppercase">
+					<h2 class="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-tight">
 						Derivatives & Sentiment
 					</h2>
 					<p class="text-slate-500 mt-3 max-w-2xl text-[13px] font-bold leading-relaxed uppercase tracking-tight">
@@ -222,8 +222,8 @@ export default function DerivativesTrigger() {
 								const currentData = data() as DerivativesData;
 								return (
 									<div class="space-y-6">
-										<div class="text-center py-4 bg-white/2 border border-white/5">
-											<div class="data-value text-4xl text-white">
+										<div class="text-center py-4 bg-white/2 border border-white/5 truncate px-2">
+											<div class="data-value text-3xl sm:text-4xl text-white">
 												${currentData.openInterest.total.toFixed(2)}B
 											</div>
 											<div class="flex items-center justify-center gap-2 mt-2">
@@ -307,9 +307,9 @@ export default function DerivativesTrigger() {
 								const currentData = data() as DerivativesData;
 								return (
 									<div class="space-y-6">
-										<div class="text-center py-4 bg-white/2 border border-white/5">
+										<div class="text-center py-4 bg-white/2 border border-white/5 px-2 truncate">
 											<div
-												class={`data-value text-4xl ${fundingColor().replace("text-", "text-").replace("amber", "amber-400").replace("rose", "rose-400").replace("emerald", "emerald-400")}`}
+												class={`data-value text-3xl sm:text-4xl ${fundingColor().replace("text-", "text-").replace("amber", "amber-400").replace("rose", "rose-400").replace("emerald", "emerald-400")}`}
 											>
 												{currentData.fundingRate.avg >= 0 ? "+" : ""}
 												{(currentData.fundingRate.avg * 100).toFixed(4)}%
@@ -417,8 +417,8 @@ export default function DerivativesTrigger() {
 								const currentData = data() as DerivativesData;
 								return (
 									<div class="space-y-6">
-										<div class="text-center py-4 bg-white/2 border border-white/5">
-											<div class="data-value text-4xl text-white">
+										<div class="text-center py-4 bg-white/2 border border-white/5 truncate px-2">
+											<div class="data-value text-3xl sm:text-4xl text-white">
 												{currentData.longShortRatio.ratio.toFixed(3)}
 											</div>
 											<div class="text-[9px] font-bold text-slate-600 uppercase mt-2">
@@ -479,28 +479,6 @@ export default function DerivativesTrigger() {
 								);
 							})()}
 						</Show>
-					</div>
-				</div>
-			</div>
-
-			{/* Operational Directive Note */}
-			<div class="mt-8 p-4 bg-indigo-500/5 border border-indigo-500/10">
-				<div class="flex items-start gap-4">
-					<span class="text-2xl filter saturate-0 grayscale opacity-50">
-						🎯
-					</span>
-					<div>
-						<p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">
-							Protocol_Directive
-						</p>
-						<p class="text-[11px] text-slate-400 font-bold uppercase tracking-tight leading-normal">
-							Extreme positive funding (&gt;0.05%) implies{" "}
-							<span class="text-rose-400 underline decoration-rose-400/30 underline-offset-4">
-								systemic overheating
-							</span>{" "}
-							and elevated crash risk. Monitoring for negative funding as a
-							precursor to explosive upside movements.
-						</p>
 					</div>
 				</div>
 			</div>

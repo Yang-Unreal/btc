@@ -1,15 +1,9 @@
 import { Title } from "@solidjs/meta";
 import type { Component } from "solid-js";
-import AssetTable from "~/components/AssetTable";
 import BTCChart from "~/components/BTCChart";
 import DerivativesTrigger from "~/components/DerivativesTrigger";
-import ExecutionChecklist from "~/components/ExecutionChecklist";
-import FuelGauge from "~/components/FuelGauge";
 import LiquidityEngine from "~/components/LiquidityEngine";
-import MentalModels from "~/components/MentalModels";
 import OnChainTruth from "~/components/OnChainTruth";
-import PredictionRoutine from "~/components/PredictionRoutine";
-import SurvivalProtocols from "~/components/SurvivalProtocols";
 
 // --- Custom Icons ---
 
@@ -102,8 +96,8 @@ export default function Home() {
 					<div class="space-y-24">
 						{/* LEVEL 1: MACRO FILTER */}
 						<section class="space-y-6">
-							<div class="flex items-center gap-4">
-								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em] whitespace-nowrap">
+							<div class="flex items-center gap-4 flex-wrap">
+								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
 									01_MACRO_ENGINE
 								</span>
 								<div class="h-px grow bg-white/5"></div>
@@ -115,8 +109,8 @@ export default function Home() {
 
 						{/* LEVEL 2: TECHNICAL OVERSIGHT */}
 						<section class="space-y-6">
-							<div class="flex items-center gap-4">
-								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em] whitespace-nowrap">
+							<div class="flex items-center gap-4 flex-wrap">
+								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
 									02_TECHNICAL_OPS
 								</span>
 								<div class="h-px grow bg-white/5"></div>
@@ -126,53 +120,17 @@ export default function Home() {
 							</div>
 						</section>
 
-						{/* LEVEL 3: STRATEGIC ALLOCATION */}
-						<section class="space-y-6">
-							<div class="flex items-center gap-4">
-								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em] whitespace-nowrap">
-									03_ALLOCATION_STRATEGY
-								</span>
-								<div class="h-px grow bg-white/5"></div>
-							</div>
-
-							<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-								<div class="lg:col-span-8 space-y-6">
-									<div class="directive-card p-6">
-										<SurvivalProtocols />
-									</div>
-									<div class="directive-card p-6">
-										<MentalModels />
-									</div>
-								</div>
-								<div class="lg:col-span-4 h-full">
-									<div class="directive-card p-6 h-full">
-										<ExecutionChecklist />
-									</div>
-								</div>
-							</div>
-						</section>
-
 						{/* MARKET UNDERPINNINGS */}
 						<section class="space-y-12">
-							<div class="flex items-center gap-4">
-								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em] whitespace-nowrap">
+							<div class="flex items-center gap-4 flex-wrap">
+								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
 									TACTICAL_DATA_SUITE
 								</span>
 								<div class="h-px grow bg-white/5"></div>
 							</div>
 
 							<div class="space-y-12">
-								{/* Grid for simpler components */}
-								<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-									<div class="directive-card p-8">
-										<FuelGauge />
-									</div>
-									<div class="directive-card p-8">
-										<PredictionRoutine />
-									</div>
-								</div>
-
-								{/* Full width for complex components */}
+								{/* Full width for complex components death */}
 								<div class="directive-card p-8">
 									<DerivativesTrigger />
 								</div>
@@ -181,14 +139,6 @@ export default function Home() {
 									<OnChainTruth />
 								</div>
 							</div>
-						</section>
-
-						{/* Asset Table Section */}
-						<section class="directive-card p-8">
-							<h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-10 text-center">
-								— CROSS_ASSET_BENCHMARKING —
-							</h3>
-							<AssetTable />
 						</section>
 					</div>
 				</div>

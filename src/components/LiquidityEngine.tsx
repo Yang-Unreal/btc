@@ -273,37 +273,39 @@ const IndicatorCard: Component<IndicatorCardProps> = (props) => {
 				</div>
 
 				{/* Value */}
-				<div class="flex items-baseline gap-3 mb-6">
+				<div class="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 mb-6 overflow-hidden">
 					<Show
 						when={!props.loading && props.value !== null}
 						fallback={<div class="h-10 w-32 bg-white/5 animate-pulse" />}
 					>
-						<span
-							class={`data-value text-4xl ${
-								props.trend === "up"
-									? "text-emerald-400"
-									: props.trend === "down"
-										? "text-rose-400"
-										: "text-white"
-							}`}
-						>
-							{typeof props.value === "number"
-								? props.value >= 1000
-									? (props.value / 1000).toFixed(2) + "T"
-									: props.value.toFixed(2)
-								: props.value}
-							{props.suffix &&
-							(typeof props.value !== "number" || props.value < 1000)
-								? props.suffix
-								: ""}
-						</span>
-						<Show when={props.trend}>
-							{props.trend === "up" ? (
-								<IconTrendUp class="w-5 h-5 text-emerald-400" />
-							) : (
-								<IconTrendDown class="w-5 h-5 text-rose-400" />
-							)}
-						</Show>
+						<div class="flex items-center gap-2 truncate">
+							<span
+								class={`data-value text-3xl sm:text-4xl ${
+									props.trend === "up"
+										? "text-emerald-400"
+										: props.trend === "down"
+											? "text-rose-400"
+											: "text-white"
+								}`}
+							>
+								{typeof props.value === "number"
+									? props.value >= 1000
+										? (props.value / 1000).toFixed(2) + "T"
+										: props.value.toFixed(2)
+									: props.value}
+								{props.suffix &&
+								(typeof props.value !== "number" || props.value < 1000)
+									? props.suffix
+									: ""}
+							</span>
+							<Show when={props.trend}>
+								{props.trend === "up" ? (
+									<IconTrendUp class="w-5 h-5 text-emerald-400 shrink-0" />
+								) : (
+									<IconTrendDown class="w-5 h-5 text-rose-400 shrink-0" />
+								)}
+							</Show>
+						</div>
 					</Show>
 				</div>
 			</div>
@@ -384,14 +386,14 @@ export default function LiquidityEngine() {
 		<div class="my-8 md:my-12">
 			{/* Section Header - Institutional Style */}
 			<div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6 border-l-4 border-indigo-500 pl-6 py-2">
-				<div>
-					<div class="flex items-center gap-3 mb-3">
+				<div class="min-w-0">
+					<div class="flex items-center gap-3 mb-3 flex-wrap">
 						<span class="badge-directive text-indigo-400 border-indigo-500/30 bg-indigo-500/5">
 							Tactical_Level_01
 						</span>
 						<span class="label-mono opacity-40">Global_Liquidity_Engine</span>
 					</div>
-					<h2 class="text-4xl font-black text-white tracking-tighter uppercase">
+					<h2 class="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-tight">
 						Macro Liquidity
 					</h2>
 					<p class="text-slate-500 mt-3 max-w-2xl text-[13px] font-bold leading-relaxed uppercase tracking-tight">

@@ -159,14 +159,14 @@ export default function OnChainTruth() {
 		<div class="my-8 md:my-12">
 			{/* Section Header - Institutional Style */}
 			<div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6 border-l-4 border-cyan-500 pl-6 py-2">
-				<div>
-					<div class="flex items-center gap-3 mb-3">
+				<div class="min-w-0">
+					<div class="flex items-center gap-3 mb-3 flex-wrap">
 						<span class="badge-directive text-cyan-500 border-cyan-500/30 bg-cyan-500/5">
 							Tactical_Level_03
 						</span>
 						<span class="label-mono opacity-40">OnChain_Truth_Feed</span>
 					</div>
-					<h2 class="text-4xl font-black text-white tracking-tighter uppercase">
+					<h2 class="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-tight">
 						On-Chain Valuation
 					</h2>
 					<p class="text-slate-500 mt-3 max-w-2xl text-[13px] font-bold leading-relaxed uppercase tracking-tight">
@@ -224,7 +224,7 @@ export default function OnChainTruth() {
 							{/* Z-Score Value */}
 							<div class="text-center py-4 bg-white/2 border border-white/5 mb-6">
 								<div
-									class={`data-value text-5xl ${
+									class={`data-value text-4xl sm:text-5xl ${
 										data()?.mvrv?.signalColor === "rose"
 											? "text-rose-400"
 											: data()?.mvrv?.signalColor === "emerald"
@@ -255,7 +255,7 @@ export default function OnChainTruth() {
 							</div>
 
 							{/* Zones Legend */}
-							<div class="grid grid-cols-3 gap-1">
+							<div class="grid grid-cols-1 sm:grid-cols-3 gap-1">
 								<div class="p-3 bg-emerald-500/5 border border-emerald-500/10">
 									<div class="text-[10px] font-mono font-black text-emerald-400">
 										&lt; 0.0
@@ -272,7 +272,7 @@ export default function OnChainTruth() {
 										Normal
 									</div>
 								</div>
-								<div class="p-3 bg-rose-500/5 border border-rose-500/10 text-right">
+								<div class="p-3 bg-rose-500/5 border border-rose-500/10 text-right sm:text-right">
 									<div class="text-[10px] font-mono font-black text-rose-400">
 										&gt; 3.0
 									</div>
@@ -340,7 +340,7 @@ export default function OnChainTruth() {
 						>
 							{/* Balance Value */}
 							<div class="text-center py-4 bg-white/2 border border-white/5 mb-6">
-								<div class="data-value text-4xl text-white">
+								<div class="data-value text-3xl sm:text-4xl text-white truncate px-2">
 									{formatNumber(data()?.exchangeBalance?.btc ?? 0)}
 								</div>
 								<div class="text-[9px] font-bold text-slate-600 uppercase mt-2">
@@ -349,13 +349,13 @@ export default function OnChainTruth() {
 							</div>
 
 							{/* Changes */}
-							<div class="grid grid-cols-2 gap-1 mb-6">
+							<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 mb-6">
 								<div class="p-4 bg-white/2 border border-white/5 text-center">
 									<div class="text-[9px] font-bold text-slate-600 uppercase mb-2 tracking-widest">
 										7D_Delta
 									</div>
 									<div
-										class={`data-value text-xl ${(data()?.exchangeBalance?.change7d ?? 0) <= 0 ? "text-emerald-400" : "text-rose-400"}`}
+										class={`data-value text-lg sm:text-xl ${(data()?.exchangeBalance?.change7d ?? 0) <= 0 ? "text-emerald-400" : "text-rose-400"}`}
 									>
 										{(data()?.exchangeBalance?.change7d ?? 0) > 0 ? "+" : ""}
 										{data()?.exchangeBalance?.change7d?.toFixed(2) ?? "0.00"}%
@@ -366,7 +366,7 @@ export default function OnChainTruth() {
 										30D_Delta
 									</div>
 									<div
-										class={`data-value text-xl ${(data()?.exchangeBalance?.change30d ?? 0) <= 0 ? "text-emerald-400" : "text-rose-400"}`}
+										class={`data-value text-lg sm:text-xl ${(data()?.exchangeBalance?.change30d ?? 0) <= 0 ? "text-emerald-400" : "text-rose-400"}`}
 									>
 										{(data()?.exchangeBalance?.change30d ?? 0) > 0 ? "+" : ""}
 										{data()?.exchangeBalance?.change30d?.toFixed(2) ?? "0.00"}%
@@ -454,7 +454,7 @@ export default function OnChainTruth() {
 						>
 							{/* Current Price */}
 							<div class="text-center py-4 bg-white/2 border border-white/5 mb-6">
-								<div class="data-value text-4xl text-white">
+								<div class="data-value text-3xl sm:text-4xl text-white truncate px-2">
 									{formatCurrency(data()?.realizedPrice?.current ?? 0)}
 								</div>
 								<div class="text-[9px] font-bold text-slate-600 uppercase mt-2">
@@ -532,28 +532,6 @@ export default function OnChainTruth() {
 							</div>
 						</div>
 					</Show>
-				</div>
-			</div>
-
-			{/* Operational Insight Note */}
-			<div class="mt-8 p-4 bg-cyan-500/5 border border-cyan-500/10">
-				<div class="flex items-start gap-4">
-					<span class="text-2xl filter saturate-0 grayscale opacity-50">
-						🔍
-					</span>
-					<div>
-						<p class="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-1">
-							Protocol_Intelligence
-						</p>
-						<p class="text-[11px] text-slate-400 font-bold uppercase tracking-tight leading-normal">
-							In verified bull regimes, market price maintains{" "}
-							<span class="text-white">
-								support above the STH Realized Price
-							</span>
-							. A breach of this level signifies a regime shift or systematic
-							failure of conviction.
-						</p>
-					</div>
 				</div>
 			</div>
 
