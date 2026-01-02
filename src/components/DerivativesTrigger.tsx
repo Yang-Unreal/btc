@@ -152,138 +152,127 @@ export default function DerivativesTrigger() {
 	};
 
 	return (
-		<div class="">
-			{/* Section Header */}
-			<div class="flex flex-col md:flex-row md:items-start justify-between mb-8 gap-4 border-b border-slate-100 pb-6">
+		<div class="my-8 md:my-12">
+			{/* Section Header - Institutional Style */}
+			<div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6 border-l-4 border-rose-500 pl-6 py-2">
 				<div>
-					<div class="flex items-center gap-2 mb-2">
-						<span class="text-[10px] font-black text-rose-500 uppercase tracking-widest bg-rose-50 px-2 py-0.5 rounded">
-							Tactical Level 04
+					<div class="flex items-center gap-3 mb-3">
+						<span class="badge-directive text-rose-500 border-rose-500/30 bg-rose-500/5">
+							Tactical_Level_04
 						</span>
-						<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-							Derivatives Trigger
-						</span>
+						<span class="label-mono opacity-40">Derivatives_Command</span>
 					</div>
-					<h2 class="text-3xl font-black text-slate-900 tracking-tight">
+					<h2 class="text-4xl font-black text-white tracking-tighter uppercase">
 						Derivatives & Sentiment
 					</h2>
-					<p class="text-slate-500 mt-2 max-w-2xl text-sm font-medium">
-						Institutional-grade signal filtering. Identifying{" "}
-						<span class="text-slate-800 font-bold">Organic Movement</span> vs.{" "}
-						<span class="text-slate-800 font-bold">
-							Volatility-Driven Volatility
-						</span>
-						.
+					<p class="text-slate-500 mt-3 max-w-2xl text-[13px] font-bold leading-relaxed uppercase tracking-tight">
+						Filtering <span class="text-white">Organic Movement</span> against{" "}
+						<span class="text-white">Volatility-Driven Liquidation</span>.
+						Systematic sentiment assessment via leverage metrics.
 					</p>
 				</div>
-				<div class="flex items-center gap-2">
+				<div class="flex items-center gap-3">
 					<Show when={data()?.isDemo}>
-						<span class="px-2 py-1 text-[10px] font-bold uppercase bg-amber-100 text-amber-600 rounded">
-							Demo Data
+						<span class="badge-directive text-amber-500 border-amber-500/30 bg-amber-500/5">
+							Demo_Protocol
 						</span>
 					</Show>
 					<button
 						type="button"
 						onClick={fetchData}
-						class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 shadow-sm rounded-lg text-sm font-medium text-slate-600 hover:text-rose-600 hover:border-rose-100 transition-all active:scale-95"
+						class="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all active:scale-95"
 					>
-						<IconRefresh class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`} />
-						{loading() ? "Updating..." : "Refresh"}
+						<IconRefresh
+							class={`w-3.5 h-3.5 ${loading() ? "animate-spin" : ""}`}
+						/>
+						{loading() ? "Syncing..." : "Sync_Data"}
 					</button>
 				</div>
 			</div>
 
-			{/* Cards Grid */}
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+			{/* Cards Grid - Directive Style */}
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-1">
 				{/* Open Interest Card */}
-				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden transition-all hover:bg-white hover:shadow-sm">
+				<div class="directive-card border-r-0 md:border-r">
 					<div class="p-6">
-						<div class="flex items-center gap-3 mb-5">
-							<div class="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
-								<IconChart class="w-5 h-5 text-indigo-600" />
-							</div>
-							<div>
-								<h3 class="font-bold text-slate-800">Open Interest</h3>
-								<p class="text-xs text-slate-400">
-									Total Futures Contracts Value
-								</p>
+						<div class="flex items-center justify-between mb-8">
+							<div class="flex items-center gap-3">
+								<div class="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
+									<IconChart class="w-5 h-5 text-indigo-400" />
+								</div>
+								<div>
+									<h3 class="font-black text-white uppercase tracking-tighter text-sm">
+										Open Interest
+									</h3>
+									<p class="label-mono opacity-50">Total_Contracts</p>
+								</div>
 							</div>
 						</div>
 
 						<Show
 							when={!loading() && data()}
 							fallback={
-								<div class="space-y-3">
-									<div class="h-12 bg-slate-100 animate-pulse rounded" />
-									<div class="h-16 bg-slate-100 animate-pulse rounded" />
+								<div class="space-y-4">
+									<div class="h-10 bg-white/5 animate-pulse" />
+									<div class="h-12 bg-white/5 animate-pulse" />
 								</div>
 							}
 						>
 							{(() => {
 								const currentData = data() as DerivativesData;
 								return (
-									<>
-										{/* OI Value */}
-										<div class="text-center mb-4">
-											<div class="text-4xl font-extrabold text-slate-900 tracking-tight">
-												${currentData.openInterest.total.toFixed(1)}B
+									<div class="space-y-6">
+										<div class="text-center py-4 bg-white/2 border border-white/5">
+											<div class="data-value text-4xl text-white">
+												${currentData.openInterest.total.toFixed(2)}B
 											</div>
 											<div class="flex items-center justify-center gap-2 mt-2">
 												<span
-													class={`text-sm font-bold ${currentData.openInterest.change24h >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+													class={`font-mono text-[11px] font-black ${currentData.openInterest.change24h >= 0 ? "text-emerald-400" : "text-rose-400"}`}
 												>
-													{currentData.openInterest.change24h >= 0 ? "+" : ""}
-													{currentData.openInterest.change24h.toFixed(1)}%
+													{currentData.openInterest.change24h >= 0 ? "▲" : "▼"}
+													{Math.abs(currentData.openInterest.change24h).toFixed(
+														2,
+													)}
+													%
 												</span>
-												<span class="text-xs text-slate-400">(24h)</span>
-											</div>
-										</div>
-
-										{/* OI Info */}
-										<div class="p-3 bg-slate-50 rounded-lg mb-3">
-											<div class="flex justify-between items-center">
-												<span class="text-xs text-slate-500">
-													BTC Equivalent
-												</span>
-												<span class="text-sm font-bold text-slate-700">
-													{(
-														currentData.openInterest.btcEquivalent / 1000
-													).toFixed(1)}
-													K BTC
+												<span class="text-[9px] font-bold text-slate-600 uppercase">
+													24H_Delta
 												</span>
 											</div>
 										</div>
 
-										{/* Price-OI Divergence */}
+										<div class="flex justify-between items-center px-4 py-3 border border-white/5">
+											<span class="label-mono opacity-50">BTC_Equivalent</span>
+											<span class="data-value text-sm">
+												{(
+													currentData.openInterest.btcEquivalent / 1000
+												).toFixed(1)}
+												K BTC
+											</span>
+										</div>
+
 										<div
-											class={`p-3 rounded-lg ${
+											class={`p-4 border ${
 												currentData.priceOiDivergence === "Healthy"
-													? "bg-emerald-50 border border-emerald-50"
+													? "border-emerald-500/20 bg-emerald-500/5 text-emerald-400"
 													: currentData.priceOiDivergence === "Weak Rally"
-														? "bg-amber-50 border border-amber-50"
-														: "bg-slate-50 border border-slate-50"
+														? "border-amber-500/20 bg-amber-500/5 text-amber-400"
+														: "border-white/5 bg-white/2 text-slate-400"
 											}`}
 										>
-											<div class="text-xs font-bold mb-1 text-slate-600">
-												Price-OI Analysis
+											<div class="text-[9px] font-black uppercase tracking-[0.2em] mb-2 opacity-60">
+												Analysis_Report
 											</div>
-											<div
-												class={`text-sm font-medium ${
-													currentData.priceOiDivergence === "Healthy"
-														? "text-emerald-600"
-														: currentData.priceOiDivergence === "Weak Rally"
-															? "text-amber-600"
-															: "text-slate-600"
-												}`}
-											>
+											<p class="text-[11px] font-bold uppercase tracking-tight leading-tight">
 												{currentData.priceOiDivergence === "Healthy"
-													? "✓ Price Up + OI Up = Real buying"
+													? "Primary Move: Organic wealth inflow detected"
 													: currentData.priceOiDivergence === "Weak Rally"
-														? "⚠ Price Up + OI Down = Short covering"
-														: "→ Monitoring trend..."}
-											</div>
+														? "Warning: Leverage-driven move / Short covering"
+														: "Monitoring: Insufficient signal density"}
+											</p>
 										</div>
-									</>
+									</div>
 								);
 							})()}
 						</Show>
@@ -291,214 +280,202 @@ export default function DerivativesTrigger() {
 				</div>
 
 				{/* Funding Rates Card */}
-				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden transition-all hover:bg-white hover:shadow-sm">
+				<div class="directive-card border-r-0 md:border-r">
 					<div class="p-6">
-						<div class="flex items-center gap-3 mb-5">
-							<div class="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
-								<IconFire class="w-5 h-5 text-indigo-600" />
+						<div class="flex items-center gap-3 mb-8">
+							<div class="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
+								<IconFire class="w-5 h-5 text-rose-500" />
 							</div>
 							<div>
-								<h3 class="font-bold text-slate-800">Funding Rate</h3>
-								<p class="text-xs text-slate-400">Cost to hold positions</p>
+								<h3 class="font-black text-white uppercase tracking-tighter text-sm">
+									Funding Rates
+								</h3>
+								<p class="label-mono opacity-50">Liquidity_Rent</p>
 							</div>
 						</div>
 
 						<Show
 							when={!loading() && data()}
 							fallback={
-								<div class="space-y-3">
-									<div class="h-12 bg-slate-100 animate-pulse rounded" />
-									<div class="h-6 bg-slate-100 animate-pulse rounded-full" />
+								<div class="space-y-4">
+									<div class="h-10 bg-white/5 animate-pulse" />
+									<div class="h-20 bg-white/5 animate-pulse" />
 								</div>
 							}
 						>
 							{(() => {
 								const currentData = data() as DerivativesData;
 								return (
-									<>
-										{/* Funding Value */}
-										<div class="text-center mb-4">
+									<div class="space-y-6">
+										<div class="text-center py-4 bg-white/2 border border-white/5">
 											<div
-												class={`text-4xl font-black tracking-tight ${fundingColor()}`}
+												class={`data-value text-4xl ${fundingColor().replace("text-", "text-").replace("amber", "amber-400").replace("rose", "rose-400").replace("emerald", "emerald-400")}`}
 											>
 												{currentData.fundingRate.avg >= 0 ? "+" : ""}
-												{(currentData.fundingRate.avg * 100).toFixed(3)}%
+												{(currentData.fundingRate.avg * 100).toFixed(4)}%
 											</div>
-											<div class="text-sm text-slate-400 mt-1">
-												Average (8h)
+											<div class="text-[9px] font-bold text-slate-600 uppercase mt-2">
+												AVG_8H_GLOBAL
 											</div>
 										</div>
 
-										{/* Heat Gauge */}
-										<div class="relative mb-4">
-											<div class="h-4 rounded-full bg-slate-100 overflow-hidden shadow-inner">
-												{/* Pointer */}
+										<div class="relative py-2">
+											<div class="h-1.5 bg-white/5 border border-white/10 overflow-hidden">
 												<div
-													class="absolute top-0 w-1.5 h-4 bg-slate-900 rounded shadow-md transition-all duration-500"
+													class="absolute top-1/2 -translate-y-1/2 w-1 h-4 bg-white shadow-[0_0_10px_#fff] transition-all duration-700"
 													style={{ left: `${fundingGaugePosition()}%` }}
 												/>
 											</div>
-											<div class="flex justify-between mt-1 text-[10px] text-slate-400 font-medium">
-												<span>Short Squeeze</span>
+											<div class="flex justify-between mt-3 text-[8px] font-black text-slate-500 uppercase tracking-widest">
+												<span class="text-emerald-500">Short_Squeeze</span>
 												<span>Neutral</span>
-												<span>Long Squeeze</span>
+												<span class="text-rose-500">Long_Squeeze</span>
 											</div>
 										</div>
 
-										{/* Exchange Breakdown */}
-										<div class="space-y-2">
-											<div class="flex justify-between items-center text-sm">
-												<span class="text-slate-500">Binance</span>
-												<span
-													class={`font-mono font-medium ${currentData.fundingRate.binance > 0.03 ? "text-rose-500" : currentData.fundingRate.binance < 0 ? "text-emerald-500" : "text-slate-700"}`}
-												>
-													{(currentData.fundingRate.binance * 100).toFixed(3)}%
+										<div class="space-y-2 pt-2">
+											<div class="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500">
+												<span>Binance</span>
+												<span class="font-mono text-white">
+													{(currentData.fundingRate.binance * 100).toFixed(4)}%
 												</span>
 											</div>
-											<div class="flex justify-between items-center text-sm">
-												<span class="text-slate-500">Bybit</span>
-												<span
-													class={`font-mono font-medium ${currentData.fundingRate.bybit > 0.03 ? "text-rose-500" : currentData.fundingRate.bybit < 0 ? "text-emerald-500" : "text-slate-700"}`}
-												>
-													{(currentData.fundingRate.bybit * 100).toFixed(3)}%
+											<div class="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500">
+												<span>Bybit</span>
+												<span class="font-mono text-white">
+													{(currentData.fundingRate.bybit * 100).toFixed(4)}%
 												</span>
 											</div>
-											<div class="flex justify-between items-center text-sm">
-												<span class="text-slate-500">OKX</span>
-												<span
-													class={`font-mono font-medium ${currentData.fundingRate.okx > 0.03 ? "text-rose-500" : currentData.fundingRate.okx < 0 ? "text-emerald-500" : "text-slate-700"}`}
-												>
-													{(currentData.fundingRate.okx * 100).toFixed(3)}%
+											<div class="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500">
+												<span>OKX</span>
+												<span class="font-mono text-white">
+													{(currentData.fundingRate.okx * 100).toFixed(4)}%
 												</span>
 											</div>
 										</div>
-									</>
+									</div>
 								);
 							})()}
 						</Show>
 					</div>
 
-					{/* Signal Footer */}
 					<Show when={data()}>
-						{(() => {
-							const currentData = data() as DerivativesData;
-							return (
-								<div
-									class={`p-4 border-t ${
-										currentData.signalColor === "rose"
-											? "bg-rose-50 border-rose-100"
-											: currentData.signalColor === "emerald"
-												? "bg-emerald-50 border-emerald-100"
-												: "bg-slate-50 border-slate-100"
+						<div
+							class={`px-6 py-4 border-t border-white/5 ${
+								(data() as DerivativesData).signalColor === "rose"
+									? "bg-rose-500/5"
+									: (data() as DerivativesData).signalColor === "emerald"
+										? "bg-emerald-500/5"
+										: "bg-white/2"
+							}`}
+						>
+							<div class="flex justify-between items-center">
+								<span class="label-mono uppercase opacity-50">
+									Protocol_Signal
+								</span>
+								<span
+									class={`text-[10px] font-black px-2 py-0.5 border uppercase ${
+										(data() as DerivativesData).signalColor === "rose"
+											? "border-rose-500/40 text-rose-400"
+											: (data() as DerivativesData).signalColor === "emerald"
+												? "border-emerald-500/40 text-emerald-400"
+												: "border-white/10 text-slate-400"
 									}`}
 								>
-									<div class="flex justify-between items-center">
-										<span class="text-sm font-medium text-slate-600">
-											Sentiment
-										</span>
-										<span
-											class={`text-xs font-bold px-2.5 py-1 rounded-full ${
-												currentData.signalColor === "rose"
-													? "bg-rose-100 text-rose-600 border border-rose-200"
-													: currentData.signalColor === "emerald"
-														? "bg-emerald-100 text-emerald-600 border border-emerald-200"
-														: "bg-slate-100 text-slate-600 border border-slate-200"
-											}`}
-										>
-											{currentData.signal}
-										</span>
-									</div>
-								</div>
-							);
-						})()}
+									{(data() as DerivativesData).signal}
+								</span>
+							</div>
+						</div>
 					</Show>
 				</div>
 
 				{/* Long/Short Ratio Card */}
-				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden transition-all hover:bg-white hover:shadow-sm">
+				<div class="directive-card">
 					<div class="p-6">
-						<div class="flex items-center gap-3 mb-5">
-							<div class="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
-								<IconScale class="w-5 h-5 text-indigo-600" />
+						<div class="flex items-center gap-3 mb-8">
+							<div class="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
+								<IconScale class="w-5 h-5 text-white" />
 							</div>
 							<div>
-								<h3 class="font-bold text-slate-800">Long/Short Ratio</h3>
-								<p class="text-xs text-slate-400">Trader positioning</p>
+								<h3 class="font-black text-white uppercase tracking-tighter text-sm">
+									Sentiment Ratio
+								</h3>
+								<p class="label-mono opacity-50">Positioning_Bias</p>
 							</div>
 						</div>
 
 						<Show
 							when={!loading() && data()}
 							fallback={
-								<div class="space-y-3">
-									<div class="h-12 bg-slate-100 animate-pulse rounded" />
-									<div class="h-20 bg-slate-100 animate-pulse rounded" />
+								<div class="space-y-4">
+									<div class="h-10 bg-white/5 animate-pulse" />
+									<div class="h-12 bg-white/5 animate-pulse" />
 								</div>
 							}
 						>
 							{(() => {
 								const currentData = data() as DerivativesData;
 								return (
-									<>
-										{/* Ratio Value */}
-										<div class="text-center mb-5">
-											<div class="text-4xl font-extrabold text-slate-900 tracking-tight">
-												{currentData.longShortRatio.ratio.toFixed(2)}
+									<div class="space-y-6">
+										<div class="text-center py-4 bg-white/2 border border-white/5">
+											<div class="data-value text-4xl text-white">
+												{currentData.longShortRatio.ratio.toFixed(3)}
 											</div>
-											<div class="text-sm text-slate-400 mt-1">
+											<div class="text-[9px] font-bold text-slate-600 uppercase mt-2">
 												{currentData.longShortRatio.ratio > 1.1
-													? "More Longs"
+													? "Long_Bias"
 													: currentData.longShortRatio.ratio < 0.9
-														? "More Shorts"
-														: "Balanced"}
+														? "Short_Bias"
+														: "Neutral_Equilibrium"}
 											</div>
 										</div>
 
-										{/* Visual Bar */}
-										<div class="mb-4">
-											<div class="flex h-6 rounded-full overflow-hidden shadow-inner">
+										<div class="space-y-2">
+											<div class="flex h-4 bg-white/5 border border-white/10 overflow-hidden">
 												<div
-													class="bg-emerald-500 flex items-center justify-end pr-2 transition-all"
+													class="bg-emerald-500/80 transition-all duration-500"
 													style={{
 														width: `${currentData.longShortRatio.longs}%`,
 													}}
-												>
-													<span class="text-[10px] font-bold text-white">
-														{currentData.longShortRatio.longs.toFixed(0)}%
-													</span>
-												</div>
+												/>
 												<div
-													class="bg-rose-500 flex items-center justify-start pl-2 transition-all"
+													class="bg-rose-500/80 transition-all duration-500"
 													style={{
 														width: `${currentData.longShortRatio.shorts}%`,
 													}}
-												>
-													<span class="text-[10px] font-bold text-white">
-														{currentData.longShortRatio.shorts.toFixed(0)}%
-													</span>
-												</div>
+												/>
 											</div>
-											<div class="flex justify-between mt-1 text-xs">
-												<span class="text-emerald-600 font-medium">Longs</span>
-												<span class="text-rose-600 font-medium">Shorts</span>
+											<div class="flex justify-between text-[8px] font-black uppercase tracking-widest">
+												<span class="text-emerald-500">
+													Longs {currentData.longShortRatio.longs.toFixed(1)}%
+												</span>
+												<span class="text-rose-500">
+													Shorts {currentData.longShortRatio.shorts.toFixed(1)}%
+												</span>
 											</div>
 										</div>
 
-										{/* Explanation */}
-										<p class="text-xs text-slate-500 leading-relaxed">
-											{currentData.longShortRatio.ratio > 1.2 ? (
-												<span class="text-amber-600 font-medium">
-													⚠️ Crowded long trade. Correction risk elevated.
-												</span>
-											) : currentData.longShortRatio.ratio < 0.85 ? (
-												<span class="text-emerald-600 font-medium">
-													💡 Shorts crowded. Short squeeze potential.
-												</span>
-											) : (
-												<span>Market positioning is balanced.</span>
-											)}
-										</p>
-									</>
+										<div class="bg-white/2 border border-white/5 p-4 mt-4">
+											<p class="text-[10px] font-bold leading-relaxed uppercase tracking-tight text-slate-400">
+												{currentData.longShortRatio.ratio > 1.2 ? (
+													<span class="text-amber-400">
+														Warning: Protocol indicates over-leveraged longs.
+														Mean reversion risk elevated.
+													</span>
+												) : currentData.longShortRatio.ratio < 0.85 ? (
+													<span class="text-emerald-400">
+														Insight: Extreme short sentiment detected. High
+														probability of squeeze fuel.
+													</span>
+												) : (
+													<span>
+														Standard Market Dynamics. No significant positioning
+														imbalance detected.
+													</span>
+												)}
+											</p>
+										</div>
+									</div>
 								);
 							})()}
 						</Show>
@@ -506,29 +483,45 @@ export default function DerivativesTrigger() {
 				</div>
 			</div>
 
-			{/* Warning Note */}
-			<div class="mt-5 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-				<div class="flex items-start gap-3">
-					<span class="text-xl">🎯</span>
+			{/* Operational Directive Note */}
+			<div class="mt-8 p-4 bg-indigo-500/5 border border-indigo-500/10">
+				<div class="flex items-start gap-4">
+					<span class="text-2xl filter saturate-0 grayscale opacity-50">
+						🎯
+					</span>
 					<div>
-						<p class="text-sm font-semibold text-slate-800 mb-1">
-							Check the Temperature
+						<p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">
+							Protocol_Directive
 						</p>
-						<p class="text-sm text-slate-600">
-							<strong>
-								High positive funding = Everyone is long → Crash risk.
-							</strong>{" "}
-							Negative funding = Everyone is short → Pump potential.
+						<p class="text-[11px] text-slate-400 font-bold uppercase tracking-tight leading-normal">
+							Extreme positive funding (&gt;0.05%) implies{" "}
+							<span class="text-rose-400 underline decoration-rose-400/30 underline-offset-4">
+								systemic overheating
+							</span>{" "}
+							and elevated crash risk. Monitoring for negative funding as a
+							precursor to explosive upside movements.
 						</p>
 					</div>
 				</div>
 			</div>
 
-			{/* Timestamp */}
-			<div class="mt-4 flex justify-end">
-				<span class="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
-					Updated:{" "}
-					{lastUpdated() ? lastUpdated()?.toLocaleTimeString() : "--:--"}
+			{/* Status Bar */}
+			<div class="mt-6 flex justify-between items-center">
+				<div class="flex items-center gap-2">
+					<div class="w-1.5 h-1.5 bg-emerald-500 animate-pulse rounded-full"></div>
+					<span class="label-mono text-[9px] opacity-40 uppercase">
+						Feed_Active
+					</span>
+				</div>
+				<span class="label-mono text-[9px] opacity-40 uppercase">
+					Last_Sync:{" "}
+					{lastUpdated()
+						? lastUpdated()?.toLocaleTimeString([], {
+								hour: "2-digit",
+								minute: "2-digit",
+								second: "2-digit",
+							})
+						: "UNKNOWN"}
 				</span>
 			</div>
 		</div>

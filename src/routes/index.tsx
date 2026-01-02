@@ -32,36 +32,34 @@ const IconTerminal: Component<{ class?: string }> = (props) => (
 
 export default function Home() {
 	return (
-		<div class="min-h-screen flex flex-col font-sans selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden bg-slate-50">
-			<Title>
-				Capital Allocation Directive | Institutional Bitcoin Strategy
-			</Title>
+		<div class="min-h-screen flex flex-col font-sans selection:bg-indigo-500/20 selection:text-indigo-400 overflow-x-hidden bg-[#0b0e14]">
+			<Title>Directive | Capital Allocation Framework</Title>
 
-			{/* Navigation Bar */}
-			<nav class="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
+			{/* Navigation Bar - Sharp and Dark */}
+			<nav class="sticky top-0 z-50 bg-[#0b0e14]/80 backdrop-blur-md border-b border-white/5">
 				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-					<div class="flex justify-between items-center h-16">
+					<div class="flex justify-between items-center h-14">
 						<div class="flex items-center gap-3">
-							<div class="w-10 h-10 bg-slate-900 rounded-xl shadow-lg flex items-center justify-center text-white">
-								<IconTerminal class="w-5 h-5" />
+							<div class="w-8 h-8 bg-white/5 border border-white/10 flex items-center justify-center text-white">
+								<IconTerminal class="w-4 h-4 text-indigo-400" />
 							</div>
 							<div class="flex flex-col">
-								<span class="font-black text-lg tracking-tighter text-slate-900 leading-none">
-									CAPITAL<span class="text-indigo-600">ALLOCATION</span>
+								<span class="font-black text-sm tracking-tighter text-white leading-none">
+									DIRECTIVE<span class="text-indigo-500">.CORE</span>
 								</span>
-								<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
-									Directive v2.0
+								<span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
+									Sovereign Mandate v3.1
 								</span>
 							</div>
 						</div>
 
 						<div class="flex gap-4 items-center">
-							<div class="hidden md:flex items-center px-3.5 py-1.5 bg-emerald-50/80 text-emerald-700 rounded-full border border-emerald-200/60 text-xs font-semibold uppercase tracking-wide gap-2 shadow-sm">
-								<span class="relative flex h-2 w-2">
+							<div class="hidden md:flex items-center px-3 py-1 bg-white/5 text-emerald-400 border border-white/10 text-[10px] font-bold uppercase tracking-widest gap-2">
+								<span class="relative flex h-1.5 w-1.5">
 									<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-									<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+									<span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
 								</span>
-								Live Market Data
+								Live Ops
 							</div>
 						</div>
 					</div>
@@ -69,90 +67,87 @@ export default function Home() {
 			</nav>
 
 			<main class="grow">
-				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
-					{/* Hero Section */}
-					<div class="text-center max-w-4xl mx-auto mb-16 relative">
-						<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[700px] h-[350px] bg-linear-to-r from-slate-200/20 via-indigo-50/10 to-slate-200/20 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
-
-						<h1 class="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight mb-6 leading-[1.1]">
-							Strategic <br class="hidden sm:block" />
-							<span class="text-transparent bg-clip-text bg-linear-to-r from-slate-900 to-slate-700">
-								Bitcoin Mandate.
-							</span>
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+					{/* Hero Section - Serious & Stripped back */}
+					<div class="max-w-4xl mb-20 relative">
+						<h1 class="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight mb-6 leading-none">
+							CAPITAL ALLOCATION <br class="hidden sm:block" />
+							<span class="text-indigo-500">DIRECTIVE.</span>
 						</h1>
 
-						<p class="text-base md:text-lg text-slate-500 font-medium leading-relaxed max-w-2xl mx-auto mb-8">
-							A top-down allocation framework for sovereign and institutional
-							capital. Filtering volatility via{" "}
-							<span class="text-slate-800 font-bold">Macro-Liquidity</span>,
-							<span class="text-slate-800 font-bold">Technical Precision</span>,
-							and
-							<span class="text-slate-800 font-bold">Survival Protocols</span>.
+						<p class="text-sm md:text-base text-slate-400 font-medium leading-relaxed max-w-xl mb-8">
+							Closed-loop framework for the management of institutional bitcoin
+							risk. Filtering noise via{" "}
+							<span class="text-white font-bold">Liquidity Physics</span> and{" "}
+							<span class="text-white font-bold">On-chain Verification</span>.
 						</p>
 
-						<div class="flex flex-wrap justify-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
-							<span class="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-slate-200">
-								<span class="w-2 h-2 rounded-full bg-slate-900"></span>
+						<div class="flex flex-wrap gap-2">
+							<span class="badge-directive text-slate-400 border-white/10">
+								<span class="w-1.5 h-1.5 bg-slate-700 mr-2"></span>
 								Macro Filter
 							</span>
-							<span class="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-slate-200">
-								<span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-								Technical Oversight
+							<span class="badge-directive text-indigo-400 border-indigo-500/20">
+								<span class="w-1.5 h-1.5 bg-indigo-500 mr-2"></span>
+								Technical Alpha
 							</span>
-							<span class="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-slate-200">
-								<span class="w-2 h-2 rounded-full bg-rose-500"></span>
-								Strategic Allocation
+							<span class="badge-directive text-rose-400 border-rose-500/20">
+								<span class="w-1.5 h-1.5 bg-rose-500 mr-2"></span>
+								Risk Mitigation
 							</span>
 						</div>
 					</div>
 
-					{/* Dashboard Sections with clean visual separation */}
-					<div class="space-y-20">
+					{/* Dashboard Sections - Strict Grid */}
+					<div class="space-y-24">
 						{/* LEVEL 1: MACRO FILTER */}
-						<section class="space-y-8">
+						<section class="space-y-6">
 							<div class="flex items-center gap-4">
-								<div class="h-px grow bg-slate-200"></div>
-								<span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
-									Logic Level 01: Macro Filter
+								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em] whitespace-nowrap">
+									01_MACRO_ENGINE
 								</span>
-								<div class="h-px grow bg-slate-200"></div>
+								<div class="h-px grow bg-white/5"></div>
 							</div>
-							<div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+							<div class="directive-card p-6 md:p-8">
 								<LiquidityEngine />
 							</div>
 						</section>
 
 						{/* LEVEL 2: TECHNICAL OVERSIGHT */}
-						<section class="space-y-8">
+						<section class="space-y-6">
 							<div class="flex items-center gap-4">
-								<div class="h-px grow bg-slate-200"></div>
-								<span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
-									Logic Level 02: Technical Oversight
+								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em] whitespace-nowrap">
+									02_TECHNICAL_OPS
 								</span>
-								<div class="h-px grow bg-slate-200"></div>
+								<div class="h-px grow bg-white/5"></div>
 							</div>
-							<div class="relative z-10 transition-all hover:scale-[1.005]">
+							<div class="directive-card overflow-hidden">
 								<BTCChart />
 							</div>
 						</section>
 
 						{/* LEVEL 3: STRATEGIC ALLOCATION */}
-						<section class="space-y-8">
+						<section class="space-y-6">
 							<div class="flex items-center gap-4">
-								<div class="h-px grow bg-slate-200"></div>
-								<span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
-									Logic Level 03: Strategic Allocation
+								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em] whitespace-nowrap">
+									03_ALLOCATION_STRATEGY
 								</span>
-								<div class="h-px grow bg-slate-200"></div>
+								<div class="h-px grow bg-white/5"></div>
 							</div>
 
-							<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-								<div class="lg:col-span-8 space-y-8">
-									<SurvivalProtocols />
-									<MentalModels />
+							<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+								<div class="lg:col-span-8 space-y-6">
+									<div class="directive-card p-6">
+										<SurvivalProtocols />
+									</div>
+									<div class="directive-card p-6">
+										<MentalModels />
+									</div>
 								</div>
-								<div class="lg:col-span-4">
-									<ExecutionChecklist />
+								<div class="lg:col-span-4 h-full">
+									<div class="directive-card p-6 h-full">
+										<ExecutionChecklist />
+									</div>
 								</div>
 							</div>
 						</section>
@@ -160,39 +155,38 @@ export default function Home() {
 						{/* MARKET UNDERPINNINGS */}
 						<section class="space-y-12">
 							<div class="flex items-center gap-4">
-								<div class="h-px grow bg-slate-200"></div>
-								<span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
-									Tactical Underpinnings
+								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em] whitespace-nowrap">
+									TACTICAL_DATA_SUITE
 								</span>
-								<div class="h-px grow bg-slate-200"></div>
+								<div class="h-px grow bg-white/5"></div>
 							</div>
 
-							<div class="space-y-16">
+							<div class="space-y-12">
 								{/* Grid for simpler components */}
-								<div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-									<div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm transition-all hover:shadow-md">
+								<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+									<div class="directive-card p-8">
 										<FuelGauge />
 									</div>
-									<div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm transition-all hover:shadow-md">
+									<div class="directive-card p-8">
 										<PredictionRoutine />
 									</div>
 								</div>
 
 								{/* Full width for complex components */}
-								<div class="bg-white rounded-3xl p-10 border border-slate-200 shadow-sm transition-all hover:shadow-md">
+								<div class="directive-card p-8">
 									<DerivativesTrigger />
 								</div>
 
-								<div class="bg-white rounded-3xl p-10 border border-slate-200 shadow-sm transition-all hover:shadow-md">
+								<div class="directive-card p-8">
 									<OnChainTruth />
 								</div>
 							</div>
 						</section>
 
 						{/* Asset Table Section */}
-						<section class="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm text-center">
-							<h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-8">
-								Ecosystem Benchmarking
+						<section class="directive-card p-8">
+							<h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-10 text-center">
+								— CROSS_ASSET_BENCHMARKING —
 							</h3>
 							<AssetTable />
 						</section>
@@ -200,25 +194,25 @@ export default function Home() {
 				</div>
 			</main>
 
-			<footer class="border-t border-slate-200/60 bg-white/60 backdrop-blur-sm">
-				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
-					<div class="flex flex-col md:flex-row justify-between items-center gap-5">
-						<div class="flex items-center gap-2.5">
-							<div class="w-7 h-7 bg-slate-900 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm">
-								C
+			<footer class="border-t border-white/5 bg-[#0b0e14]">
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+					<div class="flex flex-col md:flex-row justify-between items-center gap-6">
+						<div class="flex items-center gap-3">
+							<div class="w-6 h-6 bg-white/5 border border-white/10 flex items-center justify-center text-white text-[10px] font-bold">
+								D
 							</div>
-							<span class="text-slate-600 font-bold tracking-tight">
-								Capital Allocation Directive
+							<span class="text-slate-400 text-xs font-bold tracking-widest uppercase">
+								Directive Control Center
 							</span>
 						</div>
 
-						<p class="text-slate-400 text-sm text-center md:text-right max-w-md leading-relaxed">
-							Market data by Public APIs. Institutional framework v2.0.
-							Educational purposes only.
+						<p class="text-slate-600 text-[10px] font-bold uppercase tracking-widest text-center md:text-right max-w-sm leading-relaxed">
+							Unclassified Framework. Distribution restricted to authorized
+							entities.
 						</p>
 					</div>
-					<div class="mt-6 pt-6 border-t border-slate-100/80 text-center text-xs text-slate-300">
-						&copy; {new Date().getFullYear()} Capital Allocation Directive.
+					<div class="mt-8 pt-6 border-t border-white/5 text-center text-[9px] font-bold text-slate-700 tracking-[0.2em] uppercase">
+						Executed at {new Date().getFullYear()} / System Stable
 					</div>
 				</div>
 			</footer>

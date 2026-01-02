@@ -99,21 +99,21 @@ const getSignalColors = (signal: "Bullish" | "Bearish" | "Neutral") => {
 	switch (signal) {
 		case "Bullish":
 			return {
-				bg: "bg-emerald-50",
-				text: "text-emerald-600",
-				border: "border-emerald-200",
+				bg: "bg-emerald-500/10",
+				text: "text-emerald-400",
+				border: "border-emerald-500/20",
 			};
 		case "Bearish":
 			return {
-				bg: "bg-rose-50",
-				text: "text-rose-600",
-				border: "border-rose-200",
+				bg: "bg-rose-500/10",
+				text: "text-rose-400",
+				border: "border-rose-500/20",
 			};
 		default:
 			return {
-				bg: "bg-slate-50",
-				text: "text-slate-600",
-				border: "border-slate-200",
+				bg: "bg-white/5",
+				text: "text-slate-400",
+				border: "border-white/10",
 			};
 	}
 };
@@ -158,58 +158,64 @@ export default function FuelGauge() {
 	});
 
 	return (
-		<div class="">
+		<div class="h-full flex flex-col">
 			{/* Section Header */}
-			<div class="flex flex-col md:flex-row md:items-start justify-between mb-8 gap-4 border-b border-slate-100 pb-6">
+			<div class="flex flex-col md:flex-row md:items-start justify-between mb-10 gap-6 border-l-4 border-emerald-500 pl-6 py-2">
 				<div>
-					<div class="flex items-center gap-2 mb-2">
-						<span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded">
-							Tactical Level 02
+					<div class="flex items-center gap-3 mb-2">
+						<span class="badge-directive text-emerald-500 border-emerald-500/20 bg-emerald-500/5">
+							Tactical_Level_02
 						</span>
-						<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-							New Money Inflow
+						<span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+							Inflow_Verification_Engine
 						</span>
 					</div>
-					<h2 class="text-3xl font-black text-slate-900 tracking-tight">
+					<h2 class="text-3xl font-black text-white tracking-tighter uppercase">
 						Liquidity Inflow
 					</h2>
-					<p class="text-slate-500 mt-2 max-w-2xl text-sm font-medium">
-						Monitoring "Dry Powder" and institutional commitment.{" "}
-						<span class="text-slate-800 font-bold">Inflows</span> indicate price
-						floor support.
+					<p class="text-slate-400 mt-2 max-w-xl text-[11px] font-bold uppercase tracking-tight leading-relaxed">
+						Dry powder monitoring and institutional commitment validation.{" "}
+						<span class="text-white">Positive delta</span> confirms structural
+						price floor support.
 					</p>
 				</div>
 				<button
 					type="button"
 					onClick={fetchData}
-					class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 shadow-sm rounded-lg text-sm font-medium text-slate-600 hover:text-emerald-600 hover:border-emerald-100 transition-all active:scale-95"
+					class="flex items-center gap-3 px-5 py-3 bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:bg-white/10 hover:text-white transition-all active:scale-95 whitespace-nowrap"
 				>
-					<IconRefresh class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`} />
-					{loading() ? "Updating..." : "Refresh"}
+					<IconRefresh
+						class={`w-3.5 h-3.5 ${loading() ? "animate-spin" : ""}`}
+					/>
+					{loading() ? "Syncing..." : "Manual_Sync"}
 				</button>
 			</div>
 
 			{/* Two Column Layout */}
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+			<div class="grow grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5 border border-white/5">
 				{/* Stablecoin Supply Card */}
-				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden">
-					<div class="p-6">
-						<div class="flex items-center gap-3 mb-4">
-							<div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center">
-								<IconCoin class="w-6 h-6 text-indigo-600" />
+				<div class="bg-white/2 flex flex-col">
+					<div class="p-8 grow">
+						<div class="flex items-center gap-4 mb-8">
+							<div class="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
+								<IconCoin class="w-5 h-5 text-indigo-400" />
 							</div>
 							<div>
-								<h3 class="font-bold text-slate-800">Stablecoin Supply</h3>
-								<p class="text-xs text-slate-400">USDT + USDC - "Dry Powder"</p>
+								<h3 class="font-black text-white uppercase text-sm tracking-tighter">
+									Stablecoin Supply
+								</h3>
+								<p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
+									Aggregate_Liquidity_Pool
+								</p>
 							</div>
 						</div>
 
 						<Show
 							when={!loading() && stableData()}
 							fallback={
-								<div class="space-y-3">
-									<div class="h-12 bg-slate-100 animate-pulse rounded" />
-									<div class="h-8 bg-slate-100 animate-pulse rounded w-2/3" />
+								<div class="space-y-4">
+									<div class="h-10 bg-white/5 animate-pulse" />
+									<div class="h-6 bg-white/5 animate-pulse w-2/3" />
 								</div>
 							}
 						>
@@ -217,56 +223,66 @@ export default function FuelGauge() {
 								const data = stableData() as StablecoinData;
 								return (
 									<>
-										<div class="mb-4">
-											<div class="text-4xl font-extrabold text-slate-900 tracking-tight">
+										<div class="mb-8">
+											<div class="text-5xl font-mono font-black text-white tracking-tighter leading-none mb-3">
 												{formatBillions(data.total.supply)}
 											</div>
-											<div class="flex items-center gap-3 mt-2">
-												<span
-													class={`text-sm font-bold ${data.total.change7d >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-												>
-													{data.total.change7d >= 0 ? "+" : ""}
-													{data.total.change7d.toFixed(2)}% (7d)
-												</span>
-												<span class="text-xs text-slate-400">|</span>
-												<span
-													class={`text-sm ${data.total.change30d >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-												>
-													{data.total.change30d >= 0 ? "+" : ""}
-													{data.total.change30d.toFixed(2)}% (30d)
-												</span>
+											<div class="flex items-center gap-4">
+												<div class="flex flex-col">
+													<p class="text-[8px] font-bold text-slate-600 uppercase mb-1">
+														Weekly_Delta
+													</p>
+													<span
+														class={`text-xs font-mono font-black ${data.total.change7d >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+													>
+														{data.total.change7d >= 0 ? "+" : ""}
+														{data.total.change7d.toFixed(2)}%
+													</span>
+												</div>
+												<div class="w-px h-6 bg-white/10"></div>
+												<div class="flex flex-col">
+													<p class="text-[8px] font-bold text-slate-600 uppercase mb-1">
+														Monthly_Delta
+													</p>
+													<span
+														class={`text-xs font-mono font-black ${data.total.change30d >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+													>
+														{data.total.change30d >= 0 ? "+" : ""}
+														{data.total.change30d.toFixed(2)}%
+													</span>
+												</div>
 											</div>
 										</div>
 
 										{/* Breakdown */}
-										<div class="grid grid-cols-2 gap-3 mb-4">
-											<div class="p-3 bg-slate-50 rounded-lg">
-												<div class="text-xs text-slate-400 font-medium mb-1">
-													USDT
+										<div class="grid grid-cols-2 gap-px bg-white/5 mb-8">
+											<div class="p-4 bg-white/2">
+												<div class="text-[9px] font-bold text-slate-500 uppercase mb-2">
+													USDT_CORE
 												</div>
-												<div class="text-lg font-bold text-slate-800">
+												<div class="text-xl font-mono font-black text-white">
 													{formatBillions(data.usdt.supply)}
 												</div>
 											</div>
-											<div class="p-3 bg-slate-50 rounded-lg">
-												<div class="text-xs text-slate-400 font-medium mb-1">
-													USDC
+											<div class="p-4 bg-white/2">
+												<div class="text-[9px] font-bold text-slate-500 uppercase mb-2">
+													USDC_FED
 												</div>
-												<div class="text-lg font-bold text-slate-800">
+												<div class="text-xl font-mono font-black text-white">
 													{formatBillions(data.usdc.supply)}
 												</div>
 											</div>
 										</div>
 
 										{/* Gauge Visual */}
-										<div class="mb-3">
-											<div class="flex justify-between text-xs text-slate-400 mb-1">
-												<span>Redeeming</span>
-												<span>Minting</span>
+										<div class="mb-4">
+											<div class="flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-600 mb-2">
+												<span>Redemption_Phase</span>
+												<span>Issuance_Expansion</span>
 											</div>
-											<div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+											<div class="h-1 bg-white/5 overflow-hidden">
 												<div
-													class={`h-full transition-all duration-500 ${data.signal === "Bullish" ? "bg-emerald-500" : data.signal === "Bearish" ? "bg-rose-500" : "bg-slate-400"}`}
+													class={`h-full transition-all duration-1000 ${data.signal === "Bullish" ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : data.signal === "Bearish" ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" : "bg-slate-500"}`}
 													style={{
 														width: `${Math.min(100, Math.max(0, 50 + data.total.change7d * 10))}%`,
 													}}
@@ -285,16 +301,16 @@ export default function FuelGauge() {
 							const data = stableData() as StablecoinData;
 							const colors = getSignalColors(data.signal);
 							return (
-								<div class={`p-4 ${colors.bg} border-t ${colors.border}`}>
+								<div class={`p-6 ${colors.bg} border-t ${colors.border}`}>
 									<div class="flex justify-between items-center">
-										<span class="text-sm font-medium text-slate-600">
+										<span class="text-[10px] font-black uppercase tracking-[0.2em] text-white">
 											{data.signalLabel}
 										</span>
-										<span
-											class={`text-xs font-bold px-2.5 py-1 rounded-full ${colors.bg} ${colors.text} border ${colors.border}`}
+										<div
+											class={`px-3 py-1 border font-black text-[9px] uppercase tracking-widest ${colors.text} ${colors.border}`}
 										>
 											{data.signal}
-										</span>
+										</div>
 									</div>
 								</div>
 							);
@@ -303,23 +319,25 @@ export default function FuelGauge() {
 				</div>
 
 				{/* ETF Flows Card */}
-				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden">
-					<div class="p-6">
-						<div class="flex items-center justify-between mb-4">
-							<div class="flex items-center gap-3">
-								<div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center">
-									<IconBuilding class="w-6 h-6 text-indigo-600" />
+				<div class="bg-white/2 flex flex-col">
+					<div class="p-8 grow">
+						<div class="flex items-center justify-between mb-8">
+							<div class="flex items-center gap-4">
+								<div class="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
+									<IconBuilding class="w-5 h-5 text-indigo-400" />
 								</div>
 								<div>
-									<h3 class="font-bold text-slate-800">ETF Net Flows</h3>
-									<p class="text-xs text-slate-400">
-										Institutional Buy/Sell Activity
+									<h3 class="font-black text-white uppercase text-sm tracking-tighter">
+										Institutional Flows
+									</h3>
+									<p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
+										Spot_ETF_Accumulation
 									</p>
 								</div>
 							</div>
 							<Show when={etfData()?.isDemo}>
-								<span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-slate-100 text-slate-500 rounded">
-									Demo
+								<span class="label-mono text-[9px] text-amber-500 border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 whitespace-nowrap">
+									DEMO_MODE
 								</span>
 							</Show>
 						</div>
@@ -327,9 +345,9 @@ export default function FuelGauge() {
 						<Show
 							when={!loading() && etfData()}
 							fallback={
-								<div class="space-y-3">
-									<div class="h-12 bg-slate-100 animate-pulse rounded" />
-									<div class="h-24 bg-slate-100 animate-pulse rounded" />
+								<div class="space-y-4">
+									<div class="h-10 bg-white/5 animate-pulse" />
+									<div class="h-16 bg-white/5 animate-pulse" />
 								</div>
 							}
 						>
@@ -337,19 +355,19 @@ export default function FuelGauge() {
 								const data = etfData() as ETFFlowData;
 								return (
 									<>
-										<div class="mb-4">
-											<div class="text-4xl font-extrabold text-slate-900 tracking-tight">
+										<div class="mb-8">
+											<div class="text-5xl font-mono font-black text-white tracking-tighter leading-none mb-3">
 												{data.weeklyFlow >= 0 ? "+" : ""}
 												{formatMillions(data.weeklyFlow * 1e6)}
 											</div>
-											<div class="text-sm text-slate-400 mt-1">
-												7-Day Net Flow
+											<div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">
+												7-Day_Net_Allocation
 											</div>
 										</div>
 
 										{/* Flow Bars */}
-										<div class="mb-4">
-											<div class="flex items-end gap-1 h-20">
+										<div class="mb-8 p-4 bg-black/20 border border-white/5">
+											<div class="flex items-end gap-1.5 h-20">
 												<For each={data.flows}>
 													{(day) => {
 														const maxFlow = Math.max(
@@ -362,12 +380,12 @@ export default function FuelGauge() {
 														return (
 															<div class="flex-1 flex flex-col items-center justify-end h-full group relative">
 																<div
-																	class={`w-full rounded-t transition-all ${day.flow >= 0 ? "bg-emerald-500" : "bg-rose-500"}`}
-																	style={{ height: `${Math.max(height, 5)}%` }}
+																	class={`w-full transition-all duration-500 ${day.flow >= 0 ? "bg-emerald-500 group-hover:bg-emerald-400" : "bg-rose-500 group-hover:bg-rose-400"}`}
+																	style={{ height: `${Math.max(height, 8)}%` }}
 																/>
 																{/* Tooltip */}
-																<div class="absolute bottom-full mb-2 hidden group-hover:block z-10">
-																	<div class="bg-slate-800 text-white text-xs py-1 px-2 rounded shadow-lg whitespace-nowrap">
+																<div class="absolute bottom-full mb-2 hidden group-hover:block z-10 pointer-events-none">
+																	<div class="bg-slate-900 border border-white/10 text-white text-[9px] font-black py-1.5 px-3 whitespace-nowrap uppercase tracking-widest">
 																		{day.date}: {day.flow >= 0 ? "+" : ""}
 																		{formatMillions(day.flow * 1e6)}
 																	</div>
@@ -377,33 +395,31 @@ export default function FuelGauge() {
 													}}
 												</For>
 											</div>
-											<div class="flex justify-between mt-1 text-[10px] text-slate-400">
-												<span>{data.flows[0]?.date.slice(5)}</span>
-												<span>
-													{data.flows[data.flows.length - 1]?.date.slice(5)}
-												</span>
+											<div class="flex justify-between mt-3 text-[8px] font-black text-slate-600 uppercase tracking-widest">
+												<span>{data.flows[0]?.date} (T0)</span>
+												<span>NOW</span>
 											</div>
 										</div>
 
 										{/* Stats Row */}
-										<div class="grid grid-cols-2 gap-3">
-											<div class="p-3 bg-slate-50 rounded-lg">
-												<div class="text-xs text-slate-400 font-medium mb-1">
-													Today
+										<div class="grid grid-cols-2 gap-px bg-white/5">
+											<div class="p-4 bg-white/2">
+												<div class="text-[9px] font-bold text-slate-500 uppercase mb-2">
+													Daily_Flow
 												</div>
 												<div
-													class={`text-lg font-bold ${data.todayFlow >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+													class={`text-xl font-mono font-black ${data.todayFlow >= 0 ? "text-emerald-400" : "text-rose-400"}`}
 												>
 													{data.todayFlow >= 0 ? "+" : ""}
 													{formatMillions(data.todayFlow * 1e6)}
 												</div>
 											</div>
-											<div class="p-3 bg-slate-50 rounded-lg">
-												<div class="text-xs text-slate-400 font-medium mb-1">
-													Avg Daily
+											<div class="p-4 bg-white/2">
+												<div class="text-[9px] font-bold text-slate-500 uppercase mb-2">
+													Avg_Flow_24H
 												</div>
 												<div
-													class={`text-lg font-bold ${data.avgDailyFlow >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+													class={`text-xl font-mono font-black ${data.avgDailyFlow >= 0 ? "text-emerald-400" : "text-rose-400"}`}
 												>
 													{data.avgDailyFlow >= 0 ? "+" : ""}
 													{formatMillions(data.avgDailyFlow * 1e6)}
@@ -422,16 +438,16 @@ export default function FuelGauge() {
 							const data = etfData() as ETFFlowData;
 							const colors = getSignalColors(data.signal);
 							return (
-								<div class={`p-4 ${colors.bg} border-t ${colors.border}`}>
+								<div class={`p-6 ${colors.bg} border-t ${colors.border}`}>
 									<div class="flex justify-between items-center">
-										<span class="text-sm font-medium text-slate-600">
+										<span class="text-[10px] font-black uppercase tracking-[0.2em] text-white">
 											{data.signalLabel}
 										</span>
-										<span
-											class={`text-xs font-bold px-2.5 py-1 rounded-full ${colors.bg} ${colors.text} border ${colors.border}`}
+										<div
+											class={`px-3 py-1 border font-black text-[9px] uppercase tracking-widest ${colors.text} ${colors.border}`}
 										>
 											{data.signal}
-										</span>
+										</div>
 									</div>
 								</div>
 							);
@@ -441,28 +457,32 @@ export default function FuelGauge() {
 			</div>
 
 			{/* Insight Note */}
-			<div class="mt-5 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-				<div class="flex items-start gap-3">
-					<span class="text-xl">⛽</span>
+			<div class="mt-8 p-6 bg-white/2 border border-white/5">
+				<div class="flex items-start gap-4 text-xs font-bold leading-relaxed text-slate-400 uppercase tracking-tight">
+					<span class="text-xl shrink-0 grayscale group-hover:grayscale-0 transition-all">
+						⛽
+					</span>
 					<div>
-						<p class="text-sm font-semibold text-slate-800 mb-1">
-							Check the Fuel Every Morning
+						<p class="text-white font-black mb-1">
+							Daily Liquidity Assessment Protocols:
 						</p>
-						<p class="text-sm text-slate-600">
-							<strong>
-								Stablecoin rising + ETF inflows = New money entering.
-							</strong>{" "}
-							This is the rocket fuel for price.
+						<p>
+							Validate aggregate delta before primary cycle execution.{" "}
+							<strong>Stablecoin Issuance</strong> combined with institutional{" "}
+							<strong>ETF Net Positive</strong> flows constitutes a primary
+							bullish catalyst. Extreme bearish delta should trigger mandatory
+							risk mitigation.
 						</p>
 					</div>
 				</div>
 			</div>
 
 			{/* Timestamp */}
-			<div class="mt-4 flex justify-end">
-				<span class="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
-					Updated:{" "}
-					{lastUpdated() ? lastUpdated()?.toLocaleTimeString() : "--:--"}
+			<div class="mt-6 flex justify-end">
+				<span class="label-mono text-[9px] opacity-30">
+					Last_Kernel_Sync:{" "}
+					{lastUpdated() ? lastUpdated()?.toLocaleTimeString() : "--:--"} {"//"}{" "}
+					LIVE_FEED
 				</span>
 			</div>
 		</div>

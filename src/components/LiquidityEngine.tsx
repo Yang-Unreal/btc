@@ -152,30 +152,6 @@ interface IndicatorCardProps {
 	isDemo?: boolean;
 }
 
-// --- Signal Colors ---
-const getSignalColors = (signal: SignalType) => {
-	switch (signal) {
-		case "Bullish":
-			return {
-				bg: "bg-emerald-50",
-				text: "text-emerald-600",
-				border: "border-emerald-200",
-			};
-		case "Bearish":
-			return {
-				bg: "bg-rose-50",
-				text: "text-rose-600",
-				border: "border-rose-200",
-			};
-		default:
-			return {
-				bg: "bg-slate-50",
-				text: "text-slate-600",
-				border: "border-slate-200",
-			};
-	}
-};
-
 // --- Analysis Functions ---
 const analyzeDXY = (
 	val: number | null,
@@ -267,53 +243,48 @@ const analyzeFedRate = (
 
 // --- Indicator Card Component ---
 const IndicatorCard: Component<IndicatorCardProps> = (props) => {
-	const colors = () => getSignalColors(props.signal);
-
 	return (
-		<div class="group bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 hover:shadow-md transition-all duration-300 overflow-hidden">
+		<div class="directive-card flex flex-col h-full hover:bg-white/2 transition-colors">
 			{/* Header */}
-			<div class="p-5 pb-3">
-				<div class="flex justify-between items-start mb-3">
+			<div class="p-6 pb-2">
+				<div class="flex justify-between items-start mb-6">
 					<div class="flex items-center gap-3">
 						<div
-							class={`w-10 h-10 rounded-xl ${props.iconBg} shadow-sm flex items-center justify-center`}
+							class={`w-10 h-10 border border-white/10 bg-white/5 flex items-center justify-center`}
 						>
 							{props.icon}
 						</div>
 						<div>
-							<h3 class="font-bold text-slate-800 text-sm leading-tight">
+							<h3 class="font-black text-white uppercase tracking-tighter text-sm leading-tight">
 								{props.title}
 							</h3>
-							<div class="flex items-center gap-1.5 mt-0.5">
-								<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded-sm">
-									{props.correlation}
+							<div class="flex items-center gap-2 mt-1">
+								<span class="label-mono text-[9px] opacity-50">
+									Correlation: {props.correlation}
 								</span>
 								<Show when={props.isDemo}>
-									<span class="text-[9px] font-black text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
-										Demo
+									<span class="badge-directive text-rose-400 border-rose-400/30 bg-rose-400/5">
+										DEMO
 									</span>
 								</Show>
-								<span class="text-[10px] text-slate-400">to BTC</span>
 							</div>
 						</div>
 					</div>
 				</div>
 
 				{/* Value */}
-				<div class="flex items-baseline gap-2">
+				<div class="flex items-baseline gap-3 mb-6">
 					<Show
 						when={!props.loading && props.value !== null}
-						fallback={
-							<div class="h-9 w-28 bg-slate-100 animate-pulse rounded" />
-						}
+						fallback={<div class="h-10 w-32 bg-white/5 animate-pulse" />}
 					>
 						<span
-							class={`text-3xl font-extrabold tracking-tight ${
+							class={`data-value text-4xl ${
 								props.trend === "up"
-									? "text-emerald-500"
+									? "text-emerald-400"
 									: props.trend === "down"
-										? "text-rose-500"
-										: "text-slate-900"
+										? "text-rose-400"
+										: "text-white"
 							}`}
 						>
 							{typeof props.value === "number"
@@ -328,9 +299,9 @@ const IndicatorCard: Component<IndicatorCardProps> = (props) => {
 						</span>
 						<Show when={props.trend}>
 							{props.trend === "up" ? (
-								<IconTrendUp class="w-5 h-5 text-emerald-500" />
+								<IconTrendUp class="w-5 h-5 text-emerald-400" />
 							) : (
-								<IconTrendDown class="w-5 h-5 text-rose-500" />
+								<IconTrendDown class="w-5 h-5 text-rose-400" />
 							)}
 						</Show>
 					</Show>
@@ -338,18 +309,34 @@ const IndicatorCard: Component<IndicatorCardProps> = (props) => {
 			</div>
 
 			{/* Signal Section */}
-			<div class={`p-4 ${colors().bg} border-t ${colors().border}`}>
+			<div
+				class={`mt-auto p-4 border-t border-white/5 ${
+					props.signal === "Bullish"
+						? "bg-emerald-500/5"
+						: props.signal === "Bearish"
+							? "bg-rose-500/5"
+							: "bg-white/2"
+				}`}
+			>
 				<div class="flex justify-between items-center mb-2">
-					<span class="text-xs font-bold text-slate-500 uppercase tracking-wide">
-						BTC Impact
+					<span class="label-mono text-[9px] opacity-40 uppercase">
+						BTC_Impact_Analysis
 					</span>
 					<span
-						class={`text-xs font-bold px-2.5 py-1 rounded-full ${colors().bg} ${colors().text} border ${colors().border}`}
+						class={`text-[10px] font-black px-2 py-0.5 border uppercase ${
+							props.signal === "Bullish"
+								? "border-emerald-500/40 text-emerald-400"
+								: props.signal === "Bearish"
+									? "border-rose-500/40 text-rose-400"
+									: "border-white/10 text-slate-400"
+						}`}
 					>
 						{props.signal}
 					</span>
 				</div>
-				<p class="text-sm text-slate-600">{props.description}</p>
+				<p class="text-[11px] font-bold text-slate-500 uppercase tracking-tight leading-tight">
+					{props.description}
+				</p>
 			</div>
 		</div>
 	);
@@ -394,41 +381,44 @@ export default function LiquidityEngine() {
 	const fedAnalysis = () => analyzeFedRate(data().impliedFedRate);
 
 	return (
-		<div class="">
-			{/* Section Header */}
-			<div class="flex flex-col md:flex-row md:items-end justify-between mb-5 gap-4">
+		<div class="my-8 md:my-12">
+			{/* Section Header - Institutional Style */}
+			<div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6 border-l-4 border-indigo-500 pl-6 py-2">
 				<div>
-					<div class="flex items-center gap-2 mb-2">
-						<span class="px-2 py-1 text-xs font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 rounded-full">
-							Level 1
+					<div class="flex items-center gap-3 mb-3">
+						<span class="badge-directive text-indigo-400 border-indigo-500/30 bg-indigo-500/5">
+							Tactical_Level_01
 						</span>
-						<span class="text-xs text-slate-400 font-medium">The Engine</span>
+						<span class="label-mono opacity-40">Global_Liquidity_Engine</span>
 					</div>
-					<h2 class="text-2xl font-bold text-slate-900 tracking-tight">
-						Global Liquidity
+					<h2 class="text-4xl font-black text-white tracking-tighter uppercase">
+						Macro Liquidity
 					</h2>
-					<p class="text-slate-500 mt-1 max-w-2xl text-sm">
-						Crypto is a "Liquidity Sponge". These metrics show if money is
-						flowing into or out of risk assets.
+					<p class="text-slate-500 mt-3 max-w-2xl text-[13px] font-bold leading-relaxed uppercase tracking-tight">
+						Crypto is a <span class="text-white">"Liquidity Sponge"</span>.
+						Systematic monitoring of global capital flows and interest rate
+						regimes to determine primary asset direction.
 					</p>
 				</div>
 				<button
 					type="button"
 					onClick={fetchData}
-					class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 shadow-sm rounded-lg text-sm font-medium text-slate-600 hover:text-indigo-600 hover:border-indigo-100 transition-all active:scale-95"
+					class="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all active:scale-95"
 				>
-					<IconRefresh class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`} />
-					{loading() ? "Updating..." : "Refresh"}
+					<IconRefresh
+						class={`w-3.5 h-3.5 ${loading() ? "animate-spin" : ""}`}
+					/>
+					{loading() ? "Syncing..." : "Sync_Data"}
 				</button>
 			</div>
 
-			{/* Cards Grid */}
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			{/* Cards Grid - Directive Style */}
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1">
 				<IndicatorCard
 					title="U.S. Dollar Index (DXY)"
 					value={data().dxy}
-					icon={<IconGlobe class="w-5 h-5 text-indigo-600" />}
-					iconBg="bg-slate-50"
+					icon={<IconGlobe class="w-5 h-5 text-indigo-400" />}
+					iconBg="bg-white/5"
 					signal={dxyAnalysis().signal}
 					signalLabel={dxyAnalysis().label}
 					description={dxyAnalysis().desc}
@@ -440,8 +430,8 @@ export default function LiquidityEngine() {
 					title="10Y Treasury Yield"
 					value={data().us10y}
 					suffix="%"
-					icon={<IconChartBar class="w-5 h-5 text-indigo-600" />}
-					iconBg="bg-slate-50"
+					icon={<IconChartBar class="w-5 h-5 text-indigo-400" />}
+					iconBg="bg-white/5"
 					signal={yieldsAnalysis().signal}
 					signalLabel={yieldsAnalysis().label}
 					description={yieldsAnalysis().desc}
@@ -453,8 +443,8 @@ export default function LiquidityEngine() {
 					title="Real Interest Rate"
 					value={data().realRate}
 					suffix="%"
-					icon={<IconDollar class="w-5 h-5 text-indigo-600" />}
-					iconBg="bg-slate-50"
+					icon={<IconDollar class="w-5 h-5 text-indigo-400" />}
+					iconBg="bg-white/5"
 					signal={realRateAnalysis().signal}
 					signalLabel={realRateAnalysis().label}
 					description={realRateAnalysis().desc}
@@ -466,8 +456,8 @@ export default function LiquidityEngine() {
 					title="Implied Fed Rate"
 					value={data().impliedFedRate}
 					suffix="%"
-					icon={<IconBank class="w-5 h-5 text-indigo-600" />}
-					iconBg="bg-slate-50"
+					icon={<IconBank class="w-5 h-5 text-indigo-400" />}
+					iconBg="bg-white/5"
 					signal={fedAnalysis().signal}
 					signalLabel={fedAnalysis().label}
 					description={fedAnalysis().desc}
@@ -477,26 +467,41 @@ export default function LiquidityEngine() {
 			</div>
 
 			{/* Golden Rule Note */}
-			<div class="mt-5 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-				<div class="flex items-start gap-3">
-					<span class="text-xl">💡</span>
+			<div class="mt-8 p-4 bg-indigo-500/5 border border-indigo-500/10">
+				<div class="flex items-start gap-4">
+					<span class="text-2xl filter saturate-0 grayscale opacity-50">
+						💡
+					</span>
 					<div>
-						<p class="text-sm font-semibold text-slate-800 mb-1">
-							The Golden Rule
+						<p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">
+							Protocol_Heuristic
 						</p>
-						<p class="text-sm text-slate-600">
-							<strong>DXY falling + Yields falling = Bullish for BTC.</strong>{" "}
-							Global Liquidity sets the direction of the cycle.
+						<p class="text-[11px] text-slate-400 font-bold uppercase tracking-tight leading-normal">
+							<span class="text-white">DXY falling + Yields falling</span>{" "}
+							results in maximum risk-on tailwinds. Global Liquidity determines
+							the fundamental velocity of the BTC cycle.
 						</p>
 					</div>
 				</div>
 			</div>
 
-			{/* Timestamp */}
-			<div class="mt-4 flex justify-end">
-				<span class="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
-					Updated:{" "}
-					{lastUpdated() ? lastUpdated()?.toLocaleTimeString() : "--:--"}
+			{/* Status Bar */}
+			<div class="mt-6 flex justify-between items-center">
+				<div class="flex items-center gap-2">
+					<div class="w-1.5 h-1.5 bg-indigo-500 animate-pulse rounded-full"></div>
+					<span class="label-mono text-[9px] opacity-40 uppercase">
+						Macro_Stream_Active
+					</span>
+				</div>
+				<span class="label-mono text-[9px] opacity-40 uppercase">
+					Last_Sync:{" "}
+					{lastUpdated()
+						? lastUpdated()?.toLocaleTimeString([], {
+								hour: "2-digit",
+								minute: "2-digit",
+								second: "2-digit",
+							})
+						: "UNKNOWN"}
 				</span>
 			</div>
 		</div>

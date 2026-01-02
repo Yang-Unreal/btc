@@ -175,19 +175,36 @@ const IconChevronDown = () => (
 	</svg>
 );
 
-const IconLayers = () => (
+const IconTrendUp = (props: { class?: string }) => (
 	<svg
-		class="w-4 h-4 mr-2"
+		class={props.class}
 		fill="none"
 		viewBox="0 0 24 24"
 		stroke="currentColor"
+		stroke-width="2"
 	>
-		<title>Indicators</title>
+		<title>Trend Up</title>
 		<path
 			stroke-linecap="round"
 			stroke-linejoin="round"
-			stroke-width="2"
-			d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+			d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+		/>
+	</svg>
+);
+
+const IconTrendDown = (props: { class?: string }) => (
+	<svg
+		class={props.class}
+		fill="none"
+		viewBox="0 0 24 24"
+		stroke="currentColor"
+		stroke-width="2"
+	>
+		<title>Trend Down</title>
+		<path
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"
 		/>
 	</svg>
 );
@@ -227,8 +244,7 @@ export default function BTCChart() {
 	const [isMobile, setIsMobile] = createSignal(false);
 
 	// Dropdown States
-	const [showIntervalMenu, setShowIntervalMenu] = createSignal(false);
-	const [showIndicatorMenu, setShowIndicatorMenu] = createSignal(false);
+
 	const [showCurrencyMenu, setShowCurrencyMenu] = createSignal(false);
 	const [showAssetMenu, setShowAssetMenu] = createSignal(false);
 
@@ -1200,54 +1216,49 @@ export default function BTCChart() {
 	});
 
 	return (
-		<div class="my-4 md:my-8 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden font-sans ring-1 ring-slate-100">
-			{/* Top Bar */}
-			<div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center p-3 sm:p-5 border-b border-slate-100 bg-white">
-				<div class="flex items-center gap-3 sm:gap-4 mb-4 lg:mb-0 justify-between lg:justify-start">
-					<div class="flex items-center gap-3 sm:gap-4">
-						<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-900 flex items-center justify-center text-white font-bold text-sm sm:text-base">
-							{activeAsset().symbol[0]}
+		<div class="my-4 md:my-8 directive-card overflow-hidden">
+			{/* Top Bar - High Density */}
+			<div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center p-3 sm:p-4 border-b border-white/5 bg-white/2">
+				<div class="flex items-center gap-3 mb-4 lg:mb-0 justify-between lg:justify-start">
+					<div class="flex items-center gap-3">
+						<div class="w-8 h-8 bg-white/5 border border-white/10 flex items-center justify-center text-white font-mono font-bold text-xs">
+							{activeAsset().symbol.substring(0, 1)}
 						</div>
-						<div>
+						<div class="flex flex-col">
 							<div class="flex items-center gap-2 relative">
 								{/* Asset Dropdown */}
 								<div class="relative">
 									<button
 										type="button"
 										onClick={() => setShowAssetMenu(!showAssetMenu())}
-										class="flex items-center gap-1 text-base sm:text-lg font-bold text-slate-800 tracking-tight leading-none hover:text-indigo-600 transition-colors"
+										class="flex items-center gap-1 text-sm font-black text-white uppercase tracking-tighter hover:text-indigo-400 transition-colors"
 									>
-										<span class="hidden sm:inline">{activeAsset().name}</span>
-										<span class="sm:hidden">{activeAsset().symbol}</span>
+										{activeAsset().name}
 										<IconChevronDown />
 									</button>
 									<Show when={showAssetMenu()}>
 										<div
-											class="fixed inset-0 z-40 cursor-default"
+											class="fixed inset-0 z-40"
 											onClick={() => setShowAssetMenu(false)}
 											onKeyDown={(e) => {
-												if (e.key === "Enter" || e.key === " ") {
-													setShowAssetMenu(false);
-													e.preventDefault();
-												}
+												if (e.key === "Escape") setShowAssetMenu(false);
 											}}
+											tabIndex={-1}
 											role="button"
-											aria-label="Close asset menu"
-											tabIndex={0}
 										/>
-										<div class="absolute left-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 py-1 max-h-64 overflow-y-auto">
+										<div class="absolute left-0 top-full mt-1 w-48 bg-[#151921] border border-white/10 shadow-2xl z-50 py-1 max-h-64 overflow-y-auto no-scrollbar">
 											<For each={SUPPORTED_ASSETS}>
 												{(asset) => (
 													<button
 														type="button"
-														class={`w-full text-left px-3 py-2 text-sm font-bold hover:bg-slate-50 flex items-center justify-between ${activeAsset().symbol === asset.symbol ? "text-indigo-600 bg-slate-50" : "text-slate-600"}`}
+														class={`w-full text-left px-3 py-2 text-[11px] font-bold hover:bg-white/5 flex items-center justify-between ${activeAsset().symbol === asset.symbol ? "text-indigo-400 bg-white/5" : "text-slate-400"}`}
 														onClick={() => {
 															setActiveAsset(asset);
 															setShowAssetMenu(false);
 														}}
 													>
 														<span>{asset.name}</span>
-														<span class="text-xs text-slate-400">
+														<span class="font-mono text-[9px] opacity-50">
 															{asset.symbol}
 														</span>
 													</button>
@@ -1257,16 +1268,14 @@ export default function BTCChart() {
 									</Show>
 								</div>
 
-								<span class="text-slate-400 font-normal hidden sm:inline">
-									/
-								</span>
+								<span class="text-white/20 font-light -translate-y-px">|</span>
 
 								{/* Currency Selector */}
 								<div class="relative">
 									<button
 										type="button"
 										onClick={() => setShowCurrencyMenu(!showCurrencyMenu())}
-										class="flex items-center gap-1 text-slate-500 font-bold hover:text-slate-800 transition-colors text-xs sm:text-sm"
+										class="flex items-center gap-1 text-slate-500 font-bold hover:text-white transition-colors text-[10px] uppercase tracking-widest"
 									>
 										{activeCurrency().code}
 										<IconChevronDown />
@@ -1274,30 +1283,26 @@ export default function BTCChart() {
 
 									<Show when={showCurrencyMenu()}>
 										<div
-											class="fixed inset-0 z-40 cursor-default"
+											class="fixed inset-0 z-40"
 											onClick={() => setShowCurrencyMenu(false)}
 											onKeyDown={(e) => {
-												if (e.key === "Enter" || e.key === " ") {
-													setShowCurrencyMenu(false);
-													e.preventDefault();
-												}
+												if (e.key === "Escape") setShowCurrencyMenu(false);
 											}}
+											tabIndex={-1}
 											role="button"
-											aria-label="Close currency menu"
-											tabIndex={0}
 										/>
-										<div class="absolute left-0 top-full mt-1 w-24 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 py-1">
+										<div class="absolute left-0 top-full mt-1 w-24 bg-[#151921] border border-white/10 shadow-2xl z-50 py-1">
 											<For each={CURRENCIES}>
 												{(c) => (
 													<button
 														type="button"
-														class={`w-full text-left px-3 py-2 text-sm font-bold hover:bg-slate-50 ${activeCurrency().code === c.code ? "text-indigo-600 bg-slate-50" : "text-slate-600"}`}
+														class={`w-full text-left px-3 py-2 text-[10px] font-black hover:bg-white/5 uppercase tracking-widest ${activeCurrency().code === c.code ? "text-indigo-400 bg-white/5" : "text-slate-400"}`}
 														onClick={() => {
 															setActiveCurrency(c);
 															setShowCurrencyMenu(false);
 														}}
 													>
-														{c.code} ({c.symbol})
+														{c.code}
 													</button>
 												)}
 											</For>
@@ -1306,412 +1311,314 @@ export default function BTCChart() {
 								</div>
 
 								{/* Connection Status */}
-								<div class="flex items-center px-1.5 py-0.5 sm:px-2 rounded-full bg-slate-100 border border-slate-200 ml-1 sm:ml-2">
+								<div class="flex items-center px-2 py-0.5 bg-white/5 border border-white/10 ml-2">
 									{wsConnected() ? <IconPulse /> : <IconWifiOff />}
-									<span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden sm:inline">
-										{wsConnected() ? "Live" : "Offline"}
+									<span class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] hidden sm:inline">
+										{wsConnected() ? "Live_Ops" : "Dormant"}
 									</span>
 								</div>
 							</div>
 
 							{/* Price Display */}
 							<div
-								class={`text-xl sm:text-2xl font-mono font-bold tracking-tight leading-tight transition-colors duration-300 ${priceColor()}`}
+								class={`text-xl font-mono font-black tracking-tighter tabular-nums leading-none mt-1 transition-colors duration-200 ${priceColor()}`}
 							>
-								{`${activeCurrency().symbol}${currentPrice().toFixed(6)}`}
+								{activeCurrency().symbol}
+								{currentPrice().toFixed(activeAsset().symbol === "BTC" ? 2 : 4)}
 							</div>
 						</div>
 					</div>
-
-					<Show when={isMobile()}>
-						<div class="relative z-30">
-							<button
-								type="button"
-								onClick={() => {
-									setShowIntervalMenu(!showIntervalMenu());
-									setShowAssetMenu(false);
-									setShowCurrencyMenu(false);
-									setShowIndicatorMenu(false);
-								}}
-								class="flex items-center justify-between gap-1.5 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
-							>
-								{intervals.find((i) => i.value === interval())?.label}
-								<IconChevronDown />
-							</button>
-
-							<Show when={showIntervalMenu()}>
-								<div
-									class="fixed inset-0 z-40"
-									onClick={() => setShowIntervalMenu(false)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") {
-											setShowIntervalMenu(false);
-											e.preventDefault();
-										}
-									}}
-									role="button"
-									aria-label="Close interval menu"
-									tabIndex={0}
-								/>
-								<div class="absolute right-0 mt-2 w-36 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 py-2">
-									<For each={intervals}>
-										{(opt) => (
-											<button
-												type="button"
-												class={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 transition-colors ${interval() === opt.value ? "text-indigo-600 bg-indigo-50/50" : "text-slate-600"}`}
-												onClick={() => {
-													setInterval(opt.value);
-													setShowIntervalMenu(false);
-												}}
-											>
-												{opt.label}
-											</button>
-										)}
-									</For>
-								</div>
-							</Show>
-						</div>
-					</Show>
 				</div>
 
-				<Show when={!isMobile()}>
-					<div class="flex bg-slate-50 border border-slate-100 p-1 rounded-xl self-start lg:self-auto overflow-x-auto max-w-full shadow-xs">
-						<For each={intervals}>
-							{(opt) => (
-								<button
-									type="button"
-									class={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 whitespace-nowrap ${interval() === opt.value ? "bg-white text-indigo-600 shadow-sm border border-slate-100" : "text-slate-500 hover:text-slate-800 hover:bg-white/50"}`}
-									onClick={() => setInterval(opt.value)}
-								>
-									{opt.label}
-								</button>
-							)}
-						</For>
-					</div>
-				</Show>
+				{/* Interval Selection - Darker tabs */}
+				<div class="flex bg-white/5 border border-white/10 p-1 self-start lg:self-auto overflow-x-auto no-scrollbar max-w-full">
+					<For each={intervals}>
+						{(opt) => (
+							<button
+								type="button"
+								class={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-all ${interval() === opt.value ? "bg-indigo-600 text-white" : "text-slate-500 hover:text-slate-300 hover:bg-white/5"}`}
+								onClick={() => setInterval(opt.value)}
+							>
+								{opt.label}
+							</button>
+						)}
+					</For>
+				</div>
 			</div>
 
-			{/* Secondary Bar: Indicators */}
-			<div class="px-6 py-4 border-b border-slate-100 bg-slate-50/30 backdrop-blur-sm">
-				<Show when={!isMobile()}>
-					<div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
-						<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-3 shrink-0">
-							Overlay Indicators
-						</span>
-						<For each={indicatorConfig}>
-							{(ind) => (
-								<button
-									type="button"
-									onClick={() =>
-										setIndicators((prev) => ({
-											...prev,
-											[ind.key]: !prev[ind.key],
-										}))
-									}
-									class={`group flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all duration-200 shrink-0 select-none ${indicators()[ind.key] ? `bg-white ${ind.textColor} border-indigo-200 shadow-xs ring-1 ring-indigo-50` : "bg-white/50 text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700"}`}
-								>
-									<span
-										class={`w-2 h-2 rounded-full ${ind.color} ${indicators()[ind.key] ? "opacity-100 shadow-xs" : "opacity-30 group-hover:opacity-60"}`}
-									></span>
-									{ind.label}
-								</button>
-							)}
-						</For>
-					</div>
-				</Show>
-
-				<Show when={isMobile()}>
-					<div class="relative z-20">
-						<button
-							type="button"
-							onClick={() => {
-								setShowIndicatorMenu(!showIndicatorMenu());
-								setShowAssetMenu(false);
-								setShowCurrencyMenu(false);
-								setShowIntervalMenu(false);
-							}}
-							class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200"
-						>
-							<IconLayers />
-							<span>Customize Indicators</span>
-							<span class="bg-indigo-600 text-white text-[9px] px-1.5 py-0.5 rounded-full ml-1">
-								{Object.values(indicators()).filter(Boolean).length}
-							</span>
-							<IconChevronDown />
-						</button>
-						<Show when={showIndicatorMenu()}>
-							<div
-								class="fixed inset-0 z-40"
-								onClick={() => setShowIndicatorMenu(false)}
-								onKeyDown={(e) => {
-									if (e.key === "Enter" || e.key === " ") {
-										setShowIndicatorMenu(false);
-										e.preventDefault();
-									}
-								}}
-								role="button"
-								aria-label="Close indicator menu"
-								tabIndex={0}
-							/>
-							<div class="absolute left-0 mt-2 w-60 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 p-2 space-y-1">
-								<div class="px-3 py-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">
-									Active Chart Overlays
-								</div>
-								<For each={indicatorConfig}>
-									{(ind) => (
-										<button
-											type="button"
-											onClick={(e) => {
-												e.stopPropagation();
-												setIndicators((prev) => ({
-													...prev,
-													[ind.key]: !prev[ind.key],
-												}));
-											}}
-											class={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors ${indicators()[ind.key] ? "bg-indigo-50/40" : "hover:bg-slate-50"}`}
-										>
-											<div class="flex items-center gap-3">
-												<span
-													class={`w-2.5 h-2.5 rounded-full ${ind.color} ${indicators()[ind.key] ? "shadow-xs" : "opacity-40"}`}
-												></span>
-												<span
-													class={`font-bold ${indicators()[ind.key] ? "text-slate-900" : "text-slate-500"}`}
-												>
-													{ind.label}
-												</span>
-											</div>
-											<div
-												class={`w-8 h-4 rounded-full transition-colors relative ${indicators()[ind.key] ? "bg-indigo-500" : "bg-slate-200"}`}
-											>
-												<div
-													class={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${indicators()[ind.key] ? "left-4.5" : "left-0.5"}`}
-												/>
-											</div>
-										</button>
-									)}
-								</For>
-							</div>
-						</Show>
-					</div>
-				</Show>
+			{/* Secondary Bar: Indicators - Compressed */}
+			<div class="px-4 py-3 border-b border-white/5 bg-white/1 backdrop-blur-sm">
+				<div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+					<span class="text-[9px] font-bold text-slate-600 uppercase tracking-[0.3em] mr-4 shrink-0">
+						Data_Layers
+					</span>
+					<For each={indicatorConfig}>
+						{(ind) => (
+							<button
+								type="button"
+								onClick={() =>
+									setIndicators((prev) => ({
+										...prev,
+										[ind.key]: !prev[ind.key],
+									}))
+								}
+								class={`flex items-center gap-2 px-2.5 py-1 border text-[9px] font-black uppercase tracking-widest transition-all shrink-0 select-none ${indicators()[ind.key] ? `bg-white/5 ${ind.textColor} border-indigo-500/40` : "bg-transparent text-slate-600 border-white/5 hover:border-white/10 hover:text-slate-400"}`}
+							>
+								<span
+									class={`w-1.5 h-1.5 ${ind.color} ${indicators()[ind.key] ? "opacity-100" : "opacity-20"}`}
+								></span>
+								{ind.label}
+							</button>
+						)}
+					</For>
+				</div>
 			</div>
 
 			{/* Chart Area */}
-			<div class="relative h-[400px] md:h-[500px] w-full group cursor-crosshair touch-action-none bg-white">
+			<div class="relative h-[450px] md:h-[550px] w-full group cursor-crosshair touch-action-none bg-[#0b0e14]">
 				<Show when={isLoading()}>
-					<div class="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-xs transition-all">
+					<div class="absolute inset-0 z-20 flex items-center justify-center bg-[#0b0e14]/80 backdrop-blur-sm">
 						<div class="flex flex-col items-center gap-4">
-							<div class="w-12 h-12 border-4 border-slate-100 border-t-indigo-500 rounded-full animate-spin shadow-xs"></div>
-							<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">
-								Syncing Market...
+							<div class="w-10 h-10 border-2 border-white/5 border-t-indigo-500 animate-spin"></div>
+							<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em] animate-pulse">
+								Reconstructing_Market_State
 							</span>
 						</div>
 					</div>
 				</Show>
+
 				<Show when={error()}>
-					<div class="absolute inset-0 z-20 flex items-center justify-center bg-white/90">
-						<div class="flex items-center gap-3 text-rose-600 font-bold bg-rose-50 px-5 py-4 rounded-2xl border border-rose-100 shadow-sm">
-							<svg
-								class="w-5 h-5"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<title>Error</title>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-								/>
-							</svg>
-							{error()}
+					<div class="absolute inset-0 z-20 flex items-center justify-center bg-[#0b0e14]/90">
+						<div class="badge-directive text-rose-500 border-rose-500/50 px-4 py-3 bg-rose-500/5">
+							CRITICAL_FAILURE: {error()}
 						</div>
 					</div>
 				</Show>
 
-				<div ref={chartContainer} class="w-full h-full" />
+				<div ref={chartContainer} class="w-full h-full opacity-90" />
 
-				{/* Floating Tooltip */}
-				<Show when={tooltip()}>
+				{/* Institutional Floating Tooltip */}
+				<Show when={tooltip()} keyed>
 					{(t) => (
 						<>
+							{/* Reticle Dot */}
 							<div
-								class="hidden md:block absolute w-3.5 h-3.5 bg-indigo-600 rounded-full border-3 border-white shadow-md pointer-events-none z-10 transition-transform duration-75 ease-out"
+								class="hidden md:block absolute w-2 h-2 bg-white border border-black shadow-[0_0_10px_rgba(255,255,255,0.5)] pointer-events-none z-10"
 								style={{
 									top: "0",
 									left: "0",
-									transform: `translate(${t().x - 7}px, ${t().snapY - 7}px)`,
+									transform: `translate(${t.x - 4}px, ${t.snapY - 4}px)`,
 								}}
 							/>
+							{/* Data Panel */}
 							<div
-								class={`absolute z-30 pointer-events-none bg-white/98 backdrop-blur-md border border-slate-200/60 shadow-xl p-4 transition-all duration-100 ease-out flex flex-col gap-4 ${isMobile() ? "top-4 left-4 right-4 rounded-2xl border-l-4 border-l-indigo-500" : "rounded-2xl w-72"}`}
+								class={`absolute z-30 pointer-events-none bg-[#151921]/95 backdrop-blur-md border border-white/10 shadow-2xl transition-all duration-75 ease-out flex flex-col ${isMobile() ? "top-2 left-2 right-2 border-t-2 border-t-indigo-500" : "w-64"}`}
 								style={
 									!isMobile()
 										? {
 												top: "0",
 												left: "0",
-												transform: `translate(${Math.min(Math.max(16, t().x + 24), (chartContainer?.clientWidth ?? 800) - 312)}px, ${Math.min(Math.max(16, t().y - 64), (chartContainer?.clientHeight ?? 500) - 300)}px)`,
+												transform: `translate(${Math.min(Math.max(12, t.x + 20), (chartContainer?.clientWidth ?? 800) - 270)}px, ${Math.min(Math.max(12, t.y - 40), (chartContainer?.clientHeight ?? 500) - 320)}px)`,
 											}
 										: {}
 								}
 							>
-								<div class="flex justify-between items-center pb-3 border-b border-slate-50">
-									<div class="text-slate-400 font-black uppercase tracking-widest text-[10px]">
-										{t().time}
-									</div>
-									<div
-										class={`px-2 py-0.5 rounded text-[10px] font-black ${t().changeColor === "text-emerald-600" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}
-									>
-										{t().changeColor === "text-emerald-600" ? "BULL" : "BEAR"}
-									</div>
-								</div>
-
-								<Show when={t().tdLabel}>
-									<div
-										class={`px-3 py-2.5 rounded-xl border flex flex-col gap-1 ${t().tdColor?.replace("bg-", "bg-opacity-50 bg-") || ""}`}
-									>
-										<span class="font-black text-[11px] flex items-center gap-2">
-											<span class="w-2 h-2 rounded-full bg-current animate-pulse shadow-xs"></span>
-											{t().tdLabel}
-										</span>
-										<span class="text-[10px] font-semibold opacity-80 leading-relaxed">
-											{t().tdDescription}
-										</span>
-									</div>
-								</Show>
-
-								<div class="grid grid-cols-2 gap-x-6 gap-y-3">
-									<div class="flex flex-col gap-0.5">
-										<span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-											Open
-										</span>
-										<span class="font-mono text-slate-700 font-bold text-sm">
-											{t().currencySymbol}
-											{t().open}
-										</span>
-									</div>
-									<div class="flex flex-col gap-0.5">
-										<span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-											High
-										</span>
-										<span class="font-mono text-slate-700 font-bold text-sm">
-											{t().currencySymbol}
-											{t().high}
-										</span>
-									</div>
-									<div class="flex flex-col gap-0.5">
-										<span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-											Low
-										</span>
-										<span class="font-mono text-slate-700 font-bold text-sm">
-											{t().currencySymbol}
-											{t().low}
-										</span>
-									</div>
-									<div class="flex flex-col gap-0.5">
-										<span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-											Close
-										</span>
+								{/* Tooltip Header */}
+								<div class="px-3 py-2 border-b border-white/5 flex justify-between items-center bg-white/2">
+									<span class="text-[10px] font-mono font-black text-white p-0">
+										{t.time}
+									</span>
+									<div class="flex items-center gap-1.5">
+										<Show when={t.changeColor.includes("emerald")}>
+											<IconTrendUp class="w-2.5 h-2.5 text-emerald-400" />
+										</Show>
+										<Show when={t.changeColor.includes("rose")}>
+											<IconTrendDown class="w-2.5 h-2.5 text-rose-400" />
+										</Show>
 										<span
-											class={`font-mono font-black text-sm ${t().changeColor}`}
+											class={`text-[9px] font-black uppercase tracking-widest ${t.changeColor}`}
 										>
-											{t().currencySymbol}
-											{t().close}
-										</span>
-									</div>
-									<div class="flex flex-col gap-0.5 col-span-2 mt-1 pt-1 border-t border-slate-50">
-										<span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-											Volume
-										</span>
-										<span class="font-mono text-slate-700 font-bold text-xs">
-											{t().volume}
+											{t.changeColor.includes("emerald")
+												? "DELTA_POS"
+												: "DELTA_NEG"}
 										</span>
 									</div>
 								</div>
 
-								{(t().ema20 ||
-									t().ema60 ||
-									t().ema120 ||
-									t().ema150 ||
-									t().ema200 ||
-									t().rsi ||
-									t().fng) && (
-									<div class="border-t border-slate-50 pt-3 space-y-2">
-										<div class="flex flex-wrap gap-x-4 gap-y-2">
-											<Show when={t().ema20}>
-												<div class="flex items-center gap-1.5 text-[10px]">
-													<span class="w-2 h-2 rounded-full bg-[#2196F3] shadow-xs"></span>
-													<span class="text-slate-400 font-bold">E20</span>
-													<span class="font-mono text-slate-700 font-bold">
-														{t().ema20}
+								{/* Tooltip Body */}
+								<div class="p-4 space-y-5">
+									<div class="grid grid-cols-2 gap-x-6 gap-y-4">
+										<div class="space-y-3">
+											<div class="flex flex-col">
+												<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+													OPEN
+												</span>
+												<span class="text-[11px] font-mono font-bold text-slate-300">
+													{t.currencySymbol}
+													{t.open}
+												</span>
+											</div>
+											<div class="flex flex-col">
+												<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+													LOW
+												</span>
+												<span class="text-[11px] font-mono font-bold text-slate-300">
+													{t.currencySymbol}
+													{t.low}
+												</span>
+											</div>
+										</div>
+										<div class="space-y-3">
+											<div class="flex flex-col">
+												<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+													HIGH
+												</span>
+												<span class="text-[11px] font-mono font-bold text-slate-300">
+													{t.currencySymbol}
+													{t.high}
+												</span>
+											</div>
+											<div class="flex flex-col border-l border-indigo-500/20 pl-3">
+												<span class="text-[8px] font-bold text-indigo-400 uppercase tracking-widest mb-1">
+													TERMINAL
+												</span>
+												<div class="flex items-center gap-2">
+													<Show when={t.changeColor.includes("emerald")}>
+														<IconTrendUp class="w-2.5 h-2.5 text-emerald-400" />
+													</Show>
+													<Show when={t.changeColor.includes("rose")}>
+														<IconTrendDown class="w-2.5 h-2.5 text-rose-400" />
+													</Show>
+													<span
+														class={`text-xs font-mono font-black ${t.changeColor}`}
+													>
+														{t.currencySymbol}
+														{t.close}
 													</span>
 												</div>
-											</Show>
-											<Show when={t().ema60}>
-												<div class="flex items-center gap-1.5 text-[10px]">
-													<span class="w-2 h-2 rounded-full bg-[#10B981] shadow-xs"></span>
-													<span class="text-slate-400 font-bold">E60</span>
-													<span class="font-mono text-slate-700 font-bold">
-														{t().ema60}
-													</span>
-												</div>
-											</Show>
-											<Show when={t().ema120}>
-												<div class="flex items-center gap-1.5 text-[10px]">
-													<span class="w-2 h-2 rounded-full bg-[#F59E0B] shadow-xs"></span>
-													<span class="text-slate-400 font-bold">E120</span>
-													<span class="font-mono text-slate-700 font-bold">
-														{t().ema120}
-													</span>
-												</div>
-											</Show>
-											<Show when={t().ema150}>
-												<div class="flex items-center gap-1.5 text-[10px]">
-													<span class="w-2 h-2 rounded-full bg-[#EC4899] shadow-xs"></span>
-													<span class="text-slate-400 font-bold">E150</span>
-													<span class="font-mono text-slate-700 font-bold">
-														{t().ema150}
-													</span>
-												</div>
-											</Show>
-											<Show when={t().ema200}>
-												<div class="flex items-center gap-1.5 text-[10px]">
-													<span class="w-2 h-2 rounded-full bg-[#9C27B0] shadow-xs"></span>
-													<span class="text-slate-400 font-bold">E200</span>
-													<span class="font-mono text-slate-700 font-bold">
-														{t().ema200}
-													</span>
-												</div>
-											</Show>
-											<Show when={t().rsi}>
-												<div class="flex flex-col gap-1">
-													<div class="flex items-center gap-1.5 text-[10px]">
-														<span class="w-2 h-2 rounded-full bg-[#7E57C2] shadow-xs"></span>
-														<span class="text-slate-400 font-bold">RSI</span>
-														<span class="font-mono text-slate-700 font-bold">
-															{t().rsi}
+											</div>
+										</div>
+										<div class="col-span-2 pt-2 border-t border-white/5 flex justify-between items-center">
+											<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
+												VOL_TOTAL
+											</span>
+											<span class="text-[10px] font-mono font-bold text-slate-400">
+												{t.volume}
+											</span>
+										</div>
+									</div>
+
+									{/* Indicators Section */}
+									<Show
+										when={
+											t.ema20 ||
+											t.ema60 ||
+											t.ema120 ||
+											t.ema150 ||
+											t.ema200 ||
+											t.rsi ||
+											t.fng ||
+											t.tdLabel
+										}
+									>
+										<div class="space-y-3 pt-3 border-t border-white/5">
+											{/* Technical Overlay */}
+											<div class="grid grid-cols-2 gap-2">
+												<Show
+													when={
+														t.ema20 ||
+														t.ema60 ||
+														t.ema120 ||
+														t.ema150 ||
+														t.ema200
+													}
+												>
+													<div class="flex flex-col gap-0.5">
+														<span class="text-[7px] font-bold text-slate-500 uppercase">
+															EMA_AVG
 														</span>
+														<div class="flex flex-wrap gap-x-2 gap-y-1">
+															<Show when={t.ema20}>
+																<span class="text-[9px] font-mono text-blue-400">
+																	{t.ema20}
+																</span>
+															</Show>
+															<Show when={t.ema60}>
+																<span class="text-[9px] font-mono text-emerald-400">
+																	{t.ema60}
+																</span>
+															</Show>
+															<Show when={t.ema120}>
+																<span class="text-[9px] font-mono text-orange-400">
+																	{t.ema120}
+																</span>
+															</Show>
+															<Show when={t.ema150}>
+																<span class="text-[9px] font-mono text-pink-400">
+																	{t.ema150}
+																</span>
+															</Show>
+															<Show when={t.ema200}>
+																<span class="text-[9px] font-mono text-purple-400">
+																	{t.ema200}
+																</span>
+															</Show>
+														</div>
 													</div>
-													<Show when={t().rsiDivergence}>
-														<div class="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 italic">
-															{t().rsiDivergence}
+												</Show>
+												<div class="flex flex-col gap-2">
+													<Show when={t.rsi}>
+														<div class="flex flex-col gap-0.5">
+															<span class="text-[7px] font-bold text-slate-500 uppercase">
+																RSI_14
+															</span>
+															<span class="text-[9px] font-mono text-indigo-400">
+																{t.rsi}
+															</span>
+														</div>
+													</Show>
+													<Show when={t.fng}>
+														<div class="flex flex-col gap-0.5">
+															<span class="text-[7px] font-bold text-slate-500 uppercase">
+																FEAR_GREED
+															</span>
+															<span
+																class={`text-[9px] font-mono ${t.fngClass}`}
+															>
+																{t.fng}
+															</span>
 														</div>
 													</Show>
 												</div>
-											</Show>
-											<Show when={t().fng}>
-												<div class="flex items-center gap-1.5 text-[10px]">
-													<span class="w-2 h-2 rounded-full bg-[#F7931A] shadow-xs"></span>
-													<span class="text-slate-400 font-bold">F&G</span>
-													<span class={`font-black ${t().fngClass}`}>
-														{t().fng}
-													</span>
+											</div>
+
+											{/* Signals */}
+											<Show when={t.tdLabel}>
+												<div class="bg-indigo-500/5 border border-indigo-500/10 p-2">
+													<div class="flex items-center gap-2 mb-1">
+														<span class="w-1.5 h-1.5 bg-indigo-500 animate-pulse"></span>
+														<span class="text-[9px] font-black text-white uppercase tracking-tighter">
+															{t.tdLabel}
+														</span>
+													</div>
+													<p class="text-[8px] text-slate-400 leading-tight uppercase font-bold tracking-tight">
+														{t.tdDescription}
+													</p>
 												</div>
 											</Show>
 										</div>
-									</div>
-								)}
+									</Show>
+								</div>
+
+								{/* Tooltip Footer */}
+								<div class="px-3 py-1.5 border-t border-white/5 bg-white/2 flex justify-between items-center">
+									<span class="text-[7px] font-black text-slate-600 uppercase tracking-widest">
+										MOD_TER_ALPHA_V3
+									</span>
+									<span class="text-[7px] font-mono text-indigo-500/50">
+										SECURED_FEED
+									</span>
+								</div>
 							</div>
 						</>
 					)}

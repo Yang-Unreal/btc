@@ -83,55 +83,63 @@ export default function ExecutionChecklist() {
 	const allChecked = () => items().every((i) => i.checked);
 
 	return (
-		<div class="p-6 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 text-white">
-			<div class="flex items-center justify-between mb-8">
-				<div>
-					<h2 class="text-xl font-bold tracking-tight">Execution Checklist</h2>
-					<p class="text-xs font-black text-slate-500 uppercase tracking-widest mt-1">
-						Final Validation Before Allocation
+		<div class="h-full flex flex-col">
+			<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6 border-l-4 border-indigo-500 pl-6 py-1">
+				<div class="min-w-0">
+					<h2 class="text-2xl font-black text-white tracking-tighter uppercase leading-tight">
+						Execution Checklist
+					</h2>
+					<p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+						Operational_Pre-Flight_Sequence
 					</p>
 				</div>
-				<div class="text-right">
-					<span class="text-2xl font-mono font-black text-indigo-400">
-						{Math.round(progress())}%
-					</span>
-					<div class="w-32 h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden">
+				<div class="shrink-0">
+					<div class="flex items-baseline gap-2 mb-1">
+						<span class="text-3xl font-mono font-black text-indigo-400">
+							{Math.round(progress())}
+						</span>
+						<span class="text-xs font-bold text-slate-600 uppercase">%</span>
+					</div>
+					<div class="w-24 sm:w-32 h-1 bg-white/5 overflow-hidden">
 						<div
-							class="h-full bg-indigo-500 transition-all duration-500 ease-out"
+							class="h-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-700 ease-out"
 							style={{ width: `${progress()}%` }}
 						></div>
 					</div>
 				</div>
 			</div>
 
-			<div class="space-y-6">
+			<div class="grow space-y-8">
 				{(["Macro", "Technical", "Derivatives", "Risk"] as const).map((cat) => (
 					<div>
-						<h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 border-b border-slate-800 pb-1">
-							{cat} Filters
-						</h3>
-						<div class="space-y-2">
+						<div class="flex items-center gap-3 mb-4">
+							<span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">
+								{cat}_Parameters
+							</span>
+							<div class="h-px grow bg-white/5"></div>
+						</div>
+						<div class="grid grid-cols-1 gap-1">
 							<For each={items().filter((i) => i.category === cat)}>
 								{(item) => (
 									<button
 										type="button"
 										onClick={() => toggleItem(item.id)}
-										class={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 border ${
+										class={`w-full flex items-center gap-4 px-4 py-3 border transition-all duration-200 group ${
 											item.checked
-												? "bg-indigo-500/10 border-indigo-500/30 text-indigo-100"
-												: "bg-slate-800/50 border-slate-700/50 text-slate-400 hover:border-slate-600"
+												? "bg-indigo-500/5 border-indigo-500/20 text-indigo-100"
+												: "bg-white/2 border-white/5 text-slate-500 hover:border-white/10 hover:bg-white/4"
 										}`}
 									>
 										<div
-											class={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors ${
+											class={`w-4 h-4 flex items-center justify-center border transition-all ${
 												item.checked
-													? "bg-indigo-500 border-indigo-500"
-													: "border-slate-600"
+													? "bg-indigo-500 border-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]"
+													: "border-white/10 group-hover:border-white/30"
 											}`}
 										>
 											{item.checked && (
 												<svg
-													class="w-3 h-3 text-white"
+													class="w-2.5 h-2.5 text-white"
 													fill="none"
 													viewBox="0 0 24 24"
 													stroke="currentColor"
@@ -140,13 +148,13 @@ export default function ExecutionChecklist() {
 													<path
 														stroke-linecap="round"
 														stroke-linejoin="round"
-														stroke-width="3"
+														stroke-width="4"
 														d="M5 13l4 4L19 7"
 													/>
 												</svg>
 											)}
 										</div>
-										<span class="text-xs font-bold text-left leading-tight">
+										<span class="text-[11px] font-bold uppercase tracking-tight text-left">
 											{item.label}
 										</span>
 									</button>
@@ -161,13 +169,15 @@ export default function ExecutionChecklist() {
 				type="button"
 				disabled={!allChecked()}
 				onClick={() => alert("Strategic Allocation Initialized.")}
-				class={`w-full mt-8 py-4 rounded-xl font-black uppercase tracking-widest transition-all duration-300 text-sm ${
+				class={`w-full mt-10 py-5 font-black uppercase tracking-[0.3em] transition-all duration-300 text-xs border ${
 					allChecked()
-						? "bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/20 text-white"
-						: "bg-slate-800 text-slate-600 cursor-not-allowed opacity-50"
+						? "bg-indigo-600 border-indigo-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:bg-indigo-500"
+						: "bg-white/5 border-white/10 text-slate-700 cursor-not-allowed"
 				}`}
 			>
-				{allChecked() ? "Confirm Allocation" : "Filters Incomplete"}
+				{allChecked()
+					? "Confirm Execution Sequence"
+					: "Awaiting Operational Clearance"}
 			</button>
 		</div>
 	);

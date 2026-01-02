@@ -157,7 +157,7 @@ export default function PredictionRoutine() {
 		};
 	};
 
-	const overallSignal = (): {
+	const overallSignalValue = (): {
 		signal: OverallSignal;
 		color: string;
 		bgColor: string;
@@ -211,118 +211,169 @@ export default function PredictionRoutine() {
 		};
 	};
 
+	const overallSignalData = () => {
+		const data = overallSignalValue();
+		switch (data.signal) {
+			case "Bullish":
+				return {
+					status: "ACCUMULATE",
+					color: "text-emerald-400",
+					border: "border-emerald-500/20",
+					bg: "bg-emerald-500/10",
+				};
+			case "Cautious Bullish":
+				return {
+					status: "MONITOR_POS",
+					color: "text-amber-400",
+					border: "border-amber-500/20",
+					bg: "bg-amber-500/10",
+				};
+			case "Bearish":
+				return {
+					status: "DE-RISK",
+					color: "text-rose-400",
+					border: "border-rose-500/20",
+					bg: "bg-rose-500/10",
+				};
+			case "Cautious":
+				return {
+					status: "RESTRICTED",
+					color: "text-amber-400",
+					border: "border-amber-500/20",
+					bg: "bg-amber-500/10",
+				};
+			default:
+				return {
+					status: "NEUTRAL",
+					color: "text-slate-400",
+					border: "border-white/10",
+					bg: "bg-white/5",
+				};
+		}
+	};
+
 	return (
-		<div class="space-y-6">
+		<div class="h-full flex flex-col">
 			{/* Header */}
-			<div class="flex items-center justify-between pb-4 border-b border-slate-100">
-				<div class="flex items-center gap-3">
-					<div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white text-xl">
-						🎯
+			<div class="flex items-center justify-between pb-6 border-b border-white/5 mb-8">
+				<div class="flex items-center gap-4">
+					<div class="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center text-white text-lg">
+						<span class="font-black">P</span>
 					</div>
 					<div>
-						<h2 class="text-xl font-black text-slate-900 tracking-tight leading-none mb-1">
+						<h2 class="text-2xl font-black text-white tracking-tighter uppercase leading-none mb-1">
 							Daily Pulse
 						</h2>
-						<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-							Aggregate Market Bias
+						<p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+							Aggregated_Operational_Bias
 						</p>
 					</div>
 				</div>
 				<Show when={!loading()}>
 					<div
-						class={`px-4 py-1.5 rounded-full ${overallSignal().bgColor} text-white font-black text-[10px] uppercase tracking-widest shadow-sm`}
+						class={`px-4 py-2 border font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(0,0,0,0.5)] ${overallSignalData().color} ${overallSignalData().border} ${overallSignalData().bg}`}
 					>
-						{overallSignal().signal}
+						{overallSignalData().status}
 					</div>
 				</Show>
 			</div>
 
 			{/* Checks List */}
-			<div class="space-y-4">
+			<div class="grow space-y-2">
 				<Show
 					when={!loading()}
 					fallback={
-						<div class="space-y-4">
-							<div class="h-12 bg-slate-50 animate-pulse rounded-xl" />
-							<div class="h-12 bg-slate-50 animate-pulse rounded-xl" />
+						<div class="space-y-2">
+							<div class="h-14 bg-white/2 animate-pulse" />
+							<div class="h-14 bg-white/2 animate-pulse" />
+							<div class="h-14 bg-white/2 animate-pulse" />
 						</div>
 					}
 				>
 					{/* Fuel Check */}
-					<div class="flex items-center gap-4 p-4 rounded-xl bg-slate-50/50 border border-slate-100">
-						<span class="text-2xl">{fuelCheck().icon}</span>
+					<div class="flex items-center gap-5 p-5 bg-white/2 border border-white/5 group hover:border-white/10 transition-all">
+						<div
+							class={`w-1.5 h-10 shrink-0 ${fuelCheck().status === "bullish" ? "bg-emerald-500" : fuelCheck().status === "bearish" ? "bg-rose-500" : "bg-slate-700"}`}
+						></div>
 						<div class="flex-1">
-							<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-								Liquidity Fuel
+							<p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
+								Liquidity_Filter
 							</p>
-							<p class="text-xs font-bold text-slate-800">
+							<p class="text-[11px] font-bold text-white uppercase tracking-tight">
 								{fuelCheck().label}
 							</p>
 						</div>
 						<span
-							class={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-white border border-slate-100 ${
+							class={`label-mono text-[9px] px-2 py-1 border whitespace-nowrap ${
 								fuelCheck().status === "bullish"
-									? "text-emerald-600"
-									: "text-slate-400"
+									? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-black"
+									: "text-slate-500 border-white/5 bg-white/2"
 							}`}
 						>
-							{fuelCheck().status}
+							{"//"} {fuelCheck().status.toUpperCase()}
 						</span>
 					</div>
 
 					{/* Whale Check */}
-					<div class="flex items-center gap-4 p-4 rounded-xl bg-slate-50/50 border border-slate-100">
-						<span class="text-2xl">{whaleCheck().icon}</span>
+					<div class="flex items-center gap-5 p-5 bg-white/2 border border-white/5 group hover:border-white/10 transition-all">
+						<div
+							class={`w-1.5 h-10 shrink-0 ${whaleCheck().status === "bullish" ? "bg-emerald-500" : whaleCheck().status === "bearish" ? "bg-rose-500" : "bg-slate-700"}`}
+						></div>
 						<div class="flex-1">
-							<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-								Whale Activity
+							<p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
+								Structural_Inflows
 							</p>
-							<p class="text-xs font-bold text-slate-800">
+							<p class="text-[11px] font-bold text-white uppercase tracking-tight">
 								{whaleCheck().label}
 							</p>
 						</div>
 						<span
-							class={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-white border border-slate-100 ${
+							class={`label-mono text-[9px] px-2 py-1 border whitespace-nowrap ${
 								whaleCheck().status === "bullish"
-									? "text-emerald-600"
-									: "text-slate-400"
+									? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-black"
+									: "text-slate-500 border-white/5 bg-white/2"
 							}`}
 						>
-							{whaleCheck().status}
+							{"//"} {whaleCheck().status.toUpperCase()}
 						</span>
 					</div>
 
 					{/* Temperature Check */}
-					<div class="flex items-center gap-4 p-4 rounded-xl bg-slate-50/50 border border-slate-100">
-						<span class="text-2xl">{tempCheck().icon}</span>
+					<div class="flex items-center gap-5 p-5 bg-white/2 border border-white/5 group hover:border-white/10 transition-all">
+						<div
+							class={`w-1.5 h-10 shrink-0 ${tempCheck().status === "bullish" ? "bg-emerald-500" : tempCheck().status === "caution" ? "bg-amber-500" : "bg-slate-700"}`}
+						></div>
 						<div class="flex-1">
-							<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-								Market Heat
+							<p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
+								Market_Heat_Index
 							</p>
-							<p class="text-xs font-bold text-slate-800">
+							<p class="text-[11px] font-bold text-white uppercase tracking-tight">
 								{tempCheck().label}
 							</p>
 						</div>
 						<span
-							class={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-white border border-slate-100 ${
+							class={`label-mono text-[9px] px-2 py-1 border whitespace-nowrap ${
 								tempCheck().status === "bullish"
-									? "text-emerald-600"
-									: "text-amber-600"
+									? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-black"
+									: tempCheck().status === "caution"
+										? "text-amber-400 border-amber-500/20 bg-amber-500/5"
+										: "text-slate-500 border-white/5 bg-white/2"
 							}`}
 						>
-							{tempCheck().status}
+							{"//"} {tempCheck().status.toUpperCase()}
 						</span>
 					</div>
 				</Show>
 			</div>
 
 			{/* Analysis Logic Footer */}
-			<div class="p-4 bg-slate-900 rounded-xl text-slate-400 text-[10px] leading-relaxed">
-				<p class="font-bold text-slate-200 uppercase tracking-widest mb-1">
-					The Logic:
+			<div class="mt-8 p-6 bg-slate-900 border border-white/5 text-slate-400 text-[10px] leading-relaxed uppercase font-bold tracking-tight">
+				<p class="text-white font-black mb-2 tracking-widest">
+					KERNEL_LOGIC_SEQUENCE:
 				</p>
-				Macro Trends set direction. On-chain sets the floor. Derivatives set the
-				noise. Align daily with the highest probability trend.
+				Macro trends set global direction. On-chain delta defines the structural
+				floor. High-frequency derivatives constitute atmospheric noise. Align
+				execution with the statistically dominant aggregate trend.
 			</div>
 		</div>
 	);

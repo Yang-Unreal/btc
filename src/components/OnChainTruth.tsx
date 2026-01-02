@@ -120,7 +120,7 @@ const formatCurrency = (val: number) => {
 export default function OnChainTruth() {
 	const [data, setData] = createSignal<OnChainData | null>(null);
 	const [loading, setLoading] = createSignal(true);
-	const [lastUpdated, _setLastUpdated] = createSignal<Date | null>(null);
+	const [lastUpdated, setLastUpdated] = createSignal<Date | null>(null);
 
 	const fetchData = async () => {
 		setLoading(true);
@@ -128,7 +128,10 @@ export default function OnChainTruth() {
 			const res = await fetch("/api/onchain");
 			if (res.ok) {
 				const json = await res.json();
-				if (!json.error) setData(json);
+				if (!json.error) {
+					setData(json);
+					setLastUpdated(new Date());
+				}
 			}
 		} catch (e) {
 			console.error("Failed to fetch on-chain data:", e);
@@ -153,142 +156,155 @@ export default function OnChainTruth() {
 	};
 
 	return (
-		<div class="">
-			{/* Section Header */}
-			<div class="flex flex-col md:flex-row md:items-start justify-between mb-8 gap-4 border-b border-slate-100 pb-6">
+		<div class="my-8 md:my-12">
+			{/* Section Header - Institutional Style */}
+			<div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6 border-l-4 border-cyan-500 pl-6 py-2">
 				<div>
-					<div class="flex items-center gap-2 mb-2">
-						<span class="text-[10px] font-black text-cyan-500 uppercase tracking-widest bg-cyan-50 px-2 py-0.5 rounded">
-							Tactical Level 03
+					<div class="flex items-center gap-3 mb-3">
+						<span class="badge-directive text-cyan-500 border-cyan-500/30 bg-cyan-500/5">
+							Tactical_Level_03
 						</span>
-						<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-							On-Chain Truth
-						</span>
+						<span class="label-mono opacity-40">OnChain_Truth_Feed</span>
 					</div>
-					<h2 class="text-3xl font-black text-slate-900 tracking-tight">
+					<h2 class="text-4xl font-black text-white tracking-tighter uppercase">
 						On-Chain Valuation
 					</h2>
-					<p class="text-slate-500 mt-2 max-w-2xl text-sm font-medium">
+					<p class="text-slate-500 mt-3 max-w-2xl text-[13px] font-bold leading-relaxed uppercase tracking-tight">
 						Institutional-grade value assessment. Identifying{" "}
-						<span class="text-slate-800 font-bold">Holder Conviction</span> and{" "}
-						<span class="text-slate-800 font-bold">Supply Dynamics</span>.
+						<span class="text-white">Holder Conviction</span> and{" "}
+						<span class="text-white">Supply Dynamics</span> through immutable
+						ledger analysis.
 					</p>
 				</div>
-				<div class="flex items-center gap-2">
+				<div class="flex items-center gap-3">
 					<Show when={data()?.isDemo}>
-						<span class="px-2 py-1 text-[10px] font-bold uppercase bg-amber-100 text-amber-600 rounded">
-							Demo Data
+						<span class="badge-directive text-amber-500 border-amber-500/30 bg-amber-500/5">
+							Demo_Protocol
 						</span>
 					</Show>
 					<button
 						type="button"
 						onClick={fetchData}
-						class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 shadow-sm rounded-lg text-sm font-medium text-slate-600 hover:text-cyan-600 hover:border-cyan-100 transition-all active:scale-95"
+						class="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all active:scale-95"
 					>
-						<IconRefresh class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`} />
-						{loading() ? "Updating..." : "Refresh"}
+						<IconRefresh
+							class={`w-3.5 h-3.5 ${loading() ? "animate-spin" : ""}`}
+						/>
+						{loading() ? "Syncing..." : "Sync_Data"}
 					</button>
 				</div>
 			</div>
 
-			{/* Three Column Layout */}
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+			{/* Three Column Layout - Directive Style */}
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-1">
 				{/* MVRV Z-Score Card */}
-				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden transition-all hover:bg-white hover:shadow-sm">
+				<div class="directive-card border-r-0 md:border-r">
 					<div class="p-6">
-						<div class="flex items-center gap-3 mb-5">
-							<div class="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
-								<IconScale class="w-5 h-5 text-indigo-600" />
+						<div class="flex items-center gap-3 mb-8">
+							<div class="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
+								<IconScale class="w-5 h-5 text-indigo-400" />
 							</div>
 							<div>
-								<h3 class="font-bold text-slate-800">MVRV Z-Score</h3>
-								<p class="text-xs text-slate-400">
-									Market Value vs Realized Value
-								</p>
+								<h3 class="font-black text-white uppercase tracking-tighter text-sm">
+									MVRV Z-Score
+								</h3>
+								<p class="label-mono opacity-50">Fair_Value_Delta</p>
 							</div>
 						</div>
 
 						<Show
 							when={!loading() && data()}
 							fallback={
-								<div class="space-y-3">
-									<div class="h-12 bg-slate-100 animate-pulse rounded" />
-									<div class="h-6 bg-slate-100 animate-pulse rounded-full" />
+								<div class="space-y-4">
+									<div class="h-10 bg-white/5 animate-pulse" />
+									<div class="h-6 bg-white/5 animate-pulse" />
 								</div>
 							}
 						>
 							{/* Z-Score Value */}
-							<div class="text-center mb-4">
+							<div class="text-center py-4 bg-white/2 border border-white/5 mb-6">
 								<div
-									class={`text-5xl font-black tracking-tight ${
+									class={`data-value text-5xl ${
 										data()?.mvrv?.signalColor === "rose"
-											? "text-rose-500"
+											? "text-rose-400"
 											: data()?.mvrv?.signalColor === "emerald"
-												? "text-emerald-500"
-												: "text-slate-700"
+												? "text-emerald-400"
+												: "text-white"
 									}`}
 								>
-									{data()?.mvrv?.zScore?.toFixed(2) ?? "0.00"}
+									{data()?.mvrv?.zScore?.toFixed(3) ?? "0.000"}
 								</div>
-								<div class="text-sm text-slate-400 mt-1">Z-Score</div>
+								<div class="text-[9px] font-bold text-slate-600 uppercase mt-2">
+									Current_Z_Factor
+								</div>
 							</div>
 
 							{/* Gauge Bar */}
-							<div class="relative mb-4">
-								<div class="h-3 rounded-full bg-slate-100 overflow-hidden">
-									{/* Pointer */}
+							<div class="relative py-2 mb-6">
+								<div class="h-1.5 bg-white/5 border border-white/10 overflow-hidden">
 									<div
-										class="absolute top-0 w-1 h-3 bg-slate-900 rounded transition-all duration-500"
+										class="absolute top-1/2 -translate-y-1/2 w-1 h-4 bg-white shadow-[0_0_10px_#fff] transition-all duration-700"
 										style={{ left: `${mvrvGaugePosition()}%` }}
 									/>
 								</div>
-								<div class="flex justify-between mt-1 text-[10px] text-slate-400 font-medium">
-									<span>-1 (Buy)</span>
-									<span>0</span>
-									<span>3+ (Sell)</span>
+								<div class="flex justify-between mt-3 text-[8px] font-black text-slate-500 uppercase tracking-widest">
+									<span class="text-emerald-500">Undervalued</span>
+									<span>Neutral</span>
+									<span class="text-rose-500">Overheated</span>
 								</div>
 							</div>
 
 							{/* Zones Legend */}
-							<div class="grid grid-cols-3 gap-2 text-center text-xs">
-								<div class="p-2 bg-slate-50 border border-emerald-100 rounded-lg">
-									<div class="font-bold text-emerald-600">&lt; 0</div>
-									<div class="text-emerald-500">Undervalued</div>
+							<div class="grid grid-cols-3 gap-1">
+								<div class="p-3 bg-emerald-500/5 border border-emerald-500/10">
+									<div class="text-[10px] font-mono font-black text-emerald-400">
+										&lt; 0.0
+									</div>
+									<div class="text-[8px] font-bold text-slate-600 uppercase mt-1">
+										Accumulate
+									</div>
 								</div>
-								<div class="p-2 bg-slate-50 border border-slate-100 rounded-lg">
-									<div class="font-bold text-slate-600">0-3</div>
-									<div class="text-slate-500">Normal</div>
+								<div class="p-3 bg-white/2 border border-white/5 text-center">
+									<div class="text-[10px] font-mono font-black text-slate-400">
+										0 - 3
+									</div>
+									<div class="text-[8px] font-bold text-slate-600 uppercase mt-1">
+										Normal
+									</div>
 								</div>
-								<div class="p-2 bg-slate-50 border border-rose-100 rounded-lg">
-									<div class="font-bold text-rose-600">&gt; 3</div>
-									<div class="text-rose-500">Overheated</div>
+								<div class="p-3 bg-rose-500/5 border border-rose-500/10 text-right">
+									<div class="text-[10px] font-mono font-black text-rose-400">
+										&gt; 3.0
+									</div>
+									<div class="text-[8px] font-bold text-slate-600 uppercase mt-1">
+										Distribute
+									</div>
 								</div>
 							</div>
 						</Show>
 					</div>
 
-					{/* Signal Footer */}
 					<Show when={data()}>
 						<div
-							class={`p-4 border-t ${
+							class={`px-6 py-4 border-t border-white/5 ${
 								data()?.mvrv.signalColor === "rose"
-									? "bg-rose-50 border-rose-200"
+									? "bg-rose-500/5"
 									: data()?.mvrv.signalColor === "emerald"
-										? "bg-emerald-50 border-emerald-200"
-										: "bg-slate-50 border-slate-200"
+										? "bg-emerald-500/5"
+										: "bg-white/2"
 							}`}
 						>
 							<div class="flex justify-between items-center">
-								<span class="text-sm font-medium text-slate-600">
-									Cycle Position
+								<span class="label-mono uppercase opacity-50">
+									Market_Phase
 								</span>
 								<span
-									class={`text-xs font-bold px-2.5 py-1 rounded-full ${
+									class={`text-[10px] font-black px-2 py-0.5 border uppercase ${
 										data()?.mvrv.signalColor === "rose"
-											? "bg-rose-100 text-rose-600 border border-rose-200"
+											? "border-rose-500/40 text-rose-400"
 											: data()?.mvrv.signalColor === "emerald"
-												? "bg-emerald-100 text-emerald-600 border border-emerald-200"
-												: "bg-slate-100 text-slate-600 border border-slate-200"
+												? "border-emerald-500/40 text-emerald-400"
+												: "border-white/10 text-slate-400"
 									}`}
 								>
 									{data()?.mvrv.signal}
@@ -299,50 +315,58 @@ export default function OnChainTruth() {
 				</div>
 
 				{/* Exchange Balance Card */}
-				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden transition-all hover:bg-white hover:shadow-sm">
+				<div class="directive-card border-r-0 md:border-r">
 					<div class="p-6">
-						<div class="flex items-center gap-3 mb-5">
-							<div class="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
-								<IconDatabase class="w-5 h-5 text-indigo-600" />
+						<div class="flex items-center gap-3 mb-8">
+							<div class="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
+								<IconDatabase class="w-5 h-5 text-cyan-400" />
 							</div>
 							<div>
-								<h3 class="font-bold text-slate-800">Exchange Balance</h3>
-								<p class="text-xs text-slate-400">BTC on all exchanges</p>
+								<h3 class="font-black text-white uppercase tracking-tighter text-sm">
+									Exchange Flow
+								</h3>
+								<p class="label-mono opacity-50">Supply_Liquidity</p>
 							</div>
 						</div>
 
 						<Show
 							when={!loading() && data()}
 							fallback={
-								<div class="space-y-3">
-									<div class="h-12 bg-slate-100 animate-pulse rounded" />
-									<div class="h-16 bg-slate-100 animate-pulse rounded" />
+								<div class="space-y-4">
+									<div class="h-10 bg-white/5 animate-pulse" />
+									<div class="h-16 bg-white/5 animate-pulse" />
 								</div>
 							}
 						>
 							{/* Balance Value */}
-							<div class="text-center mb-4">
-								<div class="text-4xl font-extrabold text-slate-900 tracking-tight">
+							<div class="text-center py-4 bg-white/2 border border-white/5 mb-6">
+								<div class="data-value text-4xl text-white">
 									{formatNumber(data()?.exchangeBalance?.btc ?? 0)}
 								</div>
-								<div class="text-sm text-slate-400 mt-1">BTC on Exchanges</div>
+								<div class="text-[9px] font-bold text-slate-600 uppercase mt-2">
+									BTC_ON_EXCHANGES
+								</div>
 							</div>
 
 							{/* Changes */}
-							<div class="grid grid-cols-2 gap-3 mb-4">
-								<div class="p-3 bg-slate-50 rounded-lg text-center">
-									<div class="text-xs text-slate-400 mb-1">7d Change</div>
+							<div class="grid grid-cols-2 gap-1 mb-6">
+								<div class="p-4 bg-white/2 border border-white/5 text-center">
+									<div class="text-[9px] font-bold text-slate-600 uppercase mb-2 tracking-widest">
+										7D_Delta
+									</div>
 									<div
-										class={`text-lg font-bold ${(data()?.exchangeBalance?.change7d ?? 0) <= 0 ? "text-emerald-600" : "text-rose-600"}`}
+										class={`data-value text-xl ${(data()?.exchangeBalance?.change7d ?? 0) <= 0 ? "text-emerald-400" : "text-rose-400"}`}
 									>
 										{(data()?.exchangeBalance?.change7d ?? 0) > 0 ? "+" : ""}
 										{data()?.exchangeBalance?.change7d?.toFixed(2) ?? "0.00"}%
 									</div>
 								</div>
-								<div class="p-3 bg-slate-50 rounded-lg text-center">
-									<div class="text-xs text-slate-400 mb-1">30d Change</div>
+								<div class="p-4 bg-white/2 border border-white/5 text-center">
+									<div class="text-[9px] font-bold text-slate-600 uppercase mb-2 tracking-widest">
+										30D_Delta
+									</div>
 									<div
-										class={`text-lg font-bold ${(data()?.exchangeBalance?.change30d ?? 0) <= 0 ? "text-emerald-600" : "text-rose-600"}`}
+										class={`data-value text-xl ${(data()?.exchangeBalance?.change30d ?? 0) <= 0 ? "text-emerald-400" : "text-rose-400"}`}
 									>
 										{(data()?.exchangeBalance?.change30d ?? 0) > 0 ? "+" : ""}
 										{data()?.exchangeBalance?.change30d?.toFixed(2) ?? "0.00"}%
@@ -351,46 +375,50 @@ export default function OnChainTruth() {
 							</div>
 
 							{/* Explanation */}
-							<p class="text-xs text-slate-500 leading-relaxed">
-								{(data()?.exchangeBalance?.change7d ?? 0) < 0 ? (
-									<span class="text-emerald-600 font-medium">
-										Coins leaving exchanges = Supply shock potential. Bullish.
-									</span>
-								) : (data()?.exchangeBalance?.change7d ?? 0) > 1 ? (
-									<span class="text-rose-600 font-medium">
-										Coins entering exchanges = Potential dump incoming. Bearish.
-									</span>
-								) : (
-									<span>
-										Exchange flows are stable. Watch for trend changes.
-									</span>
-								)}
-							</p>
+							<div class="bg-indigo-500/5 border border-white/5 p-4">
+								<p class="text-[10px] font-bold leading-relaxed uppercase tracking-tight text-slate-400">
+									{(data()?.exchangeBalance?.change7d ?? 0) < 0 ? (
+										<span class="text-emerald-400 font-black">
+											Supply Squeeze Active: Outflows detected. Bullish
+											accumulation trend confirmed.
+										</span>
+									) : (data()?.exchangeBalance?.change7d ?? 0) > 1 ? (
+										<span class="text-rose-400 font-black">
+											Exchange Inflow Surge: Elevated liquidation risk. Monitor
+											for distribution.
+										</span>
+									) : (
+										<span>
+											Exchange flows neutral. Standard liquidity maintenance.
+										</span>
+									)}
+								</p>
+							</div>
 						</Show>
 					</div>
 
 					{/* Signal Footer */}
 					<Show when={data()}>
 						<div
-							class={`p-4 border-t ${
+							class={`px-6 py-4 border-t border-white/5 ${
 								data()?.exchangeBalance.signalColor === "emerald"
-									? "bg-emerald-50 border-emerald-200"
+									? "bg-emerald-500/5"
 									: data()?.exchangeBalance.signalColor === "rose"
-										? "bg-rose-50 border-rose-200"
-										: "bg-slate-50 border-slate-200"
+										? "bg-rose-500/5"
+										: "bg-white/2"
 							}`}
 						>
 							<div class="flex justify-between items-center">
-								<span class="text-sm font-medium text-slate-600">
-									Supply Status
+								<span class="label-mono uppercase opacity-50">
+									Supply_Shock_Status
 								</span>
 								<span
-									class={`text-xs font-bold px-2.5 py-1 rounded-full ${
+									class={`text-[10px] font-black px-2 py-0.5 border uppercase ${
 										data()?.exchangeBalance.signalColor === "emerald"
-											? "bg-emerald-100 text-emerald-600 border border-emerald-200"
+											? "border-emerald-500/40 text-emerald-400"
 											: data()?.exchangeBalance.signalColor === "rose"
-												? "bg-rose-100 text-rose-600 border border-rose-200"
-												: "bg-slate-100 text-slate-600 border border-slate-200"
+												? "border-rose-500/40 text-rose-400"
+												: "border-white/10 text-slate-400"
 									}`}
 								>
 									{data()?.exchangeBalance.signal}
@@ -401,70 +429,76 @@ export default function OnChainTruth() {
 				</div>
 
 				{/* Realized Price Card */}
-				<div class="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden transition-all hover:bg-white hover:shadow-sm">
+				<div class="directive-card">
 					<div class="p-6">
-						<div class="flex items-center gap-3 mb-5">
-							<div class="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
-								<IconDiamond class="w-5 h-5 text-indigo-600" />
+						<div class="flex items-center gap-3 mb-8">
+							<div class="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
+								<IconDiamond class="w-5 h-5 text-emerald-400" />
 							</div>
 							<div>
-								<h3 class="font-bold text-slate-800">Realized Prices</h3>
-								<p class="text-xs text-slate-400">Cost basis levels</p>
+								<h3 class="font-black text-white uppercase tracking-tighter text-sm">
+									Realized Basis
+								</h3>
+								<p class="label-mono opacity-50">Holding_Costs</p>
 							</div>
 						</div>
 
 						<Show
 							when={!loading() && data()}
 							fallback={
-								<div class="space-y-3">
-									<div class="h-12 bg-slate-100 animate-pulse rounded" />
-									<div class="h-24 bg-slate-100 animate-pulse rounded" />
+								<div class="space-y-4">
+									<div class="h-10 bg-white/5 animate-pulse" />
+									<div class="h-24 bg-white/5 animate-pulse" />
 								</div>
 							}
 						>
 							{/* Current Price */}
-							<div class="text-center mb-4">
-								<div class="text-3xl font-extrabold text-slate-900 tracking-tight">
+							<div class="text-center py-4 bg-white/2 border border-white/5 mb-6">
+								<div class="data-value text-4xl text-white">
 									{formatCurrency(data()?.realizedPrice?.current ?? 0)}
 								</div>
-								<div class="text-sm text-slate-400 mt-1">Current BTC Price</div>
+								<div class="text-[9px] font-bold text-slate-600 uppercase mt-2">
+									TERMINAL_MARKET_PRICE
+								</div>
 							</div>
 
 							{/* Price Levels */}
-							<div class="space-y-3 mb-4">
+							<div class="space-y-1 mb-6">
 								{/* STH Realized */}
-								<div class="p-3 border border-slate-100 bg-slate-50 rounded-lg">
-									<div class="flex justify-between items-center mb-1">
-										<span class="text-xs font-bold text-slate-700">
-											STH Realized Price
+								<div class="p-4 border border-white/5 bg-white/2">
+									<div class="flex justify-between items-center mb-2">
+										<span class="text-[10px] font-black text-white uppercase tracking-tight">
+											STH_Realized
 										</span>
-										<span class="text-xs text-slate-500">
-											{data()?.realizedPrice?.sthRatio?.toFixed(2) ?? "0.00"}x
+										<span class="label-mono text-[9px]">
+											{data()?.realizedPrice?.sthRatio?.toFixed(2) ?? "0.00"}
+											X_MTM
 										</span>
 									</div>
-									<div class="text-lg font-bold text-slate-800">
+									<div class="data-value text-2xl text-slate-300">
 										{formatCurrency(data()?.realizedPrice?.sth ?? 0)}
 									</div>
-									<p class="text-[10px] text-slate-500 mt-1">
-										Short-term holders (tourists) cost basis
+									<p class="text-[8px] font-bold text-slate-600 uppercase mt-2">
+										Short-term / Speculator cost basis
 									</p>
 								</div>
 
 								{/* LTH Realized */}
-								<div class="p-3 border border-slate-100 bg-slate-50 rounded-lg">
-									<div class="flex justify-between items-center mb-1">
-										<span class="text-xs font-bold text-slate-700">
-											LTH Realized Price
+								<div class="p-4 border border-white/5 bg-white/2">
+									<div class="flex justify-between items-center mb-2">
+										<span class="text-[10px] font-black text-white uppercase tracking-tight">
+											LTH_Realized
 										</span>
-										<span class="text-xs text-slate-500">
-											{data()?.realizedPrice?.lthRatio?.toFixed(2) ?? "0.00"}x
+										<span class="label-mono text-[9px]">
+											{data()?.realizedPrice?.lthRatio?.toFixed(2) ?? "0.00"}
+											X_MTM
 										</span>
 									</div>
-									<div class="text-lg font-bold text-slate-800">
+									<div class="data-value text-2xl text-slate-400">
 										{formatCurrency(data()?.realizedPrice?.lth ?? 0)}
 									</div>
-									<p class="text-[10px] text-slate-500 mt-1">
-										Long-term holders (diamond hands) cost basis
+									<p class="text-[8px] font-bold text-slate-600 uppercase mt-2">
+										Long-term / Strategic cost basis
 									</p>
 								</div>
 							</div>
@@ -474,24 +508,26 @@ export default function OnChainTruth() {
 					{/* Trend Signal Footer */}
 					<Show when={data()}>
 						<div
-							class={`p-4 border-t ${
+							class={`px-6 py-4 border-t border-white/5 ${
 								data()?.realizedPrice.trendBroken
-									? "bg-rose-50 border-rose-100"
-									: "bg-emerald-50 border-emerald-100"
+									? "bg-rose-500/5"
+									: "bg-emerald-500/5"
 							}`}
 						>
 							<div class="flex justify-between items-center">
-								<span class="text-sm font-medium text-slate-600">
-									Bull Trend
+								<span class="label-mono uppercase opacity-50">
+									Bull_Regime_Integrity
 								</span>
 								<span
-									class={`text-xs font-bold px-2.5 py-1 rounded-full ${
+									class={`text-[10px] font-black px-2 py-0.5 border uppercase ${
 										data()?.realizedPrice.trendBroken
-											? "bg-rose-100 text-rose-600 border border-rose-200"
-											: "bg-emerald-100 text-emerald-600 border border-emerald-200"
+											? "border-rose-500/40 text-rose-400"
+											: "border-emerald-500/40 text-emerald-400"
 									}`}
 								>
-									{data()?.realizedPrice.trendBroken ? "⚠️ Broken" : "✓ Intact"}
+									{data()?.realizedPrice.trendBroken
+										? "⚠️ Compromised"
+										: "✓ Primary Trend Intact"}
 								</span>
 							</div>
 						</div>
@@ -499,30 +535,49 @@ export default function OnChainTruth() {
 				</div>
 			</div>
 
-			{/* Insight Note */}
-			<div class="mt-5 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-				<div class="flex items-start gap-3">
-					<span class="text-xl">🔍</span>
+			{/* Operational Insight Note */}
+			<div class="mt-8 p-4 bg-cyan-500/5 border border-cyan-500/10">
+				<div class="flex items-start gap-4">
+					<span class="text-2xl filter saturate-0 grayscale opacity-50">
+						🔍
+					</span>
 					<div>
-						<p class="text-sm font-semibold text-slate-800 mb-1">
-							On-Chain Sets the Floor
+						<p class="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-1">
+							Protocol_Intelligence
 						</p>
-						<p class="text-sm text-slate-600">
-							<strong>
-								In a bull market, price should bounce off the STH Realized
-								Price.
-							</strong>{" "}
-							If it breaks below, the short-term trend is broken.
+						<p class="text-[11px] text-slate-400 font-bold uppercase tracking-tight leading-normal">
+							In verified bull regimes, market price maintains{" "}
+							<span class="text-white">
+								support above the STH Realized Price
+							</span>
+							. A breach of this level signifies a regime shift or systematic
+							failure of conviction.
 						</p>
 					</div>
 				</div>
 			</div>
 
-			{/* Timestamp */}
-			<div class="mt-4 flex justify-end">
-				<span class="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
-					Updated:{" "}
-					{lastUpdated() ? lastUpdated()?.toLocaleTimeString() : "--:--"}
+			{/* Status Bar */}
+			<div class="mt-6 flex justify-between items-center">
+				<div class="flex items-center gap-2">
+					<div class="w-1.5 h-1.5 bg-cyan-500 animate-pulse rounded-full"></div>
+					<span class="label-mono text-[9px] opacity-40 uppercase">
+						Ledger_Sync_Active
+					</span>
+				</div>
+				<span class="label-mono text-[9px] opacity-40 uppercase">
+					Last_Sync:{" "}
+					{lastUpdated()
+						? lastUpdated()?.toLocaleTimeString([], {
+								hour: "2-digit",
+								minute: "2-digit",
+								second: "2-digit",
+							})
+						: "UNKNOWN"}{" "}
+					| Audit_ID: OSC_
+					{Math.floor(Date.now() / 1000)
+						.toString(16)
+						.toUpperCase()}
 				</span>
 			</div>
 		</div>

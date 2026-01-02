@@ -19,150 +19,191 @@ export default function SurvivalProtocols() {
 	const leverageNeeded = () => notionalValue() / balance();
 
 	return (
-		<div class="p-6 bg-white border border-slate-200 rounded-2xl shadow-xl font-sans ring-1 ring-slate-100">
-			<div class="flex items-center gap-3 mb-6">
-				<div class="w-10 h-10 rounded-xl bg-rose-500 flex items-center justify-center text-white">
-					<svg
-						class="w-6 h-6"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<title>Shield Icon</title>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-						/>
-					</svg>
-				</div>
+		<div class="my-8 md:my-12">
+			{/* Section Header - Institutional Style */}
+			<div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6 border-l-4 border-rose-500 pl-6 py-2">
 				<div>
-					<h2 class="text-xl font-bold text-slate-900 tracking-tight">
+					<div class="flex items-center gap-3 mb-3">
+						<span class="badge-directive text-rose-500 border-rose-500/30 bg-rose-500/5">
+							Tactical_Level_04
+						</span>
+						<span class="label-mono opacity-40">Risk_Management_Protocol</span>
+					</div>
+					<h2 class="text-4xl font-black text-white tracking-tighter uppercase">
 						Survival Protocols
 					</h2>
-					<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-						Risk Management & Position Sizing
+					<p class="text-slate-500 mt-3 max-w-2xl text-[13px] font-bold leading-relaxed uppercase tracking-tight">
+						Systematic position sizing and risk mitigation. Operational{" "}
+						<span class="text-white">Survival</span> is the primary objective of
+						any institutional allocation.
 					</p>
+				</div>
+				<div class="flex items-center gap-3">
+					<div class="w-12 h-12 bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500">
+						<svg
+							class="w-6 h-6"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<title>Shield Icon</title>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+							/>
+						</svg>
+					</div>
 				</div>
 			</div>
 
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-1">
 				{/* Calculator Section */}
-				<div class="space-y-6">
-					<div class="space-y-4">
+				<div class="directive-card p-8">
+					<div class="space-y-8">
 						<div>
 							<label
 								for="balance"
-								class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2"
+								class="block label-mono text-[10px] opacity-50 uppercase mb-3"
 							>
-								Account Balance ($)
+								Total_Account_Equity_($)
 							</label>
-							<input
-								id="balance"
-								type="number"
-								value={balance()}
-								onInput={(e) => setBalance(Number(e.currentTarget.value))}
-								class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-slate-700 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all"
-							/>
+							<div class="relative group">
+								<input
+									id="balance"
+									type="number"
+									value={balance()}
+									onInput={(e) => setBalance(Number(e.currentTarget.value))}
+									class="w-full px-5 py-4 bg-white/5 border border-white/10 text-xl font-mono font-black text-white focus:outline-none focus:border-rose-500/50 transition-all"
+								/>
+								<div class="absolute inset-y-0 right-5 flex items-center pointer-events-none opacity-20">
+									USD
+								</div>
+							</div>
 						</div>
-						<div class="grid grid-cols-2 gap-4">
+
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 							<div>
 								<label
 									for="risk-percent"
-									class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2"
+									class="block label-mono text-[10px] opacity-50 uppercase mb-3"
 								>
-									Risk Per Trade (%)
+									Trade_Risk_Factor_(%)
 								</label>
-								<input
-									id="risk-percent"
-									type="number"
-									value={riskPercent()}
-									onInput={(e) => setRiskPercent(Number(e.currentTarget.value))}
-									class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-slate-700 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all"
-								/>
+								<div class="relative group">
+									<input
+										id="risk-percent"
+										type="number"
+										value={riskPercent()}
+										onInput={(e) =>
+											setRiskPercent(Number(e.currentTarget.value))
+										}
+										class="w-full px-5 py-4 bg-white/5 border border-white/10 text-xl font-mono font-black text-white focus:outline-none focus:border-rose-500/50 transition-all"
+									/>
+									<div class="absolute inset-y-0 right-5 flex items-center pointer-events-none opacity-20">
+										%
+									</div>
+								</div>
 							</div>
 							<div>
-								<span class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
-									Risk Amount ($)
+								<span class="block label-mono text-[10px] opacity-50 uppercase mb-3">
+									Net_Capital_Risk_($)
 								</span>
-								<div class="w-full px-4 py-3 bg-rose-50 border border-rose-100 rounded-xl font-mono font-bold text-rose-600">
-									$
+								<div class="w-full px-5 py-4 bg-rose-500/5 border border-rose-500/10 text-xl font-mono font-black text-rose-400">
+									${" "}
 									{riskAmount().toLocaleString(undefined, {
 										minimumFractionDigits: 2,
 									})}
 								</div>
 							</div>
 						</div>
-						<div class="grid grid-cols-2 gap-4">
+
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
 							<div>
 								<label
 									for="entry-price"
-									class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2"
+									class="block label-mono text-[10px] opacity-50 uppercase mb-3"
 								>
-									Entry Price
+									Terminal_Entry_Price
 								</label>
-								<input
-									id="entry-price"
-									type="number"
-									value={entryPrice()}
-									onInput={(e) => setEntryPrice(Number(e.currentTarget.value))}
-									class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-slate-700 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all"
-								/>
+								<div class="relative group">
+									<input
+										id="entry-price"
+										type="number"
+										value={entryPrice()}
+										onInput={(e) =>
+											setEntryPrice(Number(e.currentTarget.value))
+										}
+										class="w-full px-5 py-4 bg-white/5 border border-white/10 text-xl font-mono font-black text-white focus:outline-none focus:border-rose-500/50 transition-all"
+									/>
+								</div>
 							</div>
 							<div>
 								<label
 									for="stop-loss"
-									class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2"
+									class="block label-mono text-[10px] opacity-50 uppercase mb-3"
 								>
-									Stop Loss
+									Protocol_Stop_Loss
 								</label>
-								<input
-									id="stop-loss"
-									type="number"
-									value={stopLoss()}
-									onInput={(e) => setStopLoss(Number(e.currentTarget.value))}
-									class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-slate-700 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all"
-								/>
+								<div class="relative group">
+									<input
+										id="stop-loss"
+										type="number"
+										value={stopLoss()}
+										onInput={(e) => setStopLoss(Number(e.currentTarget.value))}
+										class="w-full px-5 py-4 bg-white/5 border border-white/10 text-xl font-mono font-black text-white focus:outline-none focus:border-rose-500/50 transition-all"
+									/>
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
 
 				{/* Results Section */}
-				<div class="bg-slate-900 rounded-2xl p-6 text-white flex flex-col justify-between">
-					<div class="space-y-6">
+				<div class="directive-card bg-slate-900/40 p-8 flex flex-col">
+					<div class="grow space-y-10">
 						<div>
-							<p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
-								Recommended Position Size
+							<p class="label-mono text-[10px] opacity-40 uppercase mb-4 tracking-widest">
+								Recommended_Exposure_Matrix
 							</p>
-							<div class="text-3xl font-mono font-black text-rose-400">
-								{positionSize().toFixed(4)} <span class="text-lg">BTC</span>
+							<div class="flex items-baseline gap-4">
+								<div class="data-value text-6xl text-rose-400">
+									{positionSize().toFixed(4)}
+								</div>
+								<div class="text-xl font-black text-slate-600 uppercase">
+									BTC_Units
+								</div>
 							</div>
-							<p class="text-xs text-slate-500 font-bold mt-1">
-								Notional Value: $
-								{notionalValue().toLocaleString(undefined, {
-									maximumFractionDigits: 0,
-								})}
-							</p>
+							<div class="mt-4 flex items-center gap-3">
+								<span class="label-mono text-[11px] opacity-50">
+									Notional_Value:
+								</span>
+								<span class="font-mono text-sm font-black text-slate-300">
+									${" "}
+									{notionalValue().toLocaleString(undefined, {
+										maximumFractionDigits: 0,
+									})}
+								</span>
+							</div>
 						</div>
 
-						<div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
-							<div>
-								<p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-									Leverage
+						<div class="grid grid-cols-2 gap-1">
+							<div class="p-6 bg-white/2 border border-white/5">
+								<p class="label-mono text-[10px] opacity-40 uppercase mb-2">
+									Effective_Leverage
 								</p>
 								<div
-									class={`text-xl font-mono font-bold ${leverageNeeded() > 3 ? "text-amber-400" : "text-emerald-400"}`}
+									class={`data-value text-3xl ${leverageNeeded() > 3 ? "text-amber-400" : "text-emerald-400"}`}
 								>
 									{leverageNeeded().toFixed(2)}x
 								</div>
 							</div>
-							<div>
-								<p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-									Price Drop (SL)
+							<div class="p-6 bg-white/2 border border-white/5 text-right">
+								<p class="label-mono text-[10px] opacity-40 uppercase mb-2">
+									Price_Drop_Tolerance
 								</p>
-								<div class="text-xl font-mono font-bold text-slate-300">
+								<div class="data-value text-3xl text-slate-300">
 									{priceRiskPercent().toFixed(2)}%
 								</div>
 							</div>
@@ -170,47 +211,72 @@ export default function SurvivalProtocols() {
 					</div>
 
 					<div
-						class={`mt-6 p-4 rounded-xl border ${leverageNeeded() > 5 ? "bg-rose-500/10 border-rose-500/20 text-rose-200" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-200"}`}
+						class={`mt-10 p-6 border ${leverageNeeded() > 5 ? "bg-rose-500/5 border-rose-500/20 text-rose-200" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-200"}`}
 					>
-						<p class="text-[10px] font-black uppercase tracking-widest mb-1">
-							Protocol Status
-						</p>
-						<p class="text-sm font-bold leading-tight">
+						<div class="flex items-center gap-3 mb-2">
+							<div
+								class={`w-2 h-2 rounded-full animate-pulse ${leverageNeeded() > 5 ? "bg-rose-500" : "bg-emerald-500"}`}
+							></div>
+							<p class="label-mono text-[10px] uppercase font-black tracking-widest">
+								Protocol_Validation_Status
+							</p>
+						</div>
+						<p class="text-[13px] font-bold leading-relaxed uppercase tracking-tight">
 							{leverageNeeded() > 5
-								? "WARNING: High leverage detected. Protocol violation risk. Review stop loss distance."
+								? "CRITICAL: High leverage detected. Protocol violation risk. Review stop loss distance or reduce account risk factor."
 								: leverageNeeded() > 3
-									? "CAUTION: Moderate leverage. Maintain strict oversight."
-									: "SAFE: Position aligns with institutional risk parameters."}
+									? "ADVISORY: Moderate leverage. Maintain strict oversight and ensure execution speed for stop loss protocol."
+									: "NOMINAL: Position aligns with verified institutional risk parameters. Survival probability is high."}
 						</p>
 					</div>
 				</div>
 			</div>
 
-			{/* Strategy Mantras */}
-			<div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+			{/* Operational Heuristics */}
+			<div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-1">
 				{[
 					{
-						label: "Capital Preservation",
-						value: "Primary Objective",
+						label: "Capital_Preservation",
+						value: "Primary_Directive",
 						icon: "🛡️",
 					},
 					{
-						label: "Positive Expectancy",
-						value: "Follow the Bias",
+						label: "Positive_Expectancy",
+						value: "Bias_Confirmation",
 						icon: "📈",
 					},
-					{ label: "Emotional Entropy", value: "Zero Tolerance", icon: "🧘" },
+					{ label: "Emotional_Entropy", value: "Zero_Tolerance", icon: "🧘" },
 				].map((item) => (
-					<div class="px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
-						<span class="text-xl">{item.icon}</span>
+					<div class="directive-card p-5 flex items-center gap-5 hover:bg-white/2 transition-colors">
+						<span class="text-3xl filter saturate-0 grayscale opacity-40 group-hover:opacity-100 transition-opacity">
+							{item.icon}
+						</span>
 						<div>
-							<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+							<p class="label-mono text-[9px] opacity-40 uppercase mb-1">
 								{item.label}
 							</p>
-							<p class="text-xs font-bold text-slate-700">{item.value}</p>
+							<p class="text-xs font-black text-white uppercase tracking-wider">
+								{item.value}
+							</p>
 						</div>
 					</div>
 				))}
+			</div>
+
+			{/* Operational Timestamp */}
+			<div class="mt-6 flex justify-between items-center opacity-40">
+				<div class="flex items-center gap-2">
+					<div class="w-1.5 h-1.5 bg-rose-500 rounded-full"></div>
+					<span class="label-mono text-[9px] uppercase">
+						Risk_Engine_Online
+					</span>
+				</div>
+				<span class="label-mono text-[9px] uppercase">
+					Audit_Signature: SP_
+					{Math.floor(Date.now() / 1000)
+						.toString(16)
+						.toUpperCase()}
+				</span>
 			</div>
 		</div>
 	);
