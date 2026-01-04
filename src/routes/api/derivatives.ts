@@ -1,5 +1,8 @@
 import { json } from "@solidjs/router";
+import { desc, lte } from "drizzle-orm";
 import { apiCache, CACHE_DURATIONS } from "~/lib/cache";
+import { db } from "~/lib/db";
+import { openInterestHistory } from "~/lib/db/schema";
 
 // Derivatives data from real public APIs
 // Primary: OKX (works globally)
@@ -156,6 +159,27 @@ export async function GET() {
 		// OKX is one major exchange, multiply by ~3-4x for total market estimate
 		const okxOiBTC = okxOI?.oiBTC || 0;
 		const estimatedTotalOiBTC = okxOiBTC * 3.5; // OKX is ~25-30% of market
+
+		// Store current OI in DB and fetch previous for delta
+		let change24h = 0;
+		if (okxOI && db) {
+			await db
+				.insert(openInterestHistory)
+				.values({ oiBTC: okxOiBTC.toString() });
+
+			const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+			const previousEntry = await db
+				.select()
+				.from(openInterestHistory)
+				.where(lte(openInterestHistory.timestamp, twentyFourHoursAgo))
+				.orderBy(desc(openInterestHistory.timestamp))
+				.limit(1);
+			if (previousEntry.length > 0) {
+				const previousOiBTC = parseFloat(previousEntry[0].oiBTC);
+				change24h = ((okxOiBTC - previousOiBTC) * 3.5 * btcPrice) / 1e9;
+			}
+		}
+
 		const oiUSD = (estimatedTotalOiBTC * btcPrice) / 1e9;
 
 		// Use fetched funding rates
@@ -191,7 +215,7 @@ export async function GET() {
 		const data: DerivativesData = {
 			openInterest: {
 				total: Number(oiUSD.toFixed(4)),
-				change24h: 0,
+				change24h: Number(change24h.toFixed(4)),
 				btcEquivalent: Number(estimatedTotalOiBTC.toFixed(4)),
 			},
 			fundingRate: {

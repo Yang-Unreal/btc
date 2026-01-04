@@ -1,5 +1,6 @@
 import { Title } from "@solidjs/meta";
 import type { Component } from "solid-js";
+import AssetTable from "~/components/AssetTable";
 import BTCChart from "~/components/BTCChart";
 import DerivativesTrigger from "~/components/DerivativesTrigger";
 import LiquidityEngine from "~/components/LiquidityEngine";
@@ -94,6 +95,19 @@ export default function Home() {
 
 					{/* Dashboard Sections - Strict Grid */}
 					<div class="space-y-24">
+						{/* LEVEL 0: MARKET INTELLIGENCE */}
+						<section class="space-y-6">
+							<div class="flex items-center gap-4 flex-wrap">
+								<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
+									00_MARKET_INTEL
+								</span>
+								<div class="h-px grow bg-white/5"></div>
+							</div>
+							<div class="directive-card p-6 md:p-8">
+								<AssetTable />
+							</div>
+						</section>
+
 						{/* LEVEL 1: MACRO FILTER */}
 						<section class="space-y-6">
 							<div class="flex items-center gap-4 flex-wrap">

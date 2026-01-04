@@ -514,7 +514,7 @@ export default function OnChainTruth() {
 									: "bg-emerald-500/5"
 							}`}
 						>
-							<div class="flex justify-between items-center">
+							<div class="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-2 sm:gap-0">
 								<span class="label-mono uppercase opacity-50">
 									Bull_Regime_Integrity
 								</span>

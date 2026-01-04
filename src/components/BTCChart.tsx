@@ -1418,7 +1418,7 @@ export default function BTCChart() {
 										? {
 												top: "0",
 												left: "0",
-												transform: `translate(${Math.min(Math.max(12, t.x + 20), (chartContainer?.clientWidth ?? 800) - 270)}px, ${Math.min(Math.max(12, t.y - 40), (chartContainer?.clientHeight ?? 500) - 320)}px)`,
+												transform: `translate(${Math.min(Math.max(12, t.x + 20), (chartContainer?.clientWidth ?? 800) - 270)}px, ${Math.max(12, t.snapY - 340)}px)`,
 											}
 										: {}
 								}

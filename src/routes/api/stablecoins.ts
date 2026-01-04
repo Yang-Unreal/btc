@@ -25,11 +25,14 @@ interface DefiLlamaResponse {
 
 export async function GET() {
 	try {
-		const response = await fetch("https://stablecoins.llama.fi/stablecoins?includePrices=false", {
-			headers: {
-				"User-Agent": "BTCInsight/1.0",
+		const response = await fetch(
+			"https://stablecoins.llama.fi/stablecoins?includePrices=false",
+			{
+				headers: {
+					"User-Agent": "BTCInsight/1.0",
+				},
 			},
-		});
+		);
 
 		if (!response.ok) {
 			console.error(`DefiLlama API Error: ${response.status}`);
@@ -60,9 +63,18 @@ export async function GET() {
 		const totalPrevMonth = usdtPrevMonth + usdcPrevMonth;
 
 		// Calculate percentage changes
-		const change1d = totalPrevDay > 0 ? ((totalSupply - totalPrevDay) / totalPrevDay) * 100 : 0;
-		const change7d = totalPrevWeek > 0 ? ((totalSupply - totalPrevWeek) / totalPrevWeek) * 100 : 0;
-		const change30d = totalPrevMonth > 0 ? ((totalSupply - totalPrevMonth) / totalPrevMonth) * 100 : 0;
+		const change1d =
+			totalPrevDay > 0
+				? ((totalSupply - totalPrevDay) / totalPrevDay) * 100
+				: 0;
+		const change7d =
+			totalPrevWeek > 0
+				? ((totalSupply - totalPrevWeek) / totalPrevWeek) * 100
+				: 0;
+		const change30d =
+			totalPrevMonth > 0
+				? ((totalSupply - totalPrevMonth) / totalPrevMonth) * 100
+				: 0;
 
 		// Determine signal
 		let signal: "Bullish" | "Bearish" | "Neutral" = "Neutral";
