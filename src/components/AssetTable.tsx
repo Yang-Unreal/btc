@@ -71,7 +71,7 @@ export default function AssetTable() {
 			let marketData: CryptoAsset[];
 			try {
 				marketData = JSON.parse(rawData);
-			} catch (parseErr) {
+			} catch {
 				console.error(
 					"MARKET_UI: JSON Parse Error. Raw body starts with:",
 					rawData.substring(0, 100),
@@ -97,9 +97,11 @@ export default function AssetTable() {
 			} catch (favErr) {
 				console.warn("MARKET_UI: Favorites sync background failure:", favErr);
 			}
-		} catch (_err: any) {
+		} catch (_err: unknown) {
 			console.error("MARKET_UI: Critical failure:", _err);
-			setError(`Sync Error: ${_err?.message || "Protocol Offline"}`);
+			setError(
+				`Sync Error: ${_err instanceof Error ? _err.message : "Protocol Offline"}`,
+			);
 		} finally {
 			setLoading(false);
 		}

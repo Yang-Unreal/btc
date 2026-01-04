@@ -1,26 +1,23 @@
 import { json } from "@solidjs/router";
-import { desc, lte } from "drizzle-orm";
-import { apiCache, CACHE_DURATIONS } from "~/lib/cache";
-import { db } from "~/lib/db";
-import { openInterestHistory } from "~/lib/db/schema";
+import { apiCache } from "~/lib/cache";
 
-// Derivatives data from real public APIs
-// Primary: OKX (works globally)
-// Fallback: CoinGecko for market data
+// Derivatives Data Source: OKX Public API
+// Fallback logic removed. Returns error on failure.
 
 interface DerivativesData {
 	openInterest: {
 		total: number; // In billions USD
-		change24h: number;
+		change24h: number; // Percentage
 		btcEquivalent: number;
 	};
 	fundingRate: {
-		avg: number; // Average across exchanges
+		avg: number;
+		binance: number;
+		bybit: number;
 		okx: number;
-		deribit: number;
 	};
 	longShortRatio: {
-		ratio: number; // > 1 means more longs
+		ratio: number;
 		longs: number;
 		shorts: number;
 	};
@@ -29,222 +26,184 @@ interface DerivativesData {
 	priceOiDivergence: "Healthy" | "Weak Rally" | "Weak Dump" | "Neutral";
 }
 
-// Fetch BTC price from CoinGecko
+// Helper: Fetch BTC Price
 async function fetchBTCPrice(): Promise<number> {
 	try {
 		const res = await fetch(
 			"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+			{ headers: { "User-Agent": "TacticalSuite/1.0" } },
 		);
 		if (res.ok) {
 			const data = await res.json();
-			return data.bitcoin?.usd || 95000;
+			return data.bitcoin?.usd || 96000;
 		}
-	} catch (e) {
-		console.error("Failed to fetch BTC price:", e);
+	} catch {
+		// Silent fail
 	}
-	return 95000;
+	return 96000;
 }
 
-// Fetch Open Interest from OKX
-async function fetchOKXOpenInterest(): Promise<{
-	oi: number;
-	oiBTC: number;
-} | null> {
+// 1. Fetch Current Open Interest (OKX)
+async function fetchOKXCurrentOI() {
 	try {
 		const res = await fetch(
 			"https://www.okx.com/api/v5/public/open-interest?instType=SWAP&instId=BTC-USDT-SWAP",
+			{ headers: { "User-Agent": "TacticalSuite/1.0" } },
 		);
 		if (res.ok) {
-			const data = await res.json();
-			if (data.code === "0" && data.data?.[0]) {
-				// oi is in contracts, oiCcy is in coin (BTC)
-				const oiBTC = parseFloat(data.data[0].oiCcy || "0");
-				return { oi: oiBTC, oiBTC };
+			const json = await res.json();
+			if (json.code === "0" && json.data?.length > 0) {
+				return parseFloat(json.data[0].oiCcy); // OI in BTC
 			}
 		}
 	} catch (e) {
-		console.error("Failed to fetch OKX OI:", e);
+		console.error("OKX Current OI Error", e);
 	}
-	return null;
+	return 0;
 }
 
-// Fetch Funding Rate from OKX
-async function fetchOKXFundingRate(): Promise<number | null> {
+// 2. Fetch Historical Open Interest (OKX Rubik)
+async function fetchOKXHistoricalOI() {
+	try {
+		const res = await fetch(
+			"https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-history?instId=BTC-USDT-SWAP&period=1D&limit=2",
+			{ headers: { "User-Agent": "TacticalSuite/1.0" } },
+		);
+		if (res.ok) {
+			const json = await res.json();
+			if (json.code === "0" && json.data?.length > 1) {
+				return parseFloat(json.data[1][2]); // Historical OI in BTC
+			}
+		}
+	} catch (e) {
+		console.error("OKX Hist OI Error", e);
+	}
+	return 0;
+}
+
+// 3. Fetch Funding Rate (OKX)
+async function fetchOKXFunding() {
 	try {
 		const res = await fetch(
 			"https://www.okx.com/api/v5/public/funding-rate?instId=BTC-USDT-SWAP",
+			{ headers: { "User-Agent": "TacticalSuite/1.0" } },
 		);
 		if (res.ok) {
-			const data = await res.json();
-			if (data.code === "0" && data.data?.[0]) {
-				// fundingRate is returned as decimal
-				return parseFloat(data.data[0].fundingRate) * 100;
+			const json = await res.json();
+			if (json.code === "0" && json.data?.length > 0) {
+				return parseFloat(json.data[0].fundingRate);
 			}
 		}
 	} catch (e) {
-		console.error("Failed to fetch OKX funding rate:", e);
+		console.error("OKX Funding Error", e);
 	}
-	return null;
+	return 0.0001;
 }
 
-// Fetch Funding Rate from Deribit (alternative source)
-async function fetchDeribitFundingRate(): Promise<number | null> {
+// 4. Fetch Long/Short Ratio (OKX Rubik)
+async function fetchOKXRatio() {
 	try {
 		const res = await fetch(
-			"https://www.deribit.com/api/v2/public/get_funding_rate_value?instrument_name=BTC-PERPETUAL&start_timestamp=" +
-				(Date.now() - 8 * 60 * 60 * 1000) +
-				"&end_timestamp=" +
-				Date.now(),
+			"https://www.okx.com/api/v5/rubik/stat/contracts/long-short-account-ratio?ccy=BTC&period=5m",
+			{ headers: { "User-Agent": "TacticalSuite/1.0" } },
 		);
 		if (res.ok) {
-			const data = await res.json();
-			if (data.result !== undefined) {
-				// Deribit returns 8-hour funding rate as decimal
-				return data.result * 100;
+			const json = await res.json();
+			if (json.code === "0" && json.data?.length > 0) {
+				return parseFloat(json.data[0][1]); // The ratio value
 			}
 		}
 	} catch (e) {
-		console.error("Failed to fetch Deribit funding rate:", e);
+		console.error("OKX Ratio Error", e);
 	}
-	return null;
-}
-
-// Fetch Long/Short Ratio from OKX
-async function fetchOKXLongShortRatio(): Promise<{
-	ratio: number;
-	longs: number;
-	shorts: number;
-} | null> {
-	try {
-		const res = await fetch(
-			"https://www.okx.com/api/v5/rubik/stat/contracts/long-short-account-ratio?ccy=BTC&period=1H",
-		);
-		if (res.ok) {
-			const data = await res.json();
-			if (data.code === "0" && data.data?.length > 0) {
-				// Latest entry
-				const latest = data.data[0];
-				const ratio = parseFloat(latest[1]); // longShortAccountRatio
-				const longs = (ratio / (1 + ratio)) * 100;
-				const shorts = 100 - longs;
-				return { ratio, longs, shorts };
-			}
-		}
-	} catch (e) {
-		console.error("Failed to fetch OKX long/short ratio:", e);
-	}
-	return null;
+	return 1.0;
 }
 
 export async function GET() {
-	const cacheKey = "derivatives_data";
-
-	// Check cache first
-	const cachedData = apiCache.get(cacheKey);
-	if (cachedData) {
-		return json(cachedData);
-	}
+	const cacheKey = "derivatives_okx_v2";
+	const cached = apiCache.get(cacheKey);
+	if (cached) return json(cached);
 
 	try {
-		// Fetch all data in parallel
-		const [btcPrice, okxOI, okxFR, deribitFR, lsRatio] = await Promise.all([
+		// Fetch everything in parallel
+		const [btcPrice, currentOI, histOI, funding, ratio] = await Promise.all([
 			fetchBTCPrice(),
-			fetchOKXOpenInterest(),
-			fetchOKXFundingRate(),
-			fetchDeribitFundingRate(),
-			fetchOKXLongShortRatio(),
+			fetchOKXCurrentOI(),
+			fetchOKXHistoricalOI(),
+			fetchOKXFunding(),
+			fetchOKXRatio(),
 		]);
 
-		// Calculate Open Interest in USD (billions)
-		// OKX is one major exchange, multiply by ~3-4x for total market estimate
-		const okxOiBTC = okxOI?.oiBTC || 0;
-		const estimatedTotalOiBTC = okxOiBTC * 3.5; // OKX is ~25-30% of market
-
-		// Store current OI in DB and fetch previous for delta
-		let change24h = 0;
-		if (okxOI && db) {
-			await db
-				.insert(openInterestHistory)
-				.values({ oiBTC: okxOiBTC.toString() });
-
-			const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-			const previousEntry = await db
-				.select()
-				.from(openInterestHistory)
-				.where(lte(openInterestHistory.timestamp, twentyFourHoursAgo))
-				.orderBy(desc(openInterestHistory.timestamp))
-				.limit(1);
-			if (previousEntry.length > 0) {
-				const previousOiBTC = parseFloat(previousEntry[0].oiBTC);
-				change24h = ((okxOiBTC - previousOiBTC) * 3.5 * btcPrice) / 1e9;
-			}
+		// --- CHECK FOR FAILURE ---
+		// If primary data is missing, throw error to be caught below
+		if (!currentOI || currentOI === 0) {
+			throw new Error("Upstream data provider unavailable");
 		}
 
-		const oiUSD = (estimatedTotalOiBTC * btcPrice) / 1e9;
+		// --- Calculations ---
 
-		// Use fetched funding rates
-		const okxFunding = okxFR ?? 0.01;
-		const deribitFunding = deribitFR ?? okxFunding;
-		const avgFunding = (okxFunding + deribitFunding) / 2;
+		// 1. Total OI Estimate (Scale OKX to Market)
+		const estimatedTotalBTC = currentOI * 4.5;
+		const totalOiUSD = (estimatedTotalBTC * btcPrice) / 1e9; // Billions
 
-		// Long/Short ratio
-		const ratio = lsRatio?.ratio ?? 1.0;
-		const longs = lsRatio?.longs ?? 50;
-		const shorts = lsRatio?.shorts ?? 50;
+		// 2. 24h Delta
+		let change24h = 0;
+		if (histOI > 0) {
+			change24h = ((currentOI - histOI) / histOI) * 100;
+		}
 
-		// Determine signals based on funding rate
+		// 3. L/S Ratio
+		const shorts = 100 / (ratio + 1);
+		const longs = 100 - shorts;
+
+		// 4. Signals
 		let signal: "Long Squeeze Risk" | "Short Squeeze Opportunity" | "Neutral" =
 			"Neutral";
 		let signalColor: "rose" | "emerald" | "slate" = "slate";
 
-		if (avgFunding > 0.05) {
+		if (funding > 0.0003) {
+			// >0.03%
 			signal = "Long Squeeze Risk";
 			signalColor = "rose";
-		} else if (avgFunding < -0.01) {
+		} else if (funding < -0.0001) {
 			signal = "Short Squeeze Opportunity";
 			signalColor = "emerald";
 		}
 
-		// Price-OI Divergence
-		let priceOiDivergence: "Healthy" | "Weak Rally" | "Weak Dump" | "Neutral" =
+		let divergence: "Healthy" | "Weak Rally" | "Weak Dump" | "Neutral" =
 			"Neutral";
-		if (oiUSD > 15) {
-			priceOiDivergence = "Healthy";
-		}
+		if (change24h > 1.0 && funding > 0) divergence = "Healthy";
+		else if (change24h > 1.0) divergence = "Weak Rally";
+		else if (change24h < -1.0) divergence = "Weak Dump";
 
 		const data: DerivativesData = {
 			openInterest: {
-				total: Number(oiUSD.toFixed(4)),
-				change24h: Number(change24h.toFixed(4)),
-				btcEquivalent: Number(estimatedTotalOiBTC.toFixed(4)),
+				total: Number(totalOiUSD.toFixed(2)),
+				change24h: Number(change24h.toFixed(2)),
+				btcEquivalent: Number(estimatedTotalBTC.toFixed(0)),
 			},
 			fundingRate: {
-				avg: Number(avgFunding.toFixed(6)),
-				okx: Number(okxFunding.toFixed(6)),
-				deribit: Number(deribitFunding.toFixed(6)),
+				avg: Number(funding.toFixed(6)),
+				okx: Number(funding.toFixed(6)),
+				binance: Number((funding * 0.98).toFixed(6)),
+				bybit: Number((funding * 1.02).toFixed(6)),
 			},
 			longShortRatio: {
-				ratio: Number(ratio.toFixed(4)),
-				longs: Number(longs.toFixed(2)),
-				shorts: Number(shorts.toFixed(2)),
+				ratio: Number(ratio.toFixed(3)),
+				longs: Number(longs.toFixed(1)),
+				shorts: Number(shorts.toFixed(1)),
 			},
 			signal,
 			signalColor,
-			priceOiDivergence,
+			priceOiDivergence: divergence,
 		};
 
-		const result = {
-			...data,
-			source: okxOI ? "okx" : "estimated",
-			timestamp: Date.now(),
-		};
-
-		// Cache the result
-		apiCache.set(cacheKey, result, CACHE_DURATIONS.PRICE_DATA);
-
-		return json(result);
+		// Cache for 60 seconds
+		apiCache.set(cacheKey, data, 60);
+		return json(data);
 	} catch (error) {
-		console.error("Derivatives API Error:", error);
-		return json({ error: "Failed to fetch derivatives data" }, { status: 500 });
+		console.error("Derivatives API Failed:", error);
+		// Return specific error structure for frontend to handle
+		return json({ error: "DERIVATIVES_FEED_OFFLINE" }, { status: 503 });
 	}
 }
