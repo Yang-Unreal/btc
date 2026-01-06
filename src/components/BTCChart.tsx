@@ -80,6 +80,9 @@ const SUPPORTED_ASSETS: AssetConfig[] = [
 	{ symbol: "HNT", name: "Helium", krakenId: "HNT" },
 	{ symbol: "KAS", name: "Kaspa", krakenId: "KAS" },
 	{ symbol: "NIGHT", name: "Midnight", krakenId: "NIGHT" },
+	{ symbol: "SUI", name: "Sui", krakenId: "SUI" },
+	{ symbol: "PEPE", name: "Pepe", krakenId: "PEPE" },
+	{ symbol: "VIRTUAL", name: "Virtuals Protocol", krakenId: "VIRTUAL" },
 ];
 
 // ... [Existing Interfaces for TooltipData, FNGData, etc. remain unchanged] ...

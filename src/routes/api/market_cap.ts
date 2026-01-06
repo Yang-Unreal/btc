@@ -21,6 +21,9 @@ const COINGECKO_MAP: Record<string, string> = {
 	HNT: "helium",
 	KAS: "kaspa",
 	NIGHT: "midnight-3",
+	SUI: "sui",
+	PEPE: "pepe",
+	VIRTUAL: "virtual-protocol",
 };
 
 const KRAKEN_MAP: Record<string, string> = {
@@ -42,6 +45,9 @@ const KRAKEN_MAP: Record<string, string> = {
 	HNT: "HNTUSD",
 	KAS: "KASUSD",
 	NIGHT: "NIGHTUSD",
+	SUI: "SUIUSD",
+	PEPE: "PEPEUSD",
+	VIRTUAL: "VIRTUALUSD",
 };
 
 interface CoinGeckoMarket {
@@ -53,6 +59,10 @@ interface CoinGeckoMarket {
 	market_cap: number;
 	total_volume: number;
 	price_change_percentage_24h: number;
+	price_change_percentage_1h_in_currency?: number;
+	price_change_percentage_7d_in_currency?: number;
+	price_change_percentage_30d_in_currency?: number;
+	price_change_percentage_1y_in_currency?: number;
 	market_cap_rank: number;
 }
 
@@ -82,7 +92,7 @@ export async function GET() {
 		const cgIds = Object.values(COINGECKO_MAP).join(",");
 		const krakenPairs = Object.values(KRAKEN_MAP).join(",");
 
-		const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${cgIds}&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h`;
+		const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${cgIds}&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=1h,24h,7d,30d,1y`;
 		const krakenUrl = `https://api.kraken.com/0/public/Ticker?pair=${krakenPairs}`;
 
 		const [cgRes, krakenRes] = await Promise.all([
@@ -157,7 +167,11 @@ export async function GET() {
 				price,
 				marketCap: cgAsset?.market_cap || 0,
 				volume24h: cgAsset?.total_volume || 0,
+				change1h: cgAsset?.price_change_percentage_1h_in_currency || 0,
 				change24h,
+				change7d: cgAsset?.price_change_percentage_7d_in_currency || 0,
+				change30d: cgAsset?.price_change_percentage_30d_in_currency || 0,
+				change1y: cgAsset?.price_change_percentage_1y_in_currency || 0,
 				rank: cgAsset?.market_cap_rank || 999,
 			};
 		});
