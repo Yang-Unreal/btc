@@ -1,4 +1,5 @@
 import { type Component, createSignal, For, onMount, Show } from "solid-js";
+import { formatCompact, formatCryptoPrice } from "../lib/format";
 
 // --- Icons ---
 const IconStar: Component<{ class?: string; filled?: boolean }> = (props) => (
@@ -143,16 +144,7 @@ export default function AssetTable() {
 		return list;
 	};
 
-	const formatCryptoValue = (val: number) => {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency: "USD",
-			notation: "compact",
-			compactDisplay: "short",
-			maximumFractionDigits: val < 0.01 ? 8 : val < 1 ? 4 : 2,
-		}).format(val);
-	};
-
+	// --- Formatting ---
 	const ChangeCell: Component<{ value: number }> = (props) => (
 		<td
 			class={`py-4 px-3 text-center font-mono text-[11px] font-bold ${
@@ -316,17 +308,17 @@ export default function AssetTable() {
 										</td>
 										<td class="py-4 px-6 text-right">
 											<span class="font-mono text-sm text-white">
-												{formatCryptoValue(asset.price)}
+												{formatCryptoPrice(asset.price)}
 											</span>
 										</td>
 										<td class="py-4 px-6 text-right">
 											<span class="font-mono text-sm text-white">
-												{formatCryptoValue(asset.marketCap)}
+												{formatCompact(asset.marketCap)}
 											</span>
 										</td>
 										<td class="py-4 px-6 text-right">
 											<span class="font-mono text-sm text-white">
-												{formatCryptoValue(asset.volume24h)}
+												{formatCompact(asset.volume24h)}
 											</span>
 										</td>
 										<ChangeCell value={asset.change1h} />

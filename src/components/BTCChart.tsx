@@ -21,6 +21,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import { formatCryptoPrice } from "../lib/format";
 
 type BTCData = CandlestickData<UTCTimestamp> & { volume?: number };
 type RawKlineData = [number, number, number, number, number, number];
@@ -912,9 +913,10 @@ export default function BTCChart() {
 			wickUpColor: "#10b981",
 			wickDownColor: "#ef4444",
 			priceFormat: {
-				type: "price",
-				precision: 5,
-				minMove: 0.00001,
+				type: "custom",
+				formatter: (price: number) =>
+					formatCryptoPrice(price, activeCurrency().symbol),
+				minMove: 0.00000001,
 			},
 		});
 
@@ -1008,24 +1010,14 @@ export default function BTCChart() {
 				setTooltip(null);
 				return;
 			}
-			const safeFixed = (
-				val: number | null | undefined,
-				digits: number = 6,
-			) => {
-				if (val === null || val === undefined || Number.isNaN(val)) return "—";
-				return val.toFixed(digits);
-			};
+			const dateStr = new Date(Number(param.time) * 1000).toLocaleString(
+				"en-US",
+				{ month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" },
+			);
 
-			const getVal = (series: ISeriesApi<"Line"> | undefined) => {
-				const val = series ? param.seriesData.get(series) : undefined;
-				if (
-					val &&
-					"value" in val &&
-					typeof (val as LineData).value === "number"
-				) {
-					return safeFixed((val as LineData).value);
-				}
-				return undefined;
+			const formatTooltipPrice = (val: number | undefined) => {
+				if (val === undefined || val === null || Number.isNaN(val)) return "—";
+				return formatCryptoPrice(val, ""); // No symbol here, we add it in JSX if needed, or pass it
 			};
 
 			const volumeVal = volumeSeries
@@ -1042,10 +1034,6 @@ export default function BTCChart() {
 				? (param.seriesData.get(fngSeries) as LineData)
 				: undefined;
 			const snapY = candlestickSeries.priceToCoordinate(candle.close);
-			const dateStr = new Date(Number(param.time) * 1000).toLocaleString(
-				"en-US",
-				{ month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" },
-			);
 
 			const fngNum = fngVal ? Math.round(fngVal.value) : undefined;
 			let fngClass = "text-gray-500";
@@ -1072,21 +1060,31 @@ export default function BTCChart() {
 				x: param.point.x,
 				y: param.point.y,
 				time: dateStr,
-				open: safeFixed(candle.open),
-				high: safeFixed(candle.high),
-				low: safeFixed(candle.low),
-				close: safeFixed(candle.close),
+				open: formatTooltipPrice(candle.open),
+				high: formatTooltipPrice(candle.high),
+				low: formatTooltipPrice(candle.low),
+				close: formatTooltipPrice(candle.close),
 				volume: formattedVolume,
+				currencySymbol: activeCurrency().symbol,
 				changeColor:
 					candle.close >= candle.open ? "text-emerald-600" : "text-rose-500",
-				ema20: indicators().ema20 ? getVal(ema20Series) : undefined,
-				ema60: indicators().ema60 ? getVal(ema60Series) : undefined,
-				ema120: indicators().ema120 ? getVal(ema120Series) : undefined,
-				ema150: indicators().ema150 ? getVal(ema150Series) : undefined,
-				ema200: indicators().ema200 ? getVal(ema200Series) : undefined,
+				ema20: formatTooltipPrice(
+					(ema20Series &&
+					param.seriesData.get(ema20Series) &&
+					"value" in (param.seriesData.get(ema20Series) as any)
+						? (param.seriesData.get(ema20Series) as any).value
+						: undefined) as any,
+				),
+				ema60: formatTooltipPrice(
+					(ema60Series &&
+					param.seriesData.get(ema60Series) &&
+					"value" in (param.seriesData.get(ema60Series) as any)
+						? (param.seriesData.get(ema60Series) as any).value
+						: undefined) as any,
+				),
 				rsi:
 					rsiVal && typeof rsiVal.value === "number"
-						? safeFixed(rsiVal.value, 1)
+						? rsiVal.value.toFixed(1)
 						: undefined,
 				fng: fngNum?.toString(),
 				fngClass,
@@ -1097,7 +1095,6 @@ export default function BTCChart() {
 				rsiDivergence: divStatus
 					? `${divStatus.type === "bullish" ? "Bull" : "Bear"} Div: ${divStatus.priceAction} / RSI ${divStatus.rsiAction}`
 					: undefined,
-				currencySymbol: activeCurrency().symbol, // Use active currency symbol
 			});
 		});
 
@@ -1214,8 +1211,16 @@ export default function BTCChart() {
 	// --- React to Interval OR Currency Change ---
 	createEffect(() => {
 		// Dependencies: interval(), activeCurrency(), activeAsset()
-		if (candlestickSeries)
+		if (candlestickSeries) {
+			candlestickSeries.applyOptions({
+				priceFormat: {
+					type: "custom",
+					formatter: (price: number) =>
+						formatCryptoPrice(price, activeCurrency().symbol),
+				},
+			});
 			loadData(interval(), activeCurrency(), activeAsset());
+		}
 	});
 
 	return (
@@ -1326,8 +1331,7 @@ export default function BTCChart() {
 							<div
 								class={`text-xl font-mono font-black tracking-tighter tabular-nums leading-none mt-1 transition-colors duration-200 ${priceColor()}`}
 							>
-								{activeCurrency().symbol}
-								{currentPrice().toFixed(activeAsset().symbol === "BTC" ? 2 : 4)}
+								{formatCryptoPrice(currentPrice(), activeCurrency().symbol)}
 							</div>
 						</div>
 					</div>
