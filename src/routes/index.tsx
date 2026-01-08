@@ -5,6 +5,7 @@ import BTCChart from "~/components/BTCChart";
 import DerivativesTrigger from "~/components/DerivativesTrigger";
 import LiquidityEngine from "~/components/LiquidityEngine";
 import OnChainTruth from "~/components/OnChainTruth";
+import TitanTriggers from "~/components/TitanTriggers";
 
 // --- Custom Icons ---
 
@@ -131,6 +132,13 @@ export default function Home() {
 							</div>
 							<div class="directive-card overflow-hidden">
 								<BTCChart />
+							</div>
+						</section>
+
+						{/* TITAN 9 PROTOCOL */}
+						<section class="space-y-6">
+							<div class="directive-card p-6 md:p-8">
+								<TitanTriggers />
 							</div>
 						</section>
 

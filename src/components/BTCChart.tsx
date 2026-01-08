@@ -23,6 +23,12 @@ import {
 	untrack,
 } from "solid-js";
 import { formatCryptoPrice } from "../lib/format";
+import {
+	calculateDonchianHigh,
+	calculateEMA,
+	calculateRSI,
+	calculateSMA,
+} from "../lib/indicators";
 
 type BTCData = CandlestickData<UTCTimestamp> & { volume?: number };
 type RawKlineData = [number, number, number, number, number, number];
@@ -405,76 +411,8 @@ export default function BTCChart() {
 	];
 
 	// --- Helper Functions (EMA, RSI, TDSeq) match original file ---
-	const calculateEMA = (data: number[], period: number): number[] => {
-		if (data.length < period) return [];
-		const ema: number[] = [];
-		const multiplier = 2 / (period + 1);
-		let sum = 0;
-		for (let i = 0; i < period; i++) sum += data[i];
-		let emaValue = sum / period;
-		for (let i = 0; i < period - 1; i++) ema.push(NaN);
-		ema.push(emaValue);
-		for (let i = period; i < data.length; i++) {
-			emaValue = (data[i] - emaValue) * multiplier + emaValue;
-			ema.push(emaValue);
-		}
-		return ema;
-	};
-
-	const calculateSMA = (data: number[], period: number): number[] => {
-		if (data.length < period) return Array(data.length).fill(NaN);
-		const sma: number[] = [];
-		for (let i = 0; i < period - 1; i++) sma.push(NaN);
-		for (let i = period - 1; i < data.length; i++) {
-			let sum = 0;
-			for (let j = 0; j < period; j++) {
-				sum += data[i - j];
-			}
-			sma.push(sum / period);
-		}
-		return sma;
-	};
-
-	const calculateDonchianHigh = (data: BTCData[], period: number): number[] => {
-		if (data.length < period) return Array(data.length).fill(NaN);
-		const high: number[] = [];
-		for (let i = 0; i < period - 1; i++) high.push(NaN);
-		for (let i = period - 1; i < data.length; i++) {
-			let max = -Infinity;
-			for (let j = 0; j < period; j++) {
-				max = Math.max(max, data[i - j].high);
-			}
-			high.push(max);
-		}
-		return high;
-	};
-
-	const calculateRSI = (data: number[], period = 14): number[] => {
-		if (data.length <= period) return Array(data.length).fill(NaN);
-		const rsiArray: number[] = [];
-		let gains = 0;
-		let losses = 0;
-		for (let i = 1; i <= period; i++) {
-			const change = data[i] - data[i - 1];
-			if (change >= 0) gains += change;
-			else losses += Math.abs(change);
-		}
-		let avgGain = gains / period;
-		let avgLoss = losses / period;
-		for (let i = 0; i < period; i++) rsiArray.push(NaN);
-		let rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-		rsiArray.push(100 - 100 / (1 + rs));
-		for (let i = period + 1; i < data.length; i++) {
-			const change = data[i] - data[i - 1];
-			const currentGain = change > 0 ? change : 0;
-			const currentLoss = change < 0 ? Math.abs(change) : 0;
-			avgGain = (avgGain * (period - 1) + currentGain) / period;
-			avgLoss = (avgLoss * (period - 1) + currentLoss) / period;
-			rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-			rsiArray.push(100 - 100 / (1 + rs));
-		}
-		return rsiArray;
-	};
+	// --- Helper Functions (EMA, RSI, TDSeq) match original file ---
+	// Moved to src/lib/indicators.ts
 
 	const calculateTDMarkers = (data: BTCData[]) => {
 		if (!indicators().tdSeq || data.length < 5) {
@@ -896,7 +834,8 @@ export default function BTCChart() {
 				}
 			}
 			if (currentInd.donchianHigh && donchianHighSeries) {
-				const vals = calculateDonchianHigh(recent, 20);
+				const recentHighs = recent.map((d) => d.high);
+				const vals = calculateDonchianHigh(recentHighs, 20);
 				const val = vals[vals.length - 1];
 				if (!Number.isNaN(val)) {
 					donchianHighSeries.update({ time: newData.time, value: val });
@@ -1042,7 +981,8 @@ export default function BTCChart() {
 			donchianHighSeries &&
 			currentData.length >= 20
 		) {
-			const vals = calculateDonchianHigh(currentData, 20);
+			const highs = currentData.map((d) => d.high);
+			const vals = calculateDonchianHigh(highs, 20);
 			const lineData: LineData[] = [];
 			for (let i = 0; i < vals.length; i++) {
 				if (!Number.isNaN(vals[i]))
