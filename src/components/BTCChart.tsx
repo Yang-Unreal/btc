@@ -20,6 +20,7 @@ import {
 	onCleanup,
 	onMount,
 	Show,
+	untrack,
 } from "solid-js";
 import { formatCryptoPrice } from "../lib/format";
 
@@ -311,36 +312,29 @@ export default function BTCChart() {
 
 	const indicatorConfig = [
 		{
-			key: "ema21",
-			label: "EMA 21 (Macro)",
-			color: "bg-blue-500",
-			textColor: "text-blue-500",
-			borderColor: "border-blue-500",
-		},
-		{
 			key: "sma10",
-			label: "SMA 10 (Stop)",
+			label: "SMA 10",
 			color: "bg-cyan-500",
 			textColor: "text-cyan-500",
 			borderColor: "border-cyan-500",
 		},
 		{
 			key: "sma50",
-			label: "SMA 50 (Struct)",
+			label: "SMA 50",
 			color: "bg-lime-500",
 			textColor: "text-lime-500",
 			borderColor: "border-lime-500",
 		},
 		{
 			key: "sma100",
-			label: "SMA 100 (Cult)",
+			label: "SMA 100",
 			color: "bg-indigo-500",
 			textColor: "text-indigo-500",
 			borderColor: "border-indigo-500",
 		},
 		{
 			key: "donchianHigh",
-			label: "20D High (Entry)",
+			label: "20D High",
 			color: "bg-rose-500",
 			textColor: "text-rose-500",
 			borderColor: "border-rose-500",
@@ -351,6 +345,13 @@ export default function BTCChart() {
 			color: "bg-[#2196F3]",
 			textColor: "text-[#2196F3]",
 			borderColor: "border-[#2196F3]",
+		},
+		{
+			key: "ema21",
+			label: "EMA 21",
+			color: "bg-blue-500",
+			textColor: "text-blue-500",
+			borderColor: "border-blue-500",
 		},
 		{
 			key: "ema60",
@@ -926,407 +927,8 @@ export default function BTCChart() {
 		refreshAllMarkers(currentData);
 	};
 
-	// --- Load Data ---
-	const loadData = async (
-		activeInterval: Interval,
-		currencyConfig: CurrencyConfig,
-		assetConfig: AssetConfig,
-	) => {
-		if (!candlestickSeries) return;
-		setIsLoading(true);
-		setError(null);
-
-		setBtcData([]);
-		candlestickSeries.setData([]);
-		if (volumeSeries) volumeSeries.setData([]);
-		setTdMap(new Map());
-
-		// Reset indicators
-		if (markersPrimitive) {
-			try {
-				markersPrimitive.setMarkers([]);
-			} catch {
-				/* ignore */
-			}
-		}
-		[
-			ema20Series,
-			ema60Series,
-			ema120Series,
-			ema150Series,
-			ema200Series,
-			ema21Series,
-			sma10Series,
-			sma50Series,
-			sma100Series,
-			donchianHighSeries,
-			rsiSeries,
-			fngSeries,
-		].forEach((s) => {
-			if (s) s.setData([]);
-		});
-
-		const history = await fetchHistoricalData(
-			activeInterval,
-			currencyConfig.code,
-			assetConfig.symbol,
-		);
-
-		if (history.length > 0) {
-			candlestickSeries.setData(history);
-			if (volumeSeries) {
-				const volumeData = history.map((d) => ({
-					time: d.time,
-					value: d.volume || 0,
-					color:
-						d.close >= d.open
-							? "rgba(16, 185, 129, 0.5)"
-							: "rgba(239, 68, 68, 0.5)",
-				}));
-				volumeSeries.setData(volumeData);
-			}
-			setBtcData(history);
-			setCurrentPrice(history[history.length - 1].close);
-
-			// Indicators
-			const prices = history.map((d) => d.close);
-
-			const ema21Data = calculateEMA(prices, 21).map((val, i) => ({
-				time: history[i].time,
-				value: val,
-			}));
-			if (ema21Series)
-				ema21Series.setData(ema21Data.filter((d) => !Number.isNaN(d.value)));
-
-			const sma10Data = calculateSMA(prices, 10).map((val, i) => ({
-				time: history[i].time,
-				value: val,
-			}));
-			if (sma10Series)
-				sma10Series.setData(sma10Data.filter((d) => !Number.isNaN(d.value)));
-
-			const sma50Data = calculateSMA(prices, 50).map((val, i) => ({
-				time: history[i].time,
-				value: val,
-			}));
-			if (sma50Series)
-				sma50Series.setData(sma50Data.filter((d) => !Number.isNaN(d.value)));
-
-			const sma100Data = calculateSMA(prices, 100).map((val, i) => ({
-				time: history[i].time,
-				value: val,
-			}));
-			if (sma100Series)
-				sma100Series.setData(sma100Data.filter((d) => !Number.isNaN(d.value)));
-
-			const donchianData = calculateDonchianHigh(history, 20).map((val, i) => ({
-				time: history[i].time,
-				value: val,
-			}));
-			if (donchianHighSeries)
-				donchianHighSeries.setData(
-					donchianData.filter((d) => !Number.isNaN(d.value)),
-				);
-
-			chart?.timeScale().fitContent();
-			refreshAllMarkers(history);
-		}
-
-		connectWebSocket(activeInterval, currencyConfig, assetConfig);
-		setIsLoading(false);
-	};
-
-	onMount(() => {
-		if (!chartContainer) return;
-
-		chart = createChart(chartContainer, {
-			layout: { background: { color: "transparent" }, textColor: "#64748b" },
-			grid: {
-				vertLines: { color: "#f1f5f9" },
-				horzLines: { color: "#f1f5f9" },
-			},
-			width: chartContainer.clientWidth,
-			height: chartContainer.clientHeight,
-			crosshair: {
-				mode: 1,
-				vertLine: {
-					width: 1,
-					color: "#6366f1",
-					style: 3,
-					labelBackgroundColor: "#6366f1",
-				},
-				horzLine: { color: "#6366f1", labelBackgroundColor: "#6366f1" },
-			},
-			timeScale: {
-				timeVisible: true,
-				secondsVisible: false,
-				borderColor: "#e2e8f0",
-			},
-			rightPriceScale: {
-				borderColor: "#e2e8f0",
-				scaleMargins: { top: 0.1, bottom: 0.2 }, // Added bottom margin for volume
-			},
-			handleScale: { axisPressedMouseMove: true },
-			handleScroll: { vertTouchDrag: false },
-		});
-
-		candlestickSeries = chart.addSeries(CandlestickSeries, {
-			upColor: "#10b981",
-			downColor: "#ef4444",
-			borderVisible: false,
-			wickUpColor: "#10b981",
-			wickDownColor: "#ef4444",
-			priceFormat: {
-				type: "custom",
-				formatter: (price: number) =>
-					formatCryptoPrice(price, activeCurrency().symbol),
-				minMove: 0.00000001,
-			},
-		});
-
-		volumeSeries = chart.addSeries(HistogramSeries, {
-			color: "#26a69a",
-			priceFormat: {
-				type: "volume",
-			},
-			priceScaleId: "volume",
-		});
-
-		chart.priceScale("volume").applyOptions({
-			scaleMargins: {
-				top: 0.8,
-				bottom: 0,
-			},
-			visible: false,
-		});
-
-		markersPrimitive = createSeriesMarkers(
-			candlestickSeries,
-			[],
-		) as unknown as ISeriesMarkersPrimitive;
-
-		const createLineSeries = (color: string) =>
-			(chart as IChartApi).addSeries(LineSeries, {
-				color,
-				lineWidth: 2,
-				crosshairMarkerVisible: false,
-				visible: false,
-			});
-
-		ema20Series = createLineSeries("#2196F3");
-		ema60Series = createLineSeries("#10B981");
-		ema120Series = createLineSeries("#F59E0B");
-		ema150Series = createLineSeries("#EC4899");
-		ema200Series = createLineSeries("#9C27B0");
-
-		// Titan 9
-		ema21Series = createLineSeries("#3b82f6"); // blue-500
-		sma10Series = createLineSeries("#06b6d4"); // cyan-500
-		sma50Series = createLineSeries("#84cc16"); // lime-500
-		sma100Series = createLineSeries("#6366f1"); // indigo-500
-		donchianHighSeries = createLineSeries("#f43f5e"); // rose-500
-
-		const oscillatorOptions = {
-			priceScaleId: "oscillators",
-			crosshairMarkerVisible: false,
-		};
-		rsiSeries = chart.addSeries(LineSeries, {
-			...oscillatorOptions,
-			color: "#7E57C2",
-			visible: false,
-		});
-		fngSeries = chart.addSeries(LineSeries, {
-			...oscillatorOptions,
-			color: "#F7931A",
-			visible: false,
-		});
-
-		rsiSeries.createPriceLine({
-			price: 70,
-			color: "#cbd5e1",
-			lineWidth: 1,
-			lineStyle: 2,
-			axisLabelVisible: false,
-			title: "",
-		});
-		rsiSeries.createPriceLine({
-			price: 30,
-			color: "#cbd5e1",
-			lineWidth: 1,
-			lineStyle: 2,
-			axisLabelVisible: false,
-			title: "",
-		});
-
-		chart.priceScale("oscillators").applyOptions({
-			scaleMargins: { top: 0.8, bottom: 0 },
-			visible: false,
-			borderVisible: false,
-		});
-
-		chart.subscribeCrosshairMove((param: MouseEventParams) => {
-			if (!chartContainer || !candlestickSeries) return;
-			if (
-				param.point === undefined ||
-				!param.time ||
-				param.point.x < 0 ||
-				param.point.x > chartContainer.clientWidth ||
-				param.point.y < 0 ||
-				param.point.y > chartContainer.clientHeight
-			) {
-				setTooltip(null);
-				return;
-			}
-			const candle = param.seriesData.get(candlestickSeries) as
-				| BTCData
-				| undefined;
-			if (!candle) {
-				setTooltip(null);
-				return;
-			}
-			const dateStr = new Date(Number(param.time) * 1000).toLocaleString(
-				"en-US",
-				{ month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" },
-			);
-
-			const formatTooltipPrice = (val: number | undefined) => {
-				if (val === undefined || val === null || Number.isNaN(val)) return "—";
-				return formatCryptoPrice(val, ""); // No symbol here, we add it in JSX if needed, or pass it
-			};
-
-			const volumeVal = volumeSeries
-				? (param.seriesData.get(volumeSeries) as HistogramData)
-				: undefined;
-			const formattedVolume = volumeVal
-				? (Math.round(volumeVal.value * 100) / 100).toLocaleString()
-				: "—";
-
-			const rsiVal = rsiSeries
-				? (param.seriesData.get(rsiSeries) as LineData)
-				: undefined;
-			const fngVal = fngSeries
-				? (param.seriesData.get(fngSeries) as LineData)
-				: undefined;
-			const donchianHighVal = donchianHighSeries
-				? (param.seriesData.get(donchianHighSeries) as LineData)
-				: undefined;
-			const ema21Val = ema21Series
-				? (param.seriesData.get(ema21Series) as LineData)
-				: undefined;
-			const sma10Val = sma10Series
-				? (param.seriesData.get(sma10Series) as LineData)
-				: undefined;
-			const sma50Val = sma50Series
-				? (param.seriesData.get(sma50Series) as LineData)
-				: undefined;
-			const sma100Val = sma100Series
-				? (param.seriesData.get(sma100Series) as LineData)
-				: undefined;
-
-			const snapY = candlestickSeries.priceToCoordinate(candle.close);
-
-			const fngNum = fngVal ? Math.round(fngVal.value) : undefined;
-			let fngClass = "text-gray-500";
-			if (fngNum !== undefined) {
-				if (fngNum < 25) fngClass = "text-red-600 font-bold";
-				else if (fngNum < 45) fngClass = "text-orange-500 font-bold";
-				else if (fngNum > 75) fngClass = "text-green-600 font-bold";
-				else if (fngNum > 55) fngClass = "text-teal-500 font-bold";
-			}
-
-			const tdStatus = tdMap().get(Number(param.time));
-			let tdColor = "";
-			if (tdStatus) {
-				if (tdStatus.type === "buy")
-					tdColor = "bg-emerald-50 text-emerald-700 border-emerald-100";
-				else tdColor = "bg-rose-50 text-rose-700 border-rose-100";
-				if (tdStatus.stage === "countdown")
-					tdColor = "bg-amber-50 text-amber-700 border-amber-100";
-			}
-
-			const divStatus = divMap().get(Number(param.time));
-
-			const ema20Val = ema20Series
-				? (param.seriesData.get(ema20Series) as LineData)
-				: undefined;
-			const ema60Val = ema60Series
-				? (param.seriesData.get(ema60Series) as LineData)
-				: undefined;
-			const ema120Val = ema120Series
-				? (param.seriesData.get(ema120Series) as LineData)
-				: undefined;
-			const ema150Val = ema150Series
-				? (param.seriesData.get(ema150Series) as LineData)
-				: undefined;
-			const ema200Val = ema200Series
-				? (param.seriesData.get(ema200Series) as LineData)
-				: undefined;
-
-			setTooltip({
-				x: param.point.x,
-				y: param.point.y,
-				time: dateStr,
-				open: formatTooltipPrice(candle.open),
-				high: formatTooltipPrice(candle.high),
-				low: formatTooltipPrice(candle.low),
-				close: formatTooltipPrice(candle.close),
-				volume: formattedVolume,
-				currencySymbol: activeCurrency().symbol,
-				changeColor:
-					candle.close >= candle.open ? "text-emerald-600" : "text-rose-500",
-				ema20: formatTooltipPrice(ema20Val?.value),
-				ema60: formatTooltipPrice(ema60Val?.value),
-				ema120: formatTooltipPrice(ema120Val?.value),
-				ema150: formatTooltipPrice(ema150Val?.value),
-				ema200: formatTooltipPrice(ema200Val?.value),
-				ema21: formatTooltipPrice(ema21Val?.value),
-				sma10: formatTooltipPrice(sma10Val?.value),
-				sma50: formatTooltipPrice(sma50Val?.value),
-				sma100: formatTooltipPrice(sma100Val?.value),
-				donchianHigh: formatTooltipPrice(donchianHighVal?.value),
-				rsi:
-					rsiVal && typeof rsiVal.value === "number"
-						? rsiVal.value.toFixed(1)
-						: undefined,
-				fng: fngNum?.toString(),
-				fngClass,
-				snapY: snapY ?? param.point.y,
-				tdLabel: tdStatus?.label,
-				tdColor: tdColor,
-				tdDescription: tdStatus?.description,
-				rsiDivergence: divStatus
-					? `${divStatus.type === "bullish" ? "Bull" : "Bear"} Div: ${divStatus.priceAction} / RSI ${divStatus.rsiAction}`
-					: undefined,
-			});
-		});
-
-		// Initial Load
-		loadData(interval(), activeCurrency(), activeAsset());
-
-		const handleResize = () => {
-			if (chart && chartContainer) {
-				chart.applyOptions({ width: chartContainer.clientWidth });
-			}
-			setIsMobile(window.innerWidth < 768);
-		};
-
-		handleResize();
-		window.addEventListener("resize", handleResize);
-
-		onCleanup(() => {
-			if (ws) ws.close();
-			if (chart) {
-				chart.remove();
-				chart = undefined;
-				candlestickSeries = undefined;
-			}
-			window.removeEventListener("resize", handleResize);
-		});
-	});
-
-	// --- Layout & Indicator Effect (Simplified, Same as original logic) ---
-	createEffect(() => {
-		const currentData = btcData();
+	const syncAllIndicators = () => {
+		const currentData = untrack(() => btcData());
 		const currentInd = indicators();
 
 		if (!chart || !candlestickSeries) return;
@@ -1462,6 +1064,399 @@ export default function BTCChart() {
 		} else if (rsiSeries) {
 			rsiSeries.setData([]);
 		}
+	};
+
+	// --- Load Data ---
+	const loadData = async (
+		activeInterval: Interval,
+		currencyConfig: CurrencyConfig,
+		assetConfig: AssetConfig,
+	) => {
+		if (!candlestickSeries) return;
+		setIsLoading(true);
+		setError(null);
+
+		setBtcData([]);
+		candlestickSeries.setData([]);
+		if (volumeSeries) volumeSeries.setData([]);
+		setTdMap(new Map());
+
+		// Reset indicators
+		if (markersPrimitive) {
+			try {
+				markersPrimitive.setMarkers([]);
+			} catch {
+				/* ignore */
+			}
+		}
+		[
+			ema20Series,
+			ema60Series,
+			ema120Series,
+			ema150Series,
+			ema200Series,
+			ema21Series,
+			sma10Series,
+			sma50Series,
+			sma100Series,
+			donchianHighSeries,
+			rsiSeries,
+			fngSeries,
+		].forEach((s) => {
+			if (s) s.setData([]);
+		});
+
+		const history = await fetchHistoricalData(
+			activeInterval,
+			currencyConfig.code,
+			assetConfig.symbol,
+		);
+
+		if (history.length > 0) {
+			candlestickSeries.setData(history);
+			if (volumeSeries) {
+				const volumeData = history.map((d) => ({
+					time: d.time,
+					value: d.volume || 0,
+					color:
+						d.close >= d.open
+							? "rgba(16, 185, 129, 0.5)"
+							: "rgba(239, 68, 68, 0.5)",
+				}));
+				volumeSeries.setData(volumeData);
+			}
+			setBtcData(history);
+			setCurrentPrice(history[history.length - 1].close);
+
+			chart?.timeScale().fitContent();
+			syncAllIndicators();
+		}
+
+		connectWebSocket(activeInterval, currencyConfig, assetConfig);
+		setIsLoading(false);
+	};
+
+	onMount(() => {
+		if (!chartContainer) return;
+
+		chart = createChart(chartContainer, {
+			layout: { background: { color: "transparent" }, textColor: "#64748b" },
+			grid: {
+				vertLines: { color: "#f1f5f9" },
+				horzLines: { color: "#f1f5f9" },
+			},
+			width: chartContainer.clientWidth,
+			height: chartContainer.clientHeight,
+			crosshair: {
+				mode: 1,
+				vertLine: {
+					width: 1,
+					color: "#6366f1",
+					style: 3,
+					labelBackgroundColor: "#6366f1",
+				},
+				horzLine: { color: "#6366f1", labelBackgroundColor: "#6366f1" },
+			},
+			timeScale: {
+				timeVisible: true,
+				secondsVisible: false,
+				borderColor: "#e2e8f0",
+			},
+			rightPriceScale: {
+				borderColor: "#e2e8f0",
+				scaleMargins: { top: 0.1, bottom: 0.2 }, // Added bottom margin for volume
+			},
+			handleScale: { axisPressedMouseMove: true },
+			handleScroll: { vertTouchDrag: false },
+		});
+
+		candlestickSeries = chart.addSeries(CandlestickSeries, {
+			upColor: "#10b981",
+			downColor: "#ef4444",
+			borderVisible: false,
+			wickUpColor: "#10b981",
+			wickDownColor: "#ef4444",
+			priceFormat: {
+				type: "custom",
+				formatter: (price: number) =>
+					formatCryptoPrice(price, activeCurrency().symbol),
+				minMove: 0.00000001,
+			},
+		});
+
+		volumeSeries = chart.addSeries(HistogramSeries, {
+			color: "#26a69a",
+			priceFormat: {
+				type: "volume",
+			},
+			priceScaleId: "volume",
+		});
+
+		chart.priceScale("volume").applyOptions({
+			scaleMargins: {
+				top: 0.8,
+				bottom: 0,
+			},
+			visible: false,
+		});
+
+		markersPrimitive = createSeriesMarkers(
+			candlestickSeries,
+			[],
+		) as unknown as ISeriesMarkersPrimitive;
+
+		const createLineSeries = (color: string) =>
+			(chart as IChartApi).addSeries(LineSeries, {
+				color,
+				lineWidth: 2,
+				crosshairMarkerVisible: false,
+				visible: false,
+			});
+
+		ema20Series = createLineSeries("#2196F3");
+		ema60Series = createLineSeries("#10B981");
+		ema120Series = createLineSeries("#F59E0B");
+		ema150Series = createLineSeries("#EC4899");
+		ema200Series = createLineSeries("#9C27B0");
+
+		// Titan 9
+		ema21Series = createLineSeries("#3b82f6"); // blue-500
+		sma10Series = createLineSeries("#06b6d4"); // cyan-500
+		sma50Series = createLineSeries("#84cc16"); // lime-500
+		sma100Series = createLineSeries("#6366f1"); // indigo-500
+		donchianHighSeries = createLineSeries("#f43f5e"); // rose-500
+
+		const oscillatorOptions = {
+			priceScaleId: "oscillators",
+			crosshairMarkerVisible: false,
+		};
+		rsiSeries = chart.addSeries(LineSeries, {
+			...oscillatorOptions,
+			color: "#7E57C2",
+			visible: false,
+		});
+		fngSeries = chart.addSeries(LineSeries, {
+			...oscillatorOptions,
+			color: "#F7931A",
+			visible: false,
+		});
+
+		rsiSeries.createPriceLine({
+			price: 70,
+			color: "#cbd5e1",
+			lineWidth: 1,
+			lineStyle: 2,
+			axisLabelVisible: false,
+			title: "",
+		});
+		rsiSeries.createPriceLine({
+			price: 30,
+			color: "#cbd5e1",
+			lineWidth: 1,
+			lineStyle: 2,
+			axisLabelVisible: false,
+			title: "",
+		});
+
+		chart.priceScale("oscillators").applyOptions({
+			scaleMargins: { top: 0.8, bottom: 0 },
+			visible: false,
+			borderVisible: false,
+		});
+
+		let lastTooltipTime: number | null = null;
+		let cachedTooltipData: Omit<TooltipData, "x" | "y" | "snapY"> | null = null;
+
+		chart.subscribeCrosshairMove((param: MouseEventParams) => {
+			if (!chartContainer || !candlestickSeries) return;
+			if (
+				param.point === undefined ||
+				!param.time ||
+				param.point.x < 0 ||
+				param.point.x > chartContainer.clientWidth ||
+				param.point.y < 0 ||
+				param.point.y > chartContainer.clientHeight
+			) {
+				setTooltip(null);
+				lastTooltipTime = null;
+				cachedTooltipData = null;
+				return;
+			}
+
+			if (lastTooltipTime === (param.time as number) && cachedTooltipData) {
+				const candle = param.seriesData.get(candlestickSeries) as
+					| BTCData
+					| undefined;
+				const snapY = candle
+					? candlestickSeries.priceToCoordinate(candle.close)
+					: param.point.y;
+				setTooltip({
+					...cachedTooltipData,
+					x: param.point.x,
+					y: param.point.y,
+					snapY: snapY ?? param.point.y,
+				} as TooltipData);
+				return;
+			}
+
+			const candle = param.seriesData.get(candlestickSeries) as
+				| BTCData
+				| undefined;
+			if (!candle) {
+				setTooltip(null);
+				return;
+			}
+			const dateStr = new Date(Number(param.time) * 1000).toLocaleString(
+				"en-US",
+				{ month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" },
+			);
+
+			const formatTooltipPrice = (val: number | undefined) => {
+				if (val === undefined || val === null || Number.isNaN(val)) return "—";
+				return formatCryptoPrice(val, ""); // No symbol here, we add it in JSX if needed, or pass it
+			};
+
+			const volumeVal = volumeSeries
+				? (param.seriesData.get(volumeSeries) as HistogramData)
+				: undefined;
+			const formattedVolume = volumeVal
+				? (Math.round(volumeVal.value * 100) / 100).toLocaleString()
+				: "—";
+
+			const rsiVal = rsiSeries
+				? (param.seriesData.get(rsiSeries) as LineData)
+				: undefined;
+			const fngVal = fngSeries
+				? (param.seriesData.get(fngSeries) as LineData)
+				: undefined;
+			const donchianHighVal = donchianHighSeries
+				? (param.seriesData.get(donchianHighSeries) as LineData)
+				: undefined;
+			const ema21Val = ema21Series
+				? (param.seriesData.get(ema21Series) as LineData)
+				: undefined;
+			const sma10Val = sma10Series
+				? (param.seriesData.get(sma10Series) as LineData)
+				: undefined;
+			const sma50Val = sma50Series
+				? (param.seriesData.get(sma50Series) as LineData)
+				: undefined;
+			const sma100Val = sma100Series
+				? (param.seriesData.get(sma100Series) as LineData)
+				: undefined;
+
+			const snapY = candlestickSeries.priceToCoordinate(candle.close);
+
+			const fngNum = fngVal ? Math.round(fngVal.value) : undefined;
+			let fngClass = "text-gray-500";
+			if (fngNum !== undefined) {
+				if (fngNum < 25) fngClass = "text-red-600 font-bold";
+				else if (fngNum < 45) fngClass = "text-orange-500 font-bold";
+				else if (fngNum > 75) fngClass = "text-green-600 font-bold";
+				else if (fngNum > 55) fngClass = "text-teal-500 font-bold";
+			}
+
+			const tdStatus = tdMap().get(Number(param.time));
+			let tdColor = "";
+			if (tdStatus) {
+				if (tdStatus.type === "buy")
+					tdColor = "bg-emerald-50 text-emerald-700 border-emerald-100";
+				else tdColor = "bg-rose-50 text-rose-700 border-rose-100";
+				if (tdStatus.stage === "countdown")
+					tdColor = "bg-amber-50 text-amber-700 border-amber-100";
+			}
+
+			const divStatus = divMap().get(Number(param.time));
+
+			const ema20Val = ema20Series
+				? (param.seriesData.get(ema20Series) as LineData)
+				: undefined;
+			const ema60Val = ema60Series
+				? (param.seriesData.get(ema60Series) as LineData)
+				: undefined;
+			const ema120Val = ema120Series
+				? (param.seriesData.get(ema120Series) as LineData)
+				: undefined;
+			const ema150Val = ema150Series
+				? (param.seriesData.get(ema150Series) as LineData)
+				: undefined;
+			const ema200Val = ema200Series
+				? (param.seriesData.get(ema200Series) as LineData)
+				: undefined;
+
+			lastTooltipTime = param.time as number;
+			cachedTooltipData = {
+				time: dateStr,
+				open: formatTooltipPrice(candle.open),
+				high: formatTooltipPrice(candle.high),
+				low: formatTooltipPrice(candle.low),
+				close: formatTooltipPrice(candle.close),
+				volume: formattedVolume,
+				currencySymbol: activeCurrency().symbol,
+				changeColor:
+					candle.close >= candle.open ? "text-emerald-600" : "text-rose-500",
+				ema20: formatTooltipPrice(ema20Val?.value),
+				ema60: formatTooltipPrice(ema60Val?.value),
+				ema120: formatTooltipPrice(ema120Val?.value),
+				ema150: formatTooltipPrice(ema150Val?.value),
+				ema200: formatTooltipPrice(ema200Val?.value),
+				ema21: formatTooltipPrice(ema21Val?.value),
+				sma10: formatTooltipPrice(sma10Val?.value),
+				sma50: formatTooltipPrice(sma50Val?.value),
+				sma100: formatTooltipPrice(sma100Val?.value),
+				donchianHigh: formatTooltipPrice(donchianHighVal?.value),
+				rsi:
+					rsiVal && typeof rsiVal.value === "number"
+						? rsiVal.value.toFixed(1)
+						: undefined,
+				fng: fngNum?.toString(),
+				fngClass,
+				tdLabel: tdStatus?.label,
+				tdColor: tdColor,
+				tdDescription: tdStatus?.description,
+				rsiDivergence: divStatus
+					? `${divStatus.type === "bullish" ? "Bull" : "Bear"} Div: ${divStatus.priceAction} / RSI ${divStatus.rsiAction}`
+					: undefined,
+			};
+
+			setTooltip({
+				...cachedTooltipData,
+				x: param.point.x,
+				y: param.point.y,
+				snapY: snapY ?? param.point.y,
+			} as TooltipData);
+		});
+
+		// Initial Load
+		loadData(interval(), activeCurrency(), activeAsset());
+
+		const handleResize = () => {
+			if (chart && chartContainer) {
+				chart.applyOptions({ width: chartContainer.clientWidth });
+			}
+			setIsMobile(window.innerWidth < 768);
+		};
+
+		handleResize();
+		window.addEventListener("resize", handleResize);
+
+		onCleanup(() => {
+			if (ws) ws.close();
+			if (chart) {
+				chart.remove();
+				chart = undefined;
+				candlestickSeries = undefined;
+			}
+			window.removeEventListener("resize", handleResize);
+		});
+	});
+
+	// --- Layout & Indicator Effect (Optimized) ---
+	createEffect(() => {
+		// Track indicators changes only
+		indicators();
+		// Sync without tracking data updates
+		syncAllIndicators();
 	});
 
 	// --- React to Interval OR Currency Change ---
@@ -1611,57 +1606,51 @@ export default function BTCChart() {
 
 			{/* Secondary Bar: Indicators - Refactored to Dropdown */}
 			<div class="relative z-30 px-4 py-2 border-b border-white/5 bg-white/1 backdrop-blur-sm flex items-center justify-start">
-				<div class="flex items-center gap-2">
-					<span class="text-[9px] font-bold text-slate-600 uppercase tracking-[0.3em] mr-4 shrink-0">
-						Data_Layers
-					</span>
+				<div class="relative">
+					<button
+						type="button"
+						onClick={() => setShowIndicatorMenu(!showIndicatorMenu())}
+						class="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-white hover:bg-white/10 transition-all"
+					>
+						Select Indicators
+						<IconChevronDown />
+					</button>
 
-					<div class="relative">
-						<button
-							type="button"
-							onClick={() => setShowIndicatorMenu(!showIndicatorMenu())}
-							class="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-white hover:bg-white/10 transition-all"
-						>
-							Select Indicators
-							<IconChevronDown />
-						</button>
-
-						<Show when={showIndicatorMenu()}>
-							<div
-								class="fixed inset-0 z-40"
-								onClick={() => setShowIndicatorMenu(false)}
-								onKeyDown={(e) => {
-									if (e.key === "Escape") setShowIndicatorMenu(false);
-								}}
-								tabIndex={-1}
-								role="button"
-							/>
-							<div class="absolute left-0 top-full mt-1 w-56 bg-[#151921] border border-white/10 shadow-2xl z-50 py-1 max-h-80 overflow-y-auto no-scrollbar">
-								<For each={indicatorConfig}>
-									{(ind) => (
-										<button
-											type="button"
-											onClick={() =>
-												setIndicators((prev) => ({
-													...prev,
-													[ind.key]: !prev[ind.key],
-												}))
-											}
-											class={`w-full text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 hover:bg-white/5 ${indicators()[ind.key] ? ind.textColor : "text-slate-500"}`}
-										>
-											<div
-												class={`w-2 h-2 shrink-0 ${ind.color} ${indicators()[ind.key] ? "opacity-100" : "opacity-20"}`}
-											/>
-											<span class="grow">{ind.label}</span>
-											<Show when={indicators()[ind.key]}>
-												<div class="w-1 h-1 bg-indigo-500 rounded-full" />
-											</Show>
-										</button>
-									)}
-								</For>
-							</div>
-						</Show>
-					</div>
+					<Show when={showIndicatorMenu()}>
+						<div
+							class="fixed inset-0 z-40"
+							onClick={() => setShowIndicatorMenu(false)}
+							onKeyDown={(e) => {
+								if (e.key === "Escape") setShowIndicatorMenu(false);
+							}}
+							tabIndex={-1}
+							role="button"
+						/>
+						<div class="absolute left-0 top-full mt-1 w-56 bg-[#151921] border border-white/10 shadow-2xl z-50 py-1 max-h-80 overflow-y-auto no-scrollbar">
+							<For each={indicatorConfig}>
+								{(ind) => (
+									<button
+										type="button"
+										onClick={() =>
+											setIndicators((prev) => ({
+												...prev,
+												[ind.key]: !prev[ind.key],
+											}))
+										}
+										class={`w-full text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 hover:bg-white/5 ${indicators()[ind.key] ? ind.textColor : "text-slate-500"}`}
+									>
+										<div
+											class={`w-2 h-2 shrink-0 ${ind.color} ${indicators()[ind.key] ? "opacity-100" : "opacity-20"}`}
+										/>
+										<span class="grow">{ind.label}</span>
+										<Show when={indicators()[ind.key]}>
+											<div class="w-1 h-1 bg-indigo-500 rounded-full" />
+										</Show>
+									</button>
+								)}
+							</For>
+						</div>
+					</Show>
 				</div>
 			</div>
 
@@ -1839,20 +1828,10 @@ export default function BTCChart() {
 															ACTIVE_SIGNALS
 														</span>
 														<div class="grid grid-cols-1 gap-y-1.5">
-															<Show when={t.ema21}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		EMA 21 (MACRO)
-																	</span>
-																	<span class="text-[9px] font-mono text-blue-400">
-																		{t.ema21}
-																	</span>
-																</div>
-															</Show>
 															<Show when={t.sma10}>
 																<div class="flex justify-between items-center gap-4">
 																	<span class="text-[8px] font-bold text-slate-400">
-																		SMA 10 (STOP)
+																		SMA 10
 																	</span>
 																	<span class="text-[9px] font-mono text-cyan-400">
 																		{t.sma10}
@@ -1862,7 +1841,7 @@ export default function BTCChart() {
 															<Show when={t.sma50}>
 																<div class="flex justify-between items-center gap-4">
 																	<span class="text-[8px] font-bold text-slate-400">
-																		SMA 50 (STRUCT)
+																		SMA 50
 																	</span>
 																	<span class="text-[9px] font-mono text-lime-400">
 																		{t.sma50}
@@ -1872,7 +1851,7 @@ export default function BTCChart() {
 															<Show when={t.sma100}>
 																<div class="flex justify-between items-center gap-4">
 																	<span class="text-[8px] font-bold text-slate-400">
-																		SMA 100 (CULT)
+																		SMA 100
 																	</span>
 																	<span class="text-[9px] font-mono text-indigo-400">
 																		{t.sma100}
@@ -1882,7 +1861,7 @@ export default function BTCChart() {
 															<Show when={t.donchianHigh}>
 																<div class="flex justify-between items-center gap-4">
 																	<span class="text-[8px] font-bold text-slate-400">
-																		20D HIGH (ENTRY)
+																		20D HIGH
 																	</span>
 																	<span class="text-[9px] font-mono text-rose-400">
 																		{t.donchianHigh}
@@ -1896,6 +1875,16 @@ export default function BTCChart() {
 																	</span>
 																	<span class="text-[9px] font-mono text-blue-300">
 																		{t.ema20}
+																	</span>
+																</div>
+															</Show>
+															<Show when={t.ema21}>
+																<div class="flex justify-between items-center gap-4">
+																	<span class="text-[8px] font-bold text-slate-400">
+																		EMA 21
+																	</span>
+																	<span class="text-[9px] font-mono text-blue-400">
+																		{t.ema21}
 																	</span>
 																</div>
 															</Show>

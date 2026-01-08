@@ -1,5 +1,22 @@
 const SUBSCRIPTS = ["₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉"];
 
+// Cache formatters module-wide
+const formatters = new Map<string, Intl.NumberFormat>();
+
+function getFormatter(fractionDigits: number) {
+	const key = `usd_${fractionDigits}`;
+	let formatter = formatters.get(key);
+	if (!formatter) {
+		formatter = new Intl.NumberFormat("en-US", {
+			style: "currency",
+			currency: "USD",
+			maximumFractionDigits: fractionDigits,
+		});
+		formatters.set(key, formatter);
+	}
+	return formatter;
+}
+
 /**
  * Formats a number into a subscript notation for leading zeros.
  * Example: 0.000006588 -> $0.0₅6588
@@ -7,11 +24,7 @@ const SUBSCRIPTS = ["₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈
 export function formatCryptoPrice(price: number, symbol = "$"): string {
 	if (price === 0) return `${symbol}0.00`;
 	if (price >= 0.0001) {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency: "USD",
-			maximumFractionDigits: price < 1 ? 4 : 2,
-		})
+		return getFormatter(price < 1 ? 4 : 2)
 			.format(price)
 			.replace("$", symbol);
 	}
