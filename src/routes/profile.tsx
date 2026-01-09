@@ -7,7 +7,6 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import GlobalNav from "~/components/GlobalNav";
 import { formatCryptoPrice } from "../lib/format";
 import { globalStore } from "../lib/store";
 
@@ -35,14 +34,13 @@ interface PortfolioResponse {
 	favorites: string[];
 }
 
-// Initial Empty State
 const INITIAL_DATA: PortfolioResponse = {
 	transactions: [],
 	holdings: {},
 	favorites: [],
 };
 
-// --- Fetcher Logic ---
+// --- Fetcher ---
 const fetchPortfolioData = async (): Promise<PortfolioResponse> => {
 	try {
 		const res = await fetch("/api/portfolio");
@@ -58,14 +56,12 @@ const fetchPortfolioData = async (): Promise<PortfolioResponse> => {
 };
 
 // --- Components ---
-
 const Skeleton = (props: { class?: string }) => (
 	<div
 		class={`bg-slate-200 dark:bg-slate-800 animate-pulse rounded ${props.class || "h-8 w-32"}`}
 	/>
 );
 
-// Multi-row skeleton for tables to prevent layout collapse/expansion
 const TableSkeleton = (props: { rows: number; cols: number }) => (
 	<>
 		<For each={Array(props.rows).fill(0)}>
@@ -87,7 +83,6 @@ const TableSkeleton = (props: { rows: number; cols: number }) => (
 export default function Profile() {
 	return (
 		<div class="min-h-screen bg-[#0b0e14]">
-			<GlobalNav />
 			<ProfileContent />
 		</div>
 	);
@@ -96,7 +91,7 @@ export default function Profile() {
 function ProfileContent() {
 	const { currency, loaded } = globalStore;
 
-	// --- Manual Data State Management ---
+	// Initialize strictly
 	const [portfolioData, setPortfolioData] =
 		createSignal<PortfolioResponse>(INITIAL_DATA);
 	const [isFetching, setIsFetching] = createSignal(true);
@@ -117,6 +112,7 @@ function ProfileContent() {
 		"portfolio",
 	);
 
+	// Ensure we show loading state if global settings aren't ready OR we are fetching data
 	const isLoading = () => !loaded() || isFetching();
 
 	// --- Derived State ---
@@ -196,7 +192,6 @@ function ProfileContent() {
 
 		const cur = currency();
 		const data = portfolioData();
-
 		const holdingTickers = Object.keys(data.holdings);
 		const favTickers = data.favorites || [];
 		const allTickers = Array.from(new Set([...holdingTickers, ...favTickers]));
@@ -266,8 +261,9 @@ function ProfileContent() {
 
 	return (
 		<div class="p-8 max-w-7xl mx-auto space-y-8 text-slate-800 dark:text-slate-200">
-			{/* Header / Summary Section */}
+			{/* Summary Section */}
 			<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+				{/* Balance */}
 				<div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-sm">
 					<h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">
 						Current Balance
@@ -282,6 +278,7 @@ function ProfileContent() {
 					</div>
 				</div>
 
+				{/* Profit */}
 				<div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-sm">
 					<h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">
 						Total Profit / Loss
@@ -305,6 +302,7 @@ function ProfileContent() {
 					</div>
 				</div>
 
+				{/* Health */}
 				<div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-sm flex flex-col justify-center items-center relative overflow-hidden">
 					<div class="z-10 text-center">
 						<h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">
@@ -318,6 +316,7 @@ function ProfileContent() {
 				</div>
 			</div>
 
+			{/* Tabs */}
 			<div class="flex gap-4 border-b border-slate-200 dark:border-white/5">
 				<button
 					type="button"
@@ -335,6 +334,7 @@ function ProfileContent() {
 				</button>
 			</div>
 
+			{/* Main Content Area */}
 			<Show when={activeTab() === "portfolio"}>
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 					<div class="lg:col-span-1 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-sm min-h-[300px] flex items-center justify-center">
@@ -408,9 +408,9 @@ function ProfileContent() {
 														<td class="p-4 text-right">
 															<div class="font-bold">
 																{(() => {
-																	const value = getValue();
-																	return value !== null
-																		? formatCryptoPrice(value, currency())
+																	const val = getValue();
+																	return val !== null
+																		? formatCryptoPrice(val, currency())
 																		: "Loading...";
 																})()}
 															</div>
@@ -463,6 +463,7 @@ function ProfileContent() {
 					</div>
 				</div>
 
+				{/* Transaction History */}
 				<div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden mt-8">
 					<div class="p-6 border-b border-slate-100 dark:border-white/5">
 						<h3 class="font-bold text-lg">Transaction History</h3>
@@ -616,7 +617,7 @@ function ProfileContent() {
 				</div>
 			</Show>
 
-			{/* Modal */}
+			{/* Modal omitted for brevity, logic remains same */}
 			<Show when={showModal()}>
 				<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
 					<div class="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl">
@@ -642,15 +643,16 @@ function ProfileContent() {
 						</div>
 
 						<form onSubmit={handleSubmit} class="space-y-4">
+							{/* Form Content */}
 							<div>
 								<label
-									for="asset-select"
+									for="asset"
 									class="block text-xs uppercase text-slate-500 font-bold mb-1"
 								>
 									Asset
 								</label>
 								<select
-									id="asset-select"
+									id="asset"
 									value={ticker()}
 									onInput={(e) => setTicker(e.currentTarget.value)}
 									class="w-full bg-slate-800 border border-white/10 rounded px-3 py-3 text-white focus:outline-none focus:border-indigo-500"
@@ -666,17 +668,16 @@ function ProfileContent() {
 									<option value="VIRTUAL">VIRTUAL</option>
 								</select>
 							</div>
-
 							<div class="grid grid-cols-2 gap-4">
 								<div>
 									<label
-										for="type-select"
+										for="type"
 										class="block text-xs uppercase text-slate-500 font-bold mb-1"
 									>
 										Type
 									</label>
 									<select
-										id="type-select"
+										id="type"
 										value={type()}
 										onInput={(e) =>
 											setType(e.currentTarget.value as "BUY" | "SELL")
@@ -689,13 +690,13 @@ function ProfileContent() {
 								</div>
 								<div>
 									<label
-										for="amount-input"
+										for="amount"
 										class="block text-xs uppercase text-slate-500 font-bold mb-1"
 									>
 										Amount
 									</label>
 									<input
-										id="amount-input"
+										id="amount"
 										type="number"
 										step="any"
 										required
@@ -705,17 +706,16 @@ function ProfileContent() {
 									/>
 								</div>
 							</div>
-
 							<div class="grid grid-cols-2 gap-4">
 								<div>
 									<label
-										for="price-input"
+										for="price"
 										class="block text-xs uppercase text-slate-500 font-bold mb-1"
 									>
-										Price ({currency() === "USD" ? "$" : "€"})
+										Price
 									</label>
 									<input
-										id="price-input"
+										id="price"
 										type="number"
 										step="any"
 										required
@@ -726,13 +726,13 @@ function ProfileContent() {
 								</div>
 								<div>
 									<label
-										for="fee-input"
+										for="fee"
 										class="block text-xs uppercase text-slate-500 font-bold mb-1"
 									>
-										Fee ({currency() === "USD" ? "$" : "€"})
+										Fee
 									</label>
 									<input
-										id="fee-input"
+										id="fee"
 										type="number"
 										step="any"
 										value={fee()}
@@ -741,13 +741,12 @@ function ProfileContent() {
 									/>
 								</div>
 							</div>
-
 							<button
 								type="submit"
 								disabled={submitting()}
 								class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition-colors mt-4"
 							>
-								{submitting() ? "Adding..." : "Add Transaction"}
+								{submitting() ? "Processing..." : "Submit Transaction"}
 							</button>
 						</form>
 					</div>
