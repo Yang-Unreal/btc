@@ -100,6 +100,7 @@ function ProfileContent() {
 		setIsFetching(true);
 		const data = await fetchPortfolioData();
 		setPortfolioData(data);
+		globalStore.setPortfolio(data.holdings);
 		setIsFetching(false);
 	};
 

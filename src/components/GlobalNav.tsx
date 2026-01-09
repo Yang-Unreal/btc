@@ -20,10 +20,11 @@ const IconTerminal: Component<{ class?: string }> = (props) => (
 );
 
 const GlobalNav: Component = () => {
-	const { currency, setCurrency, loadSettings } = globalStore;
+	const { currency, setCurrency, loadSettings, loadPortfolio } = globalStore;
 
 	onMount(() => {
 		loadSettings();
+		loadPortfolio();
 	});
 
 	return (

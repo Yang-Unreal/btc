@@ -4,7 +4,6 @@ import {
 	createSignal,
 	For,
 	onCleanup,
-	onMount,
 } from "solid-js";
 import {
 	calculateEMA,
@@ -34,12 +33,6 @@ interface AssetTriggerConfig {
 	entryLabel: string;
 	stopLossLabel: string; // Renamed from exitLabel
 	takeProfitLabel: string; // New
-}
-
-interface PortfolioItem {
-	amount: number;
-	averageBuyPrice: number;
-	totalCost: number;
 }
 
 const TITAN_ASSETS: AssetTriggerConfig[] = [
@@ -172,30 +165,14 @@ const fetchHistory = async (
 };
 
 export default function TitanTriggers() {
-	const { currency } = globalStore;
+	const { currency, portfolio } = globalStore;
 
 	const [assetData, setAssetData] = createSignal<
 		Record<string, CandlestickData[]>
 	>({});
 	const [loadingMap, setLoadingMap] = createSignal<Record<string, boolean>>({});
-	const [portfolio, setPortfolio] = createSignal<Record<string, PortfolioItem>>(
-		{},
-	);
 
 	let ws: WebSocket | undefined;
-
-	onMount(async () => {
-		// Fetch Portfolio first
-		try {
-			const res = await fetch("/api/portfolio");
-			const data = await res.json();
-			setPortfolio(data);
-		} catch (e) {
-			console.error("Failed to fetch portfolio", e);
-		}
-
-		// Initial Load logic moved to Effect to react to currency changes
-	});
 
 	// Reactive Data Fetcher
 	createEffect(async () => {
