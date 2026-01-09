@@ -12,7 +12,15 @@ export const openInterestHistory = pgTable("open_interest_history", {
 	oiBTC: numeric("oi_btc").notNull(),
 });
 
+export const userSettings = pgTable("user_settings", {
+	id: text("id").primaryKey().default("default"),
+	currency: text("currency").notNull().default("USD"),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export type Favorite = typeof favorites.$inferSelect;
 export type NewFavorite = typeof favorites.$inferInsert;
 export type OpenInterestHistory = typeof openInterestHistory.$inferSelect;
 export type NewOpenInterestHistory = typeof openInterestHistory.$inferInsert;
+export type UserSettings = typeof userSettings.$inferSelect;
+export type NewUserSettings = typeof userSettings.$inferInsert;

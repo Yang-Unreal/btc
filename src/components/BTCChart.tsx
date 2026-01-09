@@ -1119,7 +1119,7 @@ export default function BTCChart() {
 			priceFormat: {
 				type: "custom",
 				formatter: (price: number) =>
-					formatCryptoPrice(price, activeCurrency().symbol),
+					formatCryptoPrice(price, activeCurrency().code),
 				minMove: 0.00000001,
 			},
 		});
@@ -1253,7 +1253,7 @@ export default function BTCChart() {
 
 			const formatTooltipPrice = (val: number | undefined) => {
 				if (val === undefined || val === null || Number.isNaN(val)) return "—";
-				return formatCryptoPrice(val, ""); // No symbol here, we add it in JSX if needed, or pass it
+				return formatCryptoPrice(val, activeCurrency().code); // Includes symbol
 			};
 
 			const volumeVal = volumeSeries
@@ -1407,7 +1407,7 @@ export default function BTCChart() {
 				priceFormat: {
 					type: "custom",
 					formatter: (price: number) =>
-						formatCryptoPrice(price, activeCurrency().symbol),
+						formatCryptoPrice(price, activeCurrency().code),
 				},
 			});
 			loadData(interval(), activeCurrency(), activeAsset());
@@ -1522,7 +1522,7 @@ export default function BTCChart() {
 							<div
 								class={`text-xl font-mono font-black tracking-tighter tabular-nums leading-none mt-1 transition-colors duration-200 ${priceColor()}`}
 							>
-								{formatCryptoPrice(currentPrice(), activeCurrency().symbol)}
+								{formatCryptoPrice(currentPrice(), activeCurrency().code)}
 							</div>
 						</div>
 					</div>
@@ -1674,7 +1674,6 @@ export default function BTCChart() {
 													OPEN
 												</span>
 												<span class="text-[11px] font-mono font-bold text-slate-300">
-													{t.currencySymbol}
 													{t.open}
 												</span>
 											</div>
@@ -1683,7 +1682,6 @@ export default function BTCChart() {
 													LOW
 												</span>
 												<span class="text-[11px] font-mono font-bold text-slate-300">
-													{t.currencySymbol}
 													{t.low}
 												</span>
 											</div>
@@ -1694,7 +1692,6 @@ export default function BTCChart() {
 													HIGH
 												</span>
 												<span class="text-[11px] font-mono font-bold text-slate-300">
-													{t.currencySymbol}
 													{t.high}
 												</span>
 											</div>
@@ -1712,7 +1709,6 @@ export default function BTCChart() {
 													<span
 														class={`text-xs font-mono font-black ${t.changeColor}`}
 													>
-														{t.currencySymbol}
 														{t.close}
 													</span>
 												</div>

@@ -3,13 +3,18 @@ const SUBSCRIPTS = ["₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈
 // Cache formatters module-wide
 const formatters = new Map<string, Intl.NumberFormat>();
 
-function getFormatter(fractionDigits: number) {
-	const key = `usd_${fractionDigits}`;
+const CURRENCY_SYMBOLS: Record<string, string> = {
+	USD: "$",
+	EUR: "€",
+};
+
+function getFormatter(fractionDigits: number, currency: string) {
+	const key = `${currency.toLowerCase()}_${fractionDigits}`;
 	let formatter = formatters.get(key);
 	if (!formatter) {
-		formatter = new Intl.NumberFormat("en-US", {
+		formatter = new Intl.NumberFormat(currency === "USD" ? "en-US" : "de-DE", {
 			style: "currency",
-			currency: "USD",
+			currency: currency,
 			maximumFractionDigits: fractionDigits,
 		});
 		formatters.set(key, formatter);
@@ -21,15 +26,16 @@ function getFormatter(fractionDigits: number) {
  * Formats a number into a subscript notation for leading zeros.
  * Example: 0.000006588 -> $0.0₅6588
  */
-export function formatCryptoPrice(price: number, symbol = "$"): string {
+export function formatCryptoPrice(price: number, currency = "USD"): string {
+	const symbol = CURRENCY_SYMBOLS[currency] || currency;
 	if (price === 0) return `${symbol}0.00`;
+
+	// Use standard formatter for "normal" prices
 	if (price >= 0.0001) {
-		return getFormatter(price < 1 ? 4 : 2)
-			.format(price)
-			.replace("$", symbol);
+		return getFormatter(price < 1 ? 4 : 2, currency).format(price); // Intl handles symbol placement
 	}
 
-	// For very small numbers
+	// For very small numbers, we do manual subscript logic + symbol
 	const priceStr = price.toFixed(20);
 	const match = priceStr.match(/^0\.(0+)/);
 	if (!match) return `${symbol}${price.toFixed(4)}`;

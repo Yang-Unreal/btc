@@ -1,10 +1,18 @@
-import { createMemo, createSignal, For, onCleanup, onMount } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	onCleanup,
+	onMount,
+} from "solid-js";
 import {
 	calculateEMA,
 	calculateSMA,
 	findLastSwingHigh,
 	findLastSwingLow,
 } from "../lib/indicators";
+import { globalStore } from "../lib/store";
 
 // Types matching BTCChart
 interface CandlestickData {
@@ -19,12 +27,19 @@ type RawKlineData = [number, number, number, number, number, number];
 
 interface AssetTriggerConfig {
 	ticker: string;
-	krakenId: string; // Added for WS
+	krakenId: string;
 	role: string;
 	strategy: string;
-	interval: "1d" | "1w"; // BTC uses Weekly
+	interval: "1d" | "1w";
 	entryLabel: string;
-	exitLabel: string;
+	stopLossLabel: string; // Renamed from exitLabel
+	takeProfitLabel: string; // New
+}
+
+interface PortfolioItem {
+	amount: number;
+	averageBuyPrice: number;
+	totalCost: number;
 }
 
 const TITAN_ASSETS: AssetTriggerConfig[] = [
@@ -35,7 +50,8 @@ const TITAN_ASSETS: AssetTriggerConfig[] = [
 		strategy: "Macro Trend",
 		interval: "1w",
 		entryLabel: "Weekly Close > 21 EMA",
-		exitLabel: "Weekly Close < 21 EMA",
+		stopLossLabel: "Weekly Close < 21 EMA",
+		takeProfitLabel: "Weekly Close < 21 EMA",
 	},
 	{
 		ticker: "SOL",
@@ -44,7 +60,8 @@ const TITAN_ASSETS: AssetTriggerConfig[] = [
 		strategy: "Structure",
 		interval: "1d",
 		entryLabel: "Break > 50D MA & Swing High",
-		exitLabel: "Break < 50D MA",
+		stopLossLabel: "Daily Close < 50 SMA",
+		takeProfitLabel: "Daily Close < 20 SMA",
 	},
 	{
 		ticker: "SUI",
@@ -53,7 +70,8 @@ const TITAN_ASSETS: AssetTriggerConfig[] = [
 		strategy: "Momentum",
 		interval: "1d",
 		entryLabel: "Break 20-Day High",
-		exitLabel: "Break < 10D MA",
+		stopLossLabel: "Daily Close < 10 EMA",
+		takeProfitLabel: "Daily Close < 10 EMA",
 	},
 	{
 		ticker: "PEPE",
@@ -62,7 +80,8 @@ const TITAN_ASSETS: AssetTriggerConfig[] = [
 		strategy: "Momentum",
 		interval: "1d",
 		entryLabel: "Break 20-Day High",
-		exitLabel: "Break < 10D MA",
+		stopLossLabel: "Daily Close < 10 EMA",
+		takeProfitLabel: "Free Ride + Trail 10 EMA",
 	},
 	{
 		ticker: "TAO",
@@ -71,7 +90,8 @@ const TITAN_ASSETS: AssetTriggerConfig[] = [
 		strategy: "Structure",
 		interval: "1d",
 		entryLabel: "Break > 50D MA & Swing High",
-		exitLabel: "Break < 50D MA",
+		stopLossLabel: "Daily Close < 50 SMA",
+		takeProfitLabel: "Daily Close < 20 SMA",
 	},
 	{
 		ticker: "RENDER",
@@ -80,7 +100,8 @@ const TITAN_ASSETS: AssetTriggerConfig[] = [
 		strategy: "Momentum",
 		interval: "1d",
 		entryLabel: "Break 20-Day High",
-		exitLabel: "Break < 10D MA",
+		stopLossLabel: "Daily Close < 10 EMA",
+		takeProfitLabel: "Free Ride + Trail 10 EMA",
 	},
 	{
 		ticker: "ONDO",
@@ -89,7 +110,8 @@ const TITAN_ASSETS: AssetTriggerConfig[] = [
 		strategy: "Structure",
 		interval: "1d",
 		entryLabel: "Break > 50D MA & Swing High",
-		exitLabel: "Break < 50D MA",
+		stopLossLabel: "Daily Close < 50 SMA",
+		takeProfitLabel: "Daily Close < 20 SMA",
 	},
 	{
 		ticker: "KAS",
@@ -98,7 +120,8 @@ const TITAN_ASSETS: AssetTriggerConfig[] = [
 		strategy: "Structure",
 		interval: "1d",
 		entryLabel: "Break > 100D MA",
-		exitLabel: "Break < Swing Low",
+		stopLossLabel: "Break Prev. Swing Low",
+		takeProfitLabel: "Daily Close < 50 SMA",
 	},
 	{
 		ticker: "VIRTUAL",
@@ -107,18 +130,20 @@ const TITAN_ASSETS: AssetTriggerConfig[] = [
 		strategy: "Momentum",
 		interval: "1d",
 		entryLabel: "Break 20-Day High",
-		exitLabel: "Break < 10D MA",
+		stopLossLabel: "Daily Close < 10 EMA",
+		takeProfitLabel: "Free Ride + Trail 10 EMA",
 	},
 ];
 
 const fetchHistory = async (
 	symbol: string,
 	interval: string,
+	currency: string,
 ): Promise<CandlestickData[]> => {
 	try {
-		console.log(`[Titan] Fetching ${symbol} ${interval}...`);
+		console.log(`[Titan] Fetching ${symbol} ${interval} in ${currency}...`);
 		const res = await fetch(
-			`/api/history?interval=${interval}&symbol=${symbol}&currency=USD`,
+			`/api/history?interval=${interval}&symbol=${symbol}&currency=${currency}`,
 		);
 		const json = await res.json();
 		if (json.error) {
@@ -147,63 +172,78 @@ const fetchHistory = async (
 };
 
 export default function TitanTriggers() {
+	const { currency } = globalStore;
+
 	const [assetData, setAssetData] = createSignal<
 		Record<string, CandlestickData[]>
 	>({});
 	const [loadingMap, setLoadingMap] = createSignal<Record<string, boolean>>({});
+	const [portfolio, setPortfolio] = createSignal<Record<string, PortfolioItem>>(
+		{},
+	);
 
 	let ws: WebSocket | undefined;
 
 	onMount(async () => {
-		// Initial Load
+		// Fetch Portfolio first
+		try {
+			const res = await fetch("/api/portfolio");
+			const data = await res.json();
+			setPortfolio(data);
+		} catch (e) {
+			console.error("Failed to fetch portfolio", e);
+		}
+
+		// Initial Load logic moved to Effect to react to currency changes
+	});
+
+	// Reactive Data Fetcher
+	createEffect(async () => {
+		const cur = currency(); // dependency
 		const initialMap: Record<string, boolean> = {};
 		for (const a of TITAN_ASSETS) {
 			initialMap[a.ticker] = true;
 		}
 		setLoadingMap(initialMap);
 
-		const newData: Record<string, CandlestickData[]> = {};
-
-		// Sequential Fetch to avoid Rate Limiting
+		// Sequential Fetch
 		for (const asset of TITAN_ASSETS) {
-			const data = await fetchHistory(asset.ticker, asset.interval);
-			newData[asset.ticker] = data;
-			setLoadingMap((prev) => ({ ...prev, [asset.ticker]: false }));
+			const data = await fetchHistory(asset.ticker, asset.interval, cur);
+			// Verify we are still on the same currency request (basic race check)
+			if (currency() !== cur) return;
 
-			// Incremental update so user sees progress
 			setAssetData((prev) => ({ ...prev, [asset.ticker]: data }));
-
-			// Delay between requests
-			await new Promise((r) => setTimeout(r, 600));
+			setLoadingMap((prev) => ({ ...prev, [asset.ticker]: false }));
+			await new Promise((r) => setTimeout(r, 600)); // Rate limit
 		}
 
-		// Connect WS
-		connectWebSocket();
+		// Reconnect WS
+		connectWebSocket(cur);
 	});
 
 	onCleanup(() => {
 		if (ws) ws.close();
 	});
 
-	const connectWebSocket = () => {
+	const connectWebSocket = (cur: string) => {
 		if (ws) ws.close();
 		ws = new WebSocket("wss://ws.kraken.com");
 
 		ws.onopen = () => {
-			console.log("[Titan] WS Connected");
+			console.log(`[Titan] WS Connected (${cur})`);
 
 			// Subscribe to 1w for BTC
 			ws?.send(
 				JSON.stringify({
 					event: "subscribe",
-					pair: ["XBT/USD"],
+					pair: [`XBT/${cur}`],
 					subscription: { name: "ohlc", interval: 10080 },
 				}),
 			);
 
 			// Subscribe to 1d for others
 			const dailyPairs = TITAN_ASSETS.filter((a) => a.ticker !== "BTC").map(
-				(a) => `${a.krakenId}/USD`,
+				(a) => `${a.krakenId}/${cur}`,
 			);
 
 			if (dailyPairs.length > 0) {
@@ -221,10 +261,15 @@ export default function TitanTriggers() {
 			try {
 				const data = JSON.parse(event.data);
 				if (Array.isArray(data) && data[1]) {
-					const pair = data[data.length - 1];
+					const pair = data[data.length - 1]; // e.g. XBT/USD or XXBTZEUR
 					const kline = data[1];
 
-					const asset = TITAN_ASSETS.find((a) => `${a.krakenId}/USD` === pair);
+					// Normalize pair name might be needed if Kraken returns convoluted names like XXBTZEUR
+					// Simplest check: iterate our assets and check if string includes ID and Currency
+					const asset = TITAN_ASSETS.find(
+						(a) => pair.includes(a.krakenId) && pair.includes(cur),
+					);
+
 					if (!asset) return;
 
 					const newCandle: CandlestickData = {
@@ -259,11 +304,27 @@ export default function TitanTriggers() {
 	const checkTriggers = (ticker: string) => {
 		const data = assetData()[ticker];
 		const isLoading = loadingMap()[ticker];
+		const userAsset = portfolio()[ticker];
 
 		if (isLoading)
-			return { entry: false, exit: false, loading: true, error: false };
-		if (!data || data.length < 20)
-			return { entry: false, exit: false, loading: false, error: true }; // Insufficient data
+			return {
+				entry: false,
+				stop: false,
+				takeProfit: false,
+				freeRide: false,
+				loading: true,
+				error: false,
+			};
+		if (!data || data.length < 55)
+			// Increased req length for 50SMA
+			return {
+				entry: false,
+				stop: false,
+				takeProfit: false,
+				freeRide: false,
+				loading: false,
+				error: true,
+			};
 
 		const closes = data.map((d) => d.close);
 		const highs = data.map((d) => d.high);
@@ -271,7 +332,16 @@ export default function TitanTriggers() {
 		const currentPrice = closes[closes.length - 1];
 
 		let entry = false;
-		let exit = false;
+		let stop = false;
+		let takeProfit = false;
+		let freeRide = false;
+
+		// Free Ride Check (2x Gain)
+		if (userAsset && userAsset.averageBuyPrice > 0) {
+			if (currentPrice >= 2 * userAsset.averageBuyPrice) {
+				freeRide = true;
+			}
+		}
 
 		switch (ticker) {
 			case "BTC": {
@@ -279,7 +349,8 @@ export default function TitanTriggers() {
 				const lastEMA = ema21[ema21.length - 1];
 				if (lastEMA) {
 					entry = currentPrice > lastEMA;
-					exit = currentPrice < lastEMA;
+					stop = currentPrice < lastEMA;
+					takeProfit = currentPrice < lastEMA; // Same for BTC
 				}
 				break;
 			}
@@ -287,14 +358,19 @@ export default function TitanTriggers() {
 			case "TAO":
 			case "ONDO": {
 				const sma50 = calculateSMA(closes, 50);
+				const sma20 = calculateSMA(closes, 20); // For Trail Stop
 				const lastSMA50 = sma50[sma50.length - 1];
+				const lastSMA20 = sma20[sma20.length - 1];
 
 				const swingHigh = findLastSwingHigh(highs, 10, 2);
 				const breakSwingHigh = swingHigh ? currentPrice > swingHigh : false;
 
 				if (lastSMA50) {
 					entry = currentPrice > lastSMA50 && breakSwingHigh;
-					exit = currentPrice < lastSMA50;
+					stop = currentPrice < lastSMA50;
+				}
+				if (lastSMA20) {
+					takeProfit = currentPrice < lastSMA20;
 				}
 				break;
 			}
@@ -302,29 +378,37 @@ export default function TitanTriggers() {
 			case "PEPE":
 			case "RENDER":
 			case "VIRTUAL": {
+				// Entry: Break 20D High
 				const last20Candles = highs.slice(-21, -1);
 				const prev20High =
 					last20Candles.length > 0 ? Math.max(...last20Candles) : Infinity;
-
-				const sma10 = calculateSMA(closes, 10);
-				const lastSMA10 = sma10[sma10.length - 1];
-
 				entry = currentPrice > prev20High;
-				if (lastSMA10) exit = currentPrice < lastSMA10;
+
+				// Stop: Close < 10 EMA
+				const ema10 = calculateEMA(closes, 10);
+				const lastEMA10 = ema10[ema10.length - 1];
+				if (lastEMA10) {
+					stop = currentPrice < lastEMA10;
+					takeProfit = currentPrice < lastEMA10; // For Free Ride, trail 10 EMA
+				}
 				break;
 			}
 			case "KAS": {
 				const sma100 = calculateSMA(closes, 100);
+				const sma50 = calculateSMA(closes, 50); // TP
 				const lastSMA100 = sma100[sma100.length - 1];
+				const lastSMA50 = sma50[sma50.length - 1];
+
 				const swingLow = findLastSwingLow(lows, 10, 2);
 
 				if (lastSMA100) entry = currentPrice > lastSMA100;
-				exit = swingLow ? currentPrice < swingLow : false;
+				stop = swingLow ? currentPrice < swingLow : false;
+				if (lastSMA50) takeProfit = currentPrice < lastSMA50;
 				break;
 			}
 		}
 
-		return { entry, exit, loading: false, error: false };
+		return { entry, stop, takeProfit, freeRide, loading: false, error: false };
 	};
 
 	return (
@@ -334,6 +418,13 @@ export default function TitanTriggers() {
 					TITAN_09_PROTOCOL
 				</span>
 				<div class="h-px grow bg-white/5"></div>
+
+				<a
+					href="/profile"
+					class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] hover:text-indigo-400 transition-colors"
+				>
+					[MY PORTFOLIO]
+				</a>
 			</div>
 
 			<div class="overflow-x-auto">
@@ -344,7 +435,8 @@ export default function TitanTriggers() {
 							<th class="py-4 px-4 font-bold">Role</th>
 							<th class="py-4 px-4 font-bold">Strategy</th>
 							<th class="py-4 px-4 font-bold text-center">Entry Trigger</th>
-							<th class="py-4 px-4 font-bold text-center">Exit Trigger</th>
+							<th class="py-4 px-4 font-bold text-center">Stop Loss</th>
+							<th class="py-4 px-4 font-bold text-center">Take Profit</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-white/5">
@@ -384,22 +476,56 @@ export default function TitanTriggers() {
 											</div>
 										</td>
 
-										{/* Exit Trigger */}
+										{/* Stop Loss (Prev Exit) */}
 										<td class="py-4 px-4 text-center">
 											<div class="flex flex-col items-center gap-1">
 												<div
-													class={`w-2 h-2 rounded-full ${status().loading ? "bg-slate-700 animate-pulse" : status().error ? "bg-amber-500/50" : status().exit ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : "bg-slate-700"}`}
+													class={`w-2 h-2 rounded-full ${status().loading ? "bg-slate-700 animate-pulse" : status().error ? "bg-amber-500/50" : status().stop ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : "bg-slate-700"}`}
 													title={
 														status().error
 															? "Insufficient Data"
-															: asset.exitLabel
+															: asset.stopLossLabel
 													}
 												></div>
 												<span
 													class="text-[9px] text-slate-500 uppercase tracking-wide max-w-[120px] truncate"
-													title={asset.exitLabel}
+													title={asset.stopLossLabel}
 												>
-													{asset.exitLabel}
+													{asset.stopLossLabel}
+												</span>
+											</div>
+										</td>
+
+										{/* Take Profit (New) */}
+										<td class="py-4 px-4 text-center">
+											<div class="flex flex-col items-center gap-1">
+												<div
+													class={`w-2 h-2 rounded-full ${
+														status().loading
+															? "bg-slate-700 animate-pulse"
+															: status().error
+																? "bg-amber-500/50"
+																: status().freeRide
+																	? "bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)] animate-pulse" // Free Ride Priority
+																	: status().takeProfit
+																		? "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+																		: "bg-slate-700"
+													}`}
+													title={
+														status().error
+															? "Insufficient Data"
+															: status().freeRide
+																? "Free Ride Active (2x Gain Reached!)"
+																: asset.takeProfitLabel
+													}
+												></div>
+												<span
+													class="text-[9px] text-slate-500 uppercase tracking-wide max-w-[120px] truncate"
+													title={asset.takeProfitLabel}
+												>
+													{status().freeRide
+														? "2X GAIN REACHED"
+														: asset.takeProfitLabel}
 												</span>
 											</div>
 										</td>
