@@ -111,9 +111,11 @@ interface TooltipData {
 	ema200?: string;
 	ema21?: string;
 	sma10?: string;
+	sma20?: string;
 	sma50?: string;
 	sma100?: string;
 	donchianHigh?: string;
+	prevHigh?: string;
 	rsi?: string;
 	rsiDivergence?: string;
 	fng?: string;
@@ -240,9 +242,11 @@ export default function BTCChart() {
 	let ema200Series: ISeriesApi<"Line"> | undefined;
 	let ema21Series: ISeriesApi<"Line"> | undefined;
 	let sma10Series: ISeriesApi<"Line"> | undefined;
+	let sma20Series: ISeriesApi<"Line"> | undefined;
 	let sma50Series: ISeriesApi<"Line"> | undefined;
 	let sma100Series: ISeriesApi<"Line"> | undefined;
 	let donchianHighSeries: ISeriesApi<"Line"> | undefined;
+	let prevHighSeries: ISeriesApi<"Line"> | undefined;
 	let rsiSeries: ISeriesApi<"Line"> | undefined;
 	let fngSeries: ISeriesApi<"Line"> | undefined;
 
@@ -277,9 +281,11 @@ export default function BTCChart() {
 	const [indicators, setIndicators] = createSignal<Record<string, boolean>>({
 		ema21: false,
 		sma10: false,
+		sma20: false,
 		sma50: false,
 		sma100: false,
 		donchianHigh: false,
+		prevHigh: false,
 		ema20: false,
 		ema60: false,
 		ema120: false,
@@ -325,6 +331,13 @@ export default function BTCChart() {
 			borderColor: "border-cyan-500",
 		},
 		{
+			key: "sma20",
+			label: "SMA 20",
+			color: "bg-teal-500",
+			textColor: "text-teal-500",
+			borderColor: "border-teal-500",
+		},
+		{
 			key: "sma50",
 			label: "SMA 50",
 			color: "bg-lime-500",
@@ -344,6 +357,13 @@ export default function BTCChart() {
 			color: "bg-rose-500",
 			textColor: "text-rose-500",
 			borderColor: "border-rose-500",
+		},
+		{
+			key: "prevHigh",
+			label: "Prev High",
+			color: "bg-orange-500",
+			textColor: "text-orange-500",
+			borderColor: "border-orange-500",
 		},
 		{
 			key: "ema20",
@@ -880,9 +900,11 @@ export default function BTCChart() {
 		ema200Series?.applyOptions({ visible: !!currentInd.ema200 });
 		ema21Series?.applyOptions({ visible: !!currentInd.ema21 });
 		sma10Series?.applyOptions({ visible: !!currentInd.sma10 });
+		sma20Series?.applyOptions({ visible: !!currentInd.sma20 });
 		sma50Series?.applyOptions({ visible: !!currentInd.sma50 });
 		sma100Series?.applyOptions({ visible: !!currentInd.sma100 });
 		donchianHighSeries?.applyOptions({ visible: !!currentInd.donchianHigh });
+		prevHighSeries?.applyOptions({ visible: !!currentInd.prevHigh });
 		rsiSeries?.applyOptions({ visible: !!currentInd.rsi });
 		fngSeries?.applyOptions({ visible: !!currentInd.fng });
 
@@ -973,6 +995,7 @@ export default function BTCChart() {
 			}
 		};
 		processSMA(currentInd.sma10, sma10Series, 10);
+		processSMA(currentInd.sma20, sma20Series, 20);
 		processSMA(currentInd.sma50, sma50Series, 50);
 		processSMA(currentInd.sma100, sma100Series, 100);
 
@@ -991,6 +1014,42 @@ export default function BTCChart() {
 			donchianHighSeries.setData(lineData);
 		} else if (donchianHighSeries) {
 			donchianHighSeries.setData([]);
+		}
+
+		// Prev High (Swing High)
+		if (currentInd.prevHigh && prevHighSeries && currentData.length >= 15) {
+			const highs = currentData.map((d) => d.high);
+			const lineData: LineData[] = [];
+			for (let i = 10; i < highs.length; i++) {
+				// Look back 10 bars, forward 2 bars to find swing highs
+				const currentHigh = highs[i];
+				let isSwingHigh = true;
+
+				// Check previous 10 bars
+				for (let j = 1; j <= 10; j++) {
+					if (highs[i - j] >= currentHigh) {
+						isSwingHigh = false;
+						break;
+					}
+				}
+
+				if (!isSwingHigh) continue;
+
+				// Check next 2 bars
+				for (let j = 1; j <= 2; j++) {
+					if (i + j < highs.length && highs[i + j] > currentHigh) {
+						isSwingHigh = false;
+						break;
+					}
+				}
+
+				if (isSwingHigh) {
+					lineData.push({ time: currentData[i].time, value: currentHigh });
+				}
+			}
+			prevHighSeries.setData(lineData);
+		} else if (prevHighSeries) {
+			prevHighSeries.setData([]);
 		}
 
 		if (currentInd.rsi && rsiSeries && closes.length > 14) {
@@ -1037,9 +1096,11 @@ export default function BTCChart() {
 			ema200Series,
 			ema21Series,
 			sma10Series,
+			sma20Series,
 			sma50Series,
 			sma100Series,
 			donchianHighSeries,
+			prevHighSeries,
 			rsiSeries,
 			fngSeries,
 		].forEach((s) => {
@@ -1162,9 +1223,11 @@ export default function BTCChart() {
 		// Titan 9
 		ema21Series = createLineSeries("#3b82f6"); // blue-500
 		sma10Series = createLineSeries("#06b6d4"); // cyan-500
+		sma20Series = createLineSeries("#14b8a6"); // teal-500
 		sma50Series = createLineSeries("#84cc16"); // lime-500
 		sma100Series = createLineSeries("#6366f1"); // indigo-500
 		donchianHighSeries = createLineSeries("#f43f5e"); // rose-500
+		prevHighSeries = createLineSeries("#f97316"); // orange-500
 
 		const oscillatorOptions = {
 			priceScaleId: "oscillators",
@@ -1272,11 +1335,17 @@ export default function BTCChart() {
 			const donchianHighVal = donchianHighSeries
 				? (param.seriesData.get(donchianHighSeries) as LineData)
 				: undefined;
+			const prevHighVal = prevHighSeries
+				? (param.seriesData.get(prevHighSeries) as LineData)
+				: undefined;
 			const ema21Val = ema21Series
 				? (param.seriesData.get(ema21Series) as LineData)
 				: undefined;
 			const sma10Val = sma10Series
 				? (param.seriesData.get(sma10Series) as LineData)
+				: undefined;
+			const sma20Val = sma20Series
+				? (param.seriesData.get(sma20Series) as LineData)
 				: undefined;
 			const sma50Val = sma50Series
 				? (param.seriesData.get(sma50Series) as LineData)
@@ -1342,9 +1411,11 @@ export default function BTCChart() {
 				ema200: formatTooltipPrice(ema200Val?.value),
 				ema21: formatTooltipPrice(ema21Val?.value),
 				sma10: formatTooltipPrice(sma10Val?.value),
+				sma20: formatTooltipPrice(sma20Val?.value),
 				sma50: formatTooltipPrice(sma50Val?.value),
 				sma100: formatTooltipPrice(sma100Val?.value),
 				donchianHigh: formatTooltipPrice(donchianHighVal?.value),
+				prevHigh: formatTooltipPrice(prevHighVal?.value),
 				rsi:
 					rsiVal && typeof rsiVal.value === "number"
 						? rsiVal.value.toFixed(1)
@@ -1774,6 +1845,16 @@ export default function BTCChart() {
 																	</span>
 																</div>
 															</Show>
+															<Show when={t.sma20}>
+																<div class="flex justify-between items-center gap-4">
+																	<span class="text-[8px] font-bold text-slate-400">
+																		SMA 20
+																	</span>
+																	<span class="text-[9px] font-mono text-teal-400">
+																		{t.sma20}
+																	</span>
+																</div>
+															</Show>
 															<Show when={t.sma50}>
 																<div class="flex justify-between items-center gap-4">
 																	<span class="text-[8px] font-bold text-slate-400">
@@ -1801,6 +1882,16 @@ export default function BTCChart() {
 																	</span>
 																	<span class="text-[9px] font-mono text-rose-400">
 																		{t.donchianHigh}
+																	</span>
+																</div>
+															</Show>
+															<Show when={t.prevHigh}>
+																<div class="flex justify-between items-center gap-4">
+																	<span class="text-[8px] font-bold text-slate-400">
+																		PREV HIGH
+																	</span>
+																	<span class="text-[9px] font-mono text-orange-400">
+																		{t.prevHigh}
 																	</span>
 																</div>
 															</Show>
