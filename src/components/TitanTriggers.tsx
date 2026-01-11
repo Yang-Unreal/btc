@@ -385,15 +385,9 @@ export default function TitanTriggers() {
 		<div class="space-y-6">
 			<div class="flex items-center gap-4 flex-wrap">
 				<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
-					TITAN_09_MATRIX
+					Titan 09 Matrix
 				</span>
 				<div class="h-px grow bg-white/5"></div>
-				<a
-					href="/profile"
-					class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] hover:text-indigo-400 transition-colors"
-				>
-					[MY PORTFOLIO]
-				</a>
 			</div>
 
 			<div class="overflow-x-auto">
@@ -462,7 +456,7 @@ export default function TitanTriggers() {
 												></div>
 												<span class="text-[9px] text-slate-500 uppercase tracking-wide">
 													{status().freeRide
-														? "2X GAIN (RIDE)"
+														? "2X Gain (Ride)"
 														: asset.exitLabel}
 												</span>
 											</div>

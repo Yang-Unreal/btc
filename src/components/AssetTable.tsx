@@ -174,9 +174,9 @@ export default function AssetTable() {
 				<div>
 					<div class="flex items-center gap-3 mb-3 flex-wrap">
 						<span class="badge-directive text-indigo-400 border-indigo-500/30 bg-indigo-500/5">
-							Market_Monitor_X1
+							Market Monitor X1
 						</span>
-						<span class="label-mono opacity-40">Systematic_Asset_View</span>
+						<span class="label-mono opacity-40">Systematic Asset View</span>
 					</div>
 					<h2 class="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-tight">
 						Market Overview
@@ -194,7 +194,7 @@ export default function AssetTable() {
 						}`}
 					>
 						<IconStar class="w-3 h-3" filled={showFavoritesOnly()} />
-						{showFavoritesOnly() ? "Favorites_Mode" : "All_Assets"}
+						{showFavoritesOnly() ? "Favorites Mode" : "All Assets"}
 					</button>
 
 					<button

@@ -177,10 +177,10 @@ export default function DerivativesTrigger() {
 				<div class="min-w-0">
 					<div class="flex items-center gap-3 mb-3 flex-wrap">
 						<span class="text-[10px] font-mono text-rose-500 px-2 py-1 border border-rose-500/30 bg-rose-500/5">
-							Tactical_Level_04
+							Tactical Level 04
 						</span>
 						<span class="font-mono text-[10px] text-slate-400 opacity-60 uppercase">
-							Derivatives_Command
+							Derivatives Command
 						</span>
 					</div>
 					<h2 class="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-tight">
@@ -201,7 +201,7 @@ export default function DerivativesTrigger() {
 						<IconRefresh
 							class={`w-3.5 h-3.5 ${loading() ? "animate-spin" : ""}`}
 						/>
-						{loading() ? "Syncing..." : "Sync_Data"}
+						{loading() ? "Syncing..." : "Sync Data"}
 					</button>
 				</div>
 			</div>
@@ -217,7 +217,7 @@ export default function DerivativesTrigger() {
 								<IconAlert class="w-8 h-8 text-rose-500" />
 							</div>
 							<h3 class="text-xl font-black text-rose-500 uppercase tracking-widest">
-								Connection_Failure
+								Connection Failure
 							</h3>
 							<p class="text-xs font-mono text-rose-400/70 uppercase max-w-md mx-auto">
 								Unable to establish secure uplink with derivatives relay [OKX].
@@ -228,7 +228,7 @@ export default function DerivativesTrigger() {
 								onClick={fetchData}
 								class="mt-4 px-6 py-2 border border-rose-500/50 text-rose-400 font-bold text-xs uppercase hover:bg-rose-500/10 transition-colors"
 							>
-								Retry_Connection
+								Retry Connection
 							</button>
 						</div>
 					</div>
@@ -248,7 +248,7 @@ export default function DerivativesTrigger() {
 										Open Interest
 									</h3>
 									<p class="font-mono text-[10px] text-slate-500 uppercase">
-										Total_Contracts (Est)
+										Total Contracts (Est)
 									</p>
 								</div>
 							</div>
@@ -283,14 +283,14 @@ export default function DerivativesTrigger() {
 														%
 													</span>
 													<span class="text-[9px] font-bold text-slate-600 uppercase tracking-wider">
-														24H_Delta
+														24H Delta
 													</span>
 												</div>
 											</div>
 
 											<div class="flex justify-between items-center px-4 py-3 border border-white/5 mb-6">
 												<span class="font-mono text-[10px] text-slate-500 uppercase">
-													BTC_Equivalent
+													BTC Equivalent
 												</span>
 												<span class="font-mono text-sm text-white">
 													{(
@@ -310,9 +310,9 @@ export default function DerivativesTrigger() {
 												}`}
 											>
 												<div class="text-[9px] font-black uppercase tracking-[0.2em] mb-2 opacity-60">
-													Analysis_Report
+													Analysis Report
 												</div>
-												<p class="text-[10px] font-bold uppercase tracking-tight leading-relaxed">
+												<p class="text-[10px] font-bold tracking-tight leading-relaxed">
 													{currentData.priceOiDivergence === "Healthy"
 														? "Primary Move: Organic wealth inflow detected"
 														: currentData.priceOiDivergence === "Weak Rally"
@@ -373,7 +373,7 @@ export default function DerivativesTrigger() {
 													{(currentData.fundingRate.avg * 100).toFixed(4)}%
 												</div>
 												<div class="text-[9px] font-bold text-slate-600 uppercase mt-2 tracking-widest">
-													AVG_8H_GLOBAL
+													AVG 8H Global
 												</div>
 											</div>
 
@@ -392,9 +392,9 @@ export default function DerivativesTrigger() {
 												</div>
 
 												<div class="flex justify-between mt-2 text-[8px] font-black text-slate-500 uppercase tracking-widest">
-													<span class="text-emerald-500">Short_Sq</span>
+													<span class="text-emerald-500">Short Sq</span>
 													<span>Neutral</span>
-													<span class="text-rose-500">Long_Sq</span>
+													<span class="text-rose-500">Long Sq</span>
 												</div>
 											</div>
 
@@ -429,7 +429,7 @@ export default function DerivativesTrigger() {
 							<div class="px-6 md:px-8 py-4 border-t border-white/5 bg-white/1">
 								<div class="flex justify-between items-center">
 									<span class="font-mono text-[9px] uppercase text-slate-500">
-										Protocol_Signal
+										Protocol Signal
 									</span>
 									<span
 										class={`text-[10px] font-black px-2 py-0.5 border uppercase ${
@@ -483,10 +483,10 @@ export default function DerivativesTrigger() {
 												</div>
 												<div class="text-[9px] font-bold text-slate-600 uppercase mt-2 tracking-widest">
 													{currentData.longShortRatio.ratio > 1.1
-														? "Long_Bias"
+														? "Long Bias"
 														: currentData.longShortRatio.ratio < 0.9
-															? "Short_Bias"
-															: "Neutral_Equilibrium"}
+															? "Short Bias"
+															: "Neutral Equilibrium"}
 												</div>
 											</div>
 
@@ -526,7 +526,7 @@ export default function DerivativesTrigger() {
 											</div>
 
 											<div class="border-l-2 border-amber-500/50 pl-4 py-1">
-												<p class="text-[10px] leading-relaxed uppercase tracking-wide text-slate-400">
+												<p class="text-[10px] leading-relaxed tracking-wide text-slate-400">
 													{currentData.longShortRatio.ratio > 1.2 ? (
 														<span class="text-amber-400 block">
 															<span class="font-black block mb-1">
@@ -567,11 +567,11 @@ export default function DerivativesTrigger() {
 						class={`w-1.5 h-1.5 animate-pulse rounded-full ${error() ? "bg-rose-500" : "bg-emerald-500"}`}
 					></div>
 					<span class="font-mono text-[9px] text-slate-500 opacity-60 uppercase">
-						{error() ? "DERIVATIVES_LINK_OFFLINE" : "Derivatives_Link_Active"}
+						{error() ? "Derivatives Link Offline" : "Derivatives Link Active"}
 					</span>
 				</div>
 				<span class="font-mono text-[9px] text-slate-500 opacity-60 uppercase">
-					Last_Sync:{" "}
+					Last Sync:{" "}
 					{lastUpdated()
 						? lastUpdated()?.toLocaleTimeString([], {
 								hour: "2-digit",

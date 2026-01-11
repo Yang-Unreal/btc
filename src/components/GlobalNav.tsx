@@ -20,7 +20,8 @@ const IconTerminal: Component<{ class?: string }> = (props) => (
 );
 
 const GlobalNav: Component = () => {
-	const { currency, setCurrency, loadSettings, loadPortfolio } = globalStore;
+	const { currency, setCurrency, loadSettings, loadPortfolio, loaded } =
+		globalStore;
 
 	onMount(() => {
 		loadSettings();
@@ -42,10 +43,7 @@ const GlobalNav: Component = () => {
 							</div>
 							<div class="flex flex-col">
 								<span class="font-black text-sm tracking-tighter text-white leading-none uppercase">
-									DIRECTIVE<span class="text-indigo-400">.CORE</span>
-								</span>
-								<span class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-									Sovereign Mandate v3.1
+									Homepage
 								</span>
 							</div>
 						</A>
@@ -65,12 +63,12 @@ const GlobalNav: Component = () => {
 						</A>
 
 						{/* Global Currency Toggle */}
-						<div class="flex items-center bg-linear-to-r from-slate-800/50 to-slate-900/50 rounded-xl p-1 border border-white/10 shadow-inner">
+						<div class="flex items-center bg-linear-to-r from-slate-800/50 to-slate-900/50 rounded-xl border border-white/10 shadow-inner">
 							<button
 								type="button"
 								onClick={() => setCurrency("USD")}
 								class={`px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${
-									currency() === "USD"
+									loaded() && currency() === "USD"
 										? "bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
 										: "text-slate-400 hover:text-slate-200 hover:bg-white/5"
 								}`}
@@ -81,7 +79,7 @@ const GlobalNav: Component = () => {
 								type="button"
 								onClick={() => setCurrency("EUR")}
 								class={`px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${
-									currency() === "EUR"
+									loaded() && currency() === "EUR"
 										? "bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
 										: "text-slate-400 hover:text-slate-200 hover:bg-white/5"
 								}`}

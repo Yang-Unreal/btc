@@ -164,10 +164,10 @@ export default function OnChainTruth() {
 				<div class="min-w-0">
 					<div class="flex items-center gap-3 mb-3 flex-wrap">
 						<span class="text-[10px] font-mono text-cyan-500 px-2 py-1 border border-cyan-500/30 bg-cyan-500/5">
-							Tactical_Level_03
+							Tactical Level 03
 						</span>
 						<span class="font-mono text-[10px] text-slate-400 opacity-60 uppercase">
-							OnChain_Truth_Feed
+							OnChain Truth Feed
 						</span>
 					</div>
 					<h2 class="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-tight">
@@ -194,7 +194,7 @@ export default function OnChainTruth() {
 						<IconRefresh
 							class={`w-3.5 h-3.5 ${loading() ? "animate-spin" : ""}`}
 						/>
-						{loading() ? "Syncing..." : "Sync_Data"}
+						{loading() ? "Syncing..." : "Sync Data"}
 					</button>
 				</div>
 			</div>
@@ -213,7 +213,7 @@ export default function OnChainTruth() {
 									MVRV Z-Score
 								</h3>
 								<p class="font-mono text-[10px] text-slate-500 uppercase">
-									Fair_Value_Delta
+									Fair Value Delta
 								</p>
 							</div>
 						</div>
@@ -240,7 +240,7 @@ export default function OnChainTruth() {
 									{data()?.mvrv?.zScore?.toFixed(3) ?? "0.000"}
 								</div>
 								<div class="text-[9px] font-bold text-slate-600 uppercase mt-2 tracking-widest">
-									Current_Z_Factor
+									Current Z Factor
 								</div>
 							</div>
 
@@ -321,7 +321,7 @@ export default function OnChainTruth() {
 						<div class="px-6 md:px-8 py-4 border-t border-white/5 bg-white/1">
 							<div class="flex justify-between items-center">
 								<span class="font-mono text-[9px] uppercase text-slate-500">
-									Market_Phase
+									Market Phase
 								</span>
 								<span
 									class={`text-[10px] font-black px-2 py-0.5 border uppercase ${
@@ -351,7 +351,7 @@ export default function OnChainTruth() {
 									Exchange Flow
 								</h3>
 								<p class="font-mono text-[10px] text-slate-500 uppercase">
-									Supply_Liquidity
+									Supply Liquidity
 								</p>
 							</div>
 						</div>
@@ -370,14 +370,14 @@ export default function OnChainTruth() {
 									{formatNumber(data()?.exchangeBalance?.btc ?? 0)}
 								</div>
 								<div class="text-[9px] font-bold text-slate-600 uppercase mt-2 tracking-widest">
-									BTC_ON_EXCHANGES (EST)
+									BTC On Exchanges (Est)
 								</div>
 							</div>
 
 							<div class="grid grid-cols-2 gap-4 mb-8">
 								<div class="p-3 border border-white/5 text-center">
 									<div class="text-[9px] font-bold text-slate-500 uppercase mb-2 tracking-widest">
-										7D_Delta
+										7D Delta
 									</div>
 									<div
 										class={`text-lg font-mono ${
@@ -392,7 +392,7 @@ export default function OnChainTruth() {
 								</div>
 								<div class="p-3 border border-white/5 text-center">
 									<div class="text-[9px] font-bold text-slate-500 uppercase mb-2 tracking-widest">
-										30D_Delta
+										30D Delta
 									</div>
 									<div
 										class={`text-lg font-mono ${
@@ -408,7 +408,7 @@ export default function OnChainTruth() {
 							</div>
 
 							<div class="border-l-2 border-indigo-500/50 pl-4 py-1">
-								<p class="text-[10px] leading-relaxed uppercase tracking-wide text-slate-400">
+								<p class="text-[10px] leading-relaxed tracking-wide text-slate-400">
 									{(data()?.exchangeBalance?.change7d ?? 0) < 0 ? (
 										<span>
 											<span class="text-emerald-400 font-black block mb-1">
@@ -437,7 +437,7 @@ export default function OnChainTruth() {
 						<div class="px-6 md:px-8 py-4 border-t border-white/5 bg-white/1">
 							<div class="flex justify-between items-center">
 								<span class="font-mono text-[9px] uppercase text-slate-500">
-									Supply_Shock_Status
+									Supply Shock Status
 								</span>
 								<span
 									class={`text-[10px] font-black px-2 py-0.5 border uppercase ${
@@ -467,7 +467,7 @@ export default function OnChainTruth() {
 									Realized Basis
 								</h3>
 								<p class="font-mono text-[10px] text-slate-500 uppercase">
-									Holding_Costs
+									Holding Costs
 								</p>
 							</div>
 						</div>
@@ -486,7 +486,7 @@ export default function OnChainTruth() {
 									{formatCurrency(data()?.realizedPrice?.current ?? 0)}
 								</div>
 								<div class="text-[9px] font-bold text-slate-600 uppercase mt-2 tracking-widest">
-									TERMINAL_REALIZED_PRICE
+									Terminal Realized Price
 								</div>
 							</div>
 
@@ -494,7 +494,7 @@ export default function OnChainTruth() {
 								<div class="group">
 									<div class="flex justify-between items-end mb-1">
 										<span class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">
-											STH_Realized
+											STH Realized
 										</span>
 										<span class="font-mono text-[9px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-sm">
 											{data()?.realizedPrice?.sthRatio?.toFixed(2) ?? "0.00"}X
@@ -514,7 +514,7 @@ export default function OnChainTruth() {
 								<div class="group">
 									<div class="flex justify-between items-end mb-1">
 										<span class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">
-											LTH_Realized
+											LTH Realized
 										</span>
 										<span class="font-mono text-[9px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-sm">
 											{data()?.realizedPrice?.lthRatio?.toFixed(2) ?? "0.00"}X
@@ -538,7 +538,7 @@ export default function OnChainTruth() {
 						<div class="px-6 md:px-8 py-4 border-t border-white/5 bg-white/1">
 							<div class="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-2 sm:gap-0">
 								<span class="font-mono text-[9px] uppercase text-slate-500">
-									Bull_Regime_Integrity
+									Bull Regime Integrity
 								</span>
 								<span
 									class={`text-[10px] font-black px-2 py-0.5 border uppercase ${
@@ -562,11 +562,11 @@ export default function OnChainTruth() {
 				<div class="flex items-center gap-2">
 					<div class="w-1.5 h-1.5 bg-cyan-500 animate-pulse rounded-full"></div>
 					<span class="font-mono text-[9px] text-slate-500 opacity-60 uppercase">
-						Ledger_Sync_Active
+						Ledger Sync Active
 					</span>
 				</div>
 				<span class="font-mono text-[9px] text-slate-500 opacity-60 uppercase">
-					Last_Sync:{" "}
+					Last Sync:{" "}
 					{lastUpdated()
 						? lastUpdated()?.toLocaleTimeString([], {
 								hour: "2-digit",

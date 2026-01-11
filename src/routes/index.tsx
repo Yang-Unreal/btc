@@ -47,7 +47,7 @@ export default function Home() {
 				<section class="space-y-6">
 					<div class="flex items-center gap-4 flex-wrap">
 						<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
-							00_MARKET_INTEL
+							00 Market Intel
 						</span>
 						<div class="h-px grow bg-white/5"></div>
 					</div>
@@ -60,7 +60,7 @@ export default function Home() {
 				<section class="space-y-6">
 					<div class="flex items-center gap-4 flex-wrap">
 						<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
-							01_MACRO_ENGINE
+							01 Macro Engine
 						</span>
 						<div class="h-px grow bg-white/5"></div>
 					</div>
@@ -73,7 +73,7 @@ export default function Home() {
 				<section class="space-y-6">
 					<div class="flex items-center gap-4 flex-wrap">
 						<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
-							02_TECHNICAL_OPS
+							02 Technical Ops
 						</span>
 						<div class="h-px grow bg-white/5"></div>
 					</div>
@@ -93,7 +93,7 @@ export default function Home() {
 				<section class="space-y-12">
 					<div class="flex items-center gap-4 flex-wrap">
 						<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
-							TACTICAL_DATA_SUITE
+							Tactical Data Suite
 						</span>
 						<div class="h-px grow bg-white/5"></div>
 					</div>

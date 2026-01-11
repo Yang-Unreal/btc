@@ -322,7 +322,7 @@ const IndicatorCard: Component<IndicatorCardProps> = (props) => {
 			>
 				<div class="flex justify-between items-center mb-2">
 					<span class="label-mono text-[9px] opacity-40 uppercase">
-						BTC_Impact_Analysis
+						BTC Impact Analysis
 					</span>
 					<span
 						class={`text-[10px] font-black px-2 py-0.5 border uppercase ${
@@ -389,9 +389,9 @@ export default function LiquidityEngine() {
 				<div class="min-w-0">
 					<div class="flex items-center gap-3 mb-3 flex-wrap">
 						<span class="badge-directive text-indigo-400 border-indigo-500/30 bg-indigo-500/5">
-							Tactical_Level_01
+							Tactical Level 01
 						</span>
-						<span class="label-mono opacity-40">Global_Liquidity_Engine</span>
+						<span class="label-mono opacity-40">Global Liquidity Engine</span>
 					</div>
 					<h2 class="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-tight">
 						Macro Liquidity
@@ -410,7 +410,7 @@ export default function LiquidityEngine() {
 					<IconRefresh
 						class={`w-3.5 h-3.5 ${loading() ? "animate-spin" : ""}`}
 					/>
-					{loading() ? "Syncing..." : "Sync_Data"}
+					{loading() ? "Syncing..." : "Sync Data"}
 				</button>
 			</div>
 
@@ -476,9 +476,9 @@ export default function LiquidityEngine() {
 					</span>
 					<div>
 						<p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">
-							Protocol_Heuristic
+							Protocol Heuristic
 						</p>
-						<p class="text-[11px] text-slate-400 font-bold uppercase tracking-tight leading-normal">
+						<p class="text-[11px] text-slate-400 font-bold tracking-tight leading-normal">
 							<span class="text-white">DXY falling + Yields falling</span>{" "}
 							results in maximum risk-on tailwinds. Global Liquidity determines
 							the fundamental velocity of the BTC cycle.
@@ -492,11 +492,11 @@ export default function LiquidityEngine() {
 				<div class="flex items-center gap-2">
 					<div class="w-1.5 h-1.5 bg-indigo-500 animate-pulse rounded-full"></div>
 					<span class="label-mono text-[9px] opacity-40 uppercase">
-						Macro_Stream_Active
+						Macro Stream Active
 					</span>
 				</div>
 				<span class="label-mono text-[9px] opacity-40 uppercase">
-					Last_Sync:{" "}
+					Last Sync:{" "}
 					{lastUpdated()
 						? lastUpdated()?.toLocaleTimeString([], {
 								hour: "2-digit",

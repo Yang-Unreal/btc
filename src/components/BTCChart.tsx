@@ -1584,7 +1584,7 @@ export default function BTCChart() {
 								<div class="flex items-center px-2 py-0.5 bg-white/5 border border-white/10 ml-2">
 									{wsConnected() ? <IconPulse /> : <IconWifiOff />}
 									<span class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] hidden sm:inline">
-										{wsConnected() ? "Live_Ops" : "Dormant"}
+										{wsConnected() ? "Live Ops" : "Dormant"}
 									</span>
 								</div>
 							</div>
@@ -1672,7 +1672,7 @@ export default function BTCChart() {
 						<div class="flex flex-col items-center gap-4">
 							<div class="w-10 h-10 border-2 border-white/5 border-t-indigo-500 animate-spin"></div>
 							<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em] animate-pulse">
-								Reconstructing_Market_State
+								Reconstructing Market State
 							</span>
 						</div>
 					</div>
@@ -1681,7 +1681,7 @@ export default function BTCChart() {
 				<Show when={error()}>
 					<div class="absolute inset-0 z-20 flex items-center justify-center bg-[#0b0e14]/90">
 						<div class="badge-directive text-rose-500 border-rose-500/50 px-4 py-3 bg-rose-500/5">
-							CRITICAL_FAILURE: {error()}
+							Critical Failure: {error()}
 						</div>
 					</div>
 				</Show>
@@ -1730,8 +1730,8 @@ export default function BTCChart() {
 											class={`text-[9px] font-black uppercase tracking-widest ${t.changeColor}`}
 										>
 											{t.changeColor.includes("emerald")
-												? "DELTA_POS"
-												: "DELTA_NEG"}
+												? "Delta Pos"
+												: "Delta Neg"}
 										</span>
 									</div>
 								</div>
@@ -1742,7 +1742,7 @@ export default function BTCChart() {
 										<div class="space-y-3">
 											<div class="flex flex-col">
 												<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-													OPEN
+													Open
 												</span>
 												<span class="text-[11px] font-mono font-bold text-slate-300">
 													{t.open}
@@ -1750,7 +1750,7 @@ export default function BTCChart() {
 											</div>
 											<div class="flex flex-col">
 												<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-													LOW
+													Low
 												</span>
 												<span class="text-[11px] font-mono font-bold text-slate-300">
 													{t.low}
@@ -1760,7 +1760,7 @@ export default function BTCChart() {
 										<div class="space-y-3">
 											<div class="flex flex-col">
 												<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-													HIGH
+													High
 												</span>
 												<span class="text-[11px] font-mono font-bold text-slate-300">
 													{t.high}
@@ -1768,7 +1768,7 @@ export default function BTCChart() {
 											</div>
 											<div class="flex flex-col border-l border-indigo-500/20 pl-3">
 												<span class="text-[8px] font-bold text-indigo-400 uppercase tracking-widest mb-1">
-													TERMINAL
+													Terminal
 												</span>
 												<div class="flex items-center gap-2">
 													<Show when={t.changeColor.includes("emerald")}>
@@ -1787,7 +1787,7 @@ export default function BTCChart() {
 										</div>
 										<div class="col-span-2 pt-2 border-t border-white/5 flex justify-between items-center">
 											<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
-												VOL_TOTAL
+												Vol Total
 											</span>
 											<span class="text-[10px] font-mono font-bold text-slate-400">
 												{t.volume}
@@ -1832,7 +1832,7 @@ export default function BTCChart() {
 												>
 													<div class="flex flex-col gap-2">
 														<span class="text-[7px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 pb-1 mb-1">
-															ACTIVE_SIGNALS
+															Active Signals
 														</span>
 														<div class="grid grid-cols-1 gap-y-1.5">
 															<Show when={t.sma10}>
@@ -1962,7 +1962,7 @@ export default function BTCChart() {
 													<Show when={t.rsi}>
 														<div class="flex flex-col gap-0.5">
 															<span class="text-[7px] font-bold text-slate-500 uppercase">
-																RSI_14
+																RSI 14
 															</span>
 															<span class="text-[9px] font-mono text-indigo-400">
 																{t.rsi}
@@ -1972,7 +1972,7 @@ export default function BTCChart() {
 													<Show when={t.fng}>
 														<div class="flex flex-col gap-0.5">
 															<span class="text-[7px] font-bold text-slate-500 uppercase">
-																FEAR_GREED
+																Fear Greed
 															</span>
 															<span
 																class={`text-[9px] font-mono ${t.fngClass}`}
@@ -2005,10 +2005,10 @@ export default function BTCChart() {
 								{/* Tooltip Footer */}
 								<div class="px-3 py-1.5 border-t border-white/5 bg-white/2 flex justify-between items-center">
 									<span class="text-[7px] font-black text-slate-600 uppercase tracking-widest">
-										MOD_TER_ALPHA_V3
+										Mod Ter Alpha V3
 									</span>
 									<span class="text-[7px] font-mono text-indigo-500/50">
-										SECURED_FEED
+										Secured Feed
 									</span>
 								</div>
 							</div>

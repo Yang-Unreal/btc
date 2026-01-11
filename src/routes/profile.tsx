@@ -341,7 +341,7 @@ function ProfileContent() {
 					<div class="lg:col-span-1 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-sm min-h-[300px] flex items-center justify-center">
 						<div class="text-center text-slate-500">
 							<div class="w-40 h-40 rounded-full border-8 border-indigo-500/30 border-t-indigo-500 animate-spin-slow flex items-center justify-center mb-4 mx-auto">
-								<span class="text-xs font-mono">ALLOCATION</span>
+								<span class="text-xs font-mono">Allocation</span>
 							</div>
 						</div>
 					</div>
