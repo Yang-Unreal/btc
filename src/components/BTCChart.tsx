@@ -114,6 +114,7 @@ interface TooltipData {
 	sma20?: string;
 	sma50?: string;
 	sma100?: string;
+	sma200?: string;
 	donchianHigh?: string;
 	prevHigh?: string;
 	rsi?: string;
@@ -245,6 +246,7 @@ export default function BTCChart() {
 	let sma20Series: ISeriesApi<"Line"> | undefined;
 	let sma50Series: ISeriesApi<"Line"> | undefined;
 	let sma100Series: ISeriesApi<"Line"> | undefined;
+	let sma200Series: ISeriesApi<"Line"> | undefined;
 	let donchianHighSeries: ISeriesApi<"Line"> | undefined;
 	let prevHighSeries: ISeriesApi<"Line"> | undefined;
 	let rsiSeries: ISeriesApi<"Line"> | undefined;
@@ -284,6 +286,7 @@ export default function BTCChart() {
 		sma20: false,
 		sma50: false,
 		sma100: false,
+		sma200: false,
 		donchianHigh: false,
 		prevHigh: false,
 		ema20: false,
@@ -350,6 +353,13 @@ export default function BTCChart() {
 			color: "bg-indigo-500",
 			textColor: "text-indigo-500",
 			borderColor: "border-indigo-500",
+		},
+		{
+			key: "sma200",
+			label: "SMA 200",
+			color: "bg-[#795548]",
+			textColor: "text-[#795548]",
+			borderColor: "border-[#795548]",
 		},
 		{
 			key: "donchianHigh",
@@ -828,38 +838,43 @@ export default function BTCChart() {
 		// Titan 9
 		if (currentInd.ema21) updateEMA(ema21Series, lastEMA21(), setLastEMA21, 21);
 
-		if (currentData.length >= 100) {
-			const recent = [...currentData.slice(-100), newData];
-			const recentCloses = recent.map((d) => d.close);
+		const recent = [...currentData.slice(-200), newData];
+		const recentCloses = recent.map((d) => d.close);
 
-			if (currentInd.sma10 && sma10Series) {
-				const vals = calculateSMA(recentCloses, 10);
-				const val = vals[vals.length - 1];
-				if (!Number.isNaN(val)) {
-					sma10Series.update({ time: newData.time, value: val });
-				}
+		if (currentInd.sma10 && sma10Series && recentCloses.length >= 10) {
+			const vals = calculateSMA(recentCloses, 10);
+			const val = vals[vals.length - 1];
+			if (!Number.isNaN(val)) {
+				sma10Series.update({ time: newData.time, value: val });
 			}
-			if (currentInd.sma50 && sma50Series) {
-				const vals = calculateSMA(recentCloses, 50);
-				const val = vals[vals.length - 1];
-				if (!Number.isNaN(val)) {
-					sma50Series.update({ time: newData.time, value: val });
-				}
+		}
+		if (currentInd.sma50 && sma50Series && recentCloses.length >= 50) {
+			const vals = calculateSMA(recentCloses, 50);
+			const val = vals[vals.length - 1];
+			if (!Number.isNaN(val)) {
+				sma50Series.update({ time: newData.time, value: val });
 			}
-			if (currentInd.sma100 && sma100Series) {
-				const vals = calculateSMA(recentCloses, 100);
-				const val = vals[vals.length - 1];
-				if (!Number.isNaN(val)) {
-					sma100Series.update({ time: newData.time, value: val });
-				}
+		}
+		if (currentInd.sma100 && sma100Series && recentCloses.length >= 100) {
+			const vals = calculateSMA(recentCloses, 100);
+			const val = vals[vals.length - 1];
+			if (!Number.isNaN(val)) {
+				sma100Series.update({ time: newData.time, value: val });
 			}
-			if (currentInd.donchianHigh && donchianHighSeries) {
-				const recentHighs = recent.map((d) => d.high);
-				const vals = calculateDonchianHigh(recentHighs, 20);
-				const val = vals[vals.length - 1];
-				if (!Number.isNaN(val)) {
-					donchianHighSeries.update({ time: newData.time, value: val });
-				}
+		}
+		if (currentInd.sma200 && sma200Series && recentCloses.length >= 200) {
+			const vals = calculateSMA(recentCloses, 200);
+			const val = vals[vals.length - 1];
+			if (!Number.isNaN(val)) {
+				sma200Series.update({ time: newData.time, value: val });
+			}
+		}
+		if (currentInd.donchianHigh && donchianHighSeries && recent.length >= 20) {
+			const recentHighs = recent.map((d) => d.high);
+			const vals = calculateDonchianHigh(recentHighs, 20);
+			const val = vals[vals.length - 1];
+			if (!Number.isNaN(val)) {
+				donchianHighSeries.update({ time: newData.time, value: val });
 			}
 		}
 
@@ -903,6 +918,7 @@ export default function BTCChart() {
 		sma20Series?.applyOptions({ visible: !!currentInd.sma20 });
 		sma50Series?.applyOptions({ visible: !!currentInd.sma50 });
 		sma100Series?.applyOptions({ visible: !!currentInd.sma100 });
+		sma200Series?.applyOptions({ visible: !!currentInd.sma200 });
 		donchianHighSeries?.applyOptions({ visible: !!currentInd.donchianHigh });
 		prevHighSeries?.applyOptions({ visible: !!currentInd.prevHigh });
 		rsiSeries?.applyOptions({ visible: !!currentInd.rsi });
@@ -998,6 +1014,7 @@ export default function BTCChart() {
 		processSMA(currentInd.sma20, sma20Series, 20);
 		processSMA(currentInd.sma50, sma50Series, 50);
 		processSMA(currentInd.sma100, sma100Series, 100);
+		processSMA(currentInd.sma200, sma200Series, 200);
 
 		if (
 			currentInd.donchianHigh &&
@@ -1099,6 +1116,7 @@ export default function BTCChart() {
 			sma20Series,
 			sma50Series,
 			sma100Series,
+			sma200Series,
 			donchianHighSeries,
 			prevHighSeries,
 			rsiSeries,
@@ -1226,6 +1244,7 @@ export default function BTCChart() {
 		sma20Series = createLineSeries("#14b8a6"); // teal-500
 		sma50Series = createLineSeries("#84cc16"); // lime-500
 		sma100Series = createLineSeries("#6366f1"); // indigo-500
+		sma200Series = createLineSeries("#795548"); // brown
 		donchianHighSeries = createLineSeries("#f43f5e"); // rose-500
 		prevHighSeries = createLineSeries("#f97316"); // orange-500
 
@@ -1353,6 +1372,9 @@ export default function BTCChart() {
 			const sma100Val = sma100Series
 				? (param.seriesData.get(sma100Series) as LineData)
 				: undefined;
+			const sma200Val = sma200Series
+				? (param.seriesData.get(sma200Series) as LineData)
+				: undefined;
 
 			const snapY = candlestickSeries.priceToCoordinate(candle.close);
 
@@ -1414,6 +1436,7 @@ export default function BTCChart() {
 				sma20: formatTooltipPrice(sma20Val?.value),
 				sma50: formatTooltipPrice(sma50Val?.value),
 				sma100: formatTooltipPrice(sma100Val?.value),
+				sma200: formatTooltipPrice(sma200Val?.value),
 				donchianHigh: formatTooltipPrice(donchianHighVal?.value),
 				prevHigh: formatTooltipPrice(prevHighVal?.value),
 				rsi:
@@ -1807,6 +1830,7 @@ export default function BTCChart() {
 											t.sma10 ||
 											t.sma50 ||
 											t.sma100 ||
+											t.sma200 ||
 											t.donchianHigh ||
 											t.rsi ||
 											t.fng ||
@@ -1827,6 +1851,7 @@ export default function BTCChart() {
 														t.sma10 ||
 														t.sma50 ||
 														t.sma100 ||
+														t.sma200 ||
 														t.donchianHigh
 													}
 												>
@@ -1872,6 +1897,16 @@ export default function BTCChart() {
 																	</span>
 																	<span class="text-[9px] font-mono text-indigo-400">
 																		{t.sma100}
+																	</span>
+																</div>
+															</Show>
+															<Show when={t.sma200}>
+																<div class="flex justify-between items-center gap-4">
+																	<span class="text-[8px] font-bold text-slate-400">
+																		SMA 200
+																	</span>
+																	<span class="text-[9px] font-mono text-[#795548]">
+																		{t.sma200}
 																	</span>
 																</div>
 															</Show>
