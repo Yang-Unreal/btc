@@ -22,6 +22,11 @@ import {
 	Show,
 	untrack,
 } from "solid-js";
+import {
+	CURRENCIES,
+	KRAKEN_INTERVAL_MAP,
+	SUPPORTED_ASSETS,
+} from "../lib/constants";
 import { formatCryptoPrice } from "../lib/format";
 import {
 	calculateDonchianHigh,
@@ -29,69 +34,15 @@ import {
 	calculateRSI,
 	calculateSMA,
 } from "../lib/indicators";
+import type {
+	AssetConfig,
+	CurrencyCode,
+	CurrencyConfig,
+	Interval,
+} from "../lib/types";
 
 type BTCData = CandlestickData<UTCTimestamp> & { volume?: number };
 type RawKlineData = [number, number, number, number, number, number];
-type Interval =
-	| "1m"
-	| "3m"
-	| "5m"
-	| "15m"
-	| "30m"
-	| "1h"
-	| "2h"
-	| "4h"
-	| "12h"
-	| "1d"
-	| "3d"
-	| "1w"
-	| "1M";
-
-type CurrencyCode = "USD" | "EUR" | "GBP";
-
-interface CurrencyConfig {
-	code: CurrencyCode;
-	symbol: string;
-	wsPair: string; // Kraken WS uses "XBT/USD", "XBT/EUR"
-	locale: string;
-}
-
-// Configuration for supported currencies
-const CURRENCIES: CurrencyConfig[] = [
-	{ code: "USD", symbol: "$", wsPair: "XBT/USD", locale: "en-US" },
-	{ code: "EUR", symbol: "€", wsPair: "XBT/EUR", locale: "de-DE" },
-	{ code: "GBP", symbol: "£", wsPair: "XBT/GBP", locale: "en-GB" },
-];
-
-interface AssetConfig {
-	symbol: string;
-	name: string;
-	krakenId: string; // Used for WS pair construction
-}
-
-const SUPPORTED_ASSETS: AssetConfig[] = [
-	{ symbol: "BTC", name: "Bitcoin", krakenId: "XBT" },
-	{ symbol: "ETH", name: "Ethereum", krakenId: "ETH" },
-	{ symbol: "SOL", name: "Solana", krakenId: "SOL" },
-	{ symbol: "DOGE", name: "Dogecoin", krakenId: "XDG" },
-	{ symbol: "LINK", name: "Chainlink", krakenId: "LINK" },
-	{ symbol: "TIA", name: "Celestia", krakenId: "TIA" },
-	{ symbol: "ONDO", name: "Ondo", krakenId: "ONDO" },
-	{ symbol: "PENDLE", name: "Pendle", krakenId: "PENDLE" },
-	{ symbol: "TAO", name: "Bittensor", krakenId: "TAO" },
-	{ symbol: "AERO", name: "Aerodrome", krakenId: "AERO" },
-	{ symbol: "RENDER", name: "Render", krakenId: "RENDER" },
-	{ symbol: "AKT", name: "Akash Network", krakenId: "AKT" },
-	{ symbol: "EWT", name: "Energy Web Token", krakenId: "EWT" },
-	{ symbol: "AAVE", name: "Aave", krakenId: "AAVE" },
-	{ symbol: "TON", name: "Toncoin", krakenId: "TON" },
-	{ symbol: "HNT", name: "Helium", krakenId: "HNT" },
-	{ symbol: "KAS", name: "Kaspa", krakenId: "KAS" },
-	{ symbol: "NIGHT", name: "Midnight", krakenId: "NIGHT" },
-	{ symbol: "SUI", name: "Sui", krakenId: "SUI" },
-	{ symbol: "PEPE", name: "Pepe", krakenId: "PEPE" },
-	{ symbol: "VIRTUAL", name: "Virtuals Protocol", krakenId: "VIRTUAL" },
-];
 
 // ... [Existing Interfaces for TooltipData, FNGData, etc. remain unchanged] ...
 interface TooltipData {
@@ -705,22 +656,7 @@ export default function BTCChart() {
 	};
 
 	const mapIntervalToKrakenWS = (interval: Interval): number => {
-		const map: Record<string, number> = {
-			"1m": 1,
-			"3m": 5,
-			"5m": 5,
-			"15m": 15,
-			"30m": 30,
-			"1h": 60,
-			"2h": 240,
-			"4h": 240,
-			"12h": 1440,
-			"1d": 1440,
-			"3d": 10080,
-			"1w": 10080,
-			"1M": 21600,
-		};
-		return map[interval] || 1440;
+		return KRAKEN_INTERVAL_MAP[interval] || 1440;
 	};
 
 	// --- Modified WebSocket Connection ---

@@ -1,33 +1,33 @@
 {
-  "transactions": [
-    {
-      "id": "2d3bcc58-9e4c-4260-8363-428609893ba6",
-      "date": "2026-01-09T05:26:48.106Z",
-      "ticker": "BTC",
-      "type": "BUY",
-      "amount": 0.00344827,
-      "price": 72500,
-      "fee": 0.625
-    },
-    {
-      "id": "8c225267-7fa1-4996-bb9b-c356f9a7b4a6",
-      "date": "2026-01-09T05:26:33.776Z",
-      "ticker": "BTC",
-      "type": "BUY",
-      "amount": 0.0004,
-      "price": 75000,
-      "fee": 0.075
-    }
-  ],
-  "favorites": [
-    "BTC",
-    "SOL",
-    "SUI",
-    "PEPE",
-    "TAO",
-    "RENDER",
-    "ONDO",
-    "KAS",
-    "VIRTUAL"
-  ]
+	"transactions": [
+		{
+			"id": "2d3bcc58-9e4c-4260-8363-428609893ba6",
+			"date": "2026-01-09T05:26:48.106Z",
+			"ticker": "BTC",
+			"type": "BUY",
+			"amount": 0.00344827,
+			"price": 72500,
+			"fee": 0.625
+		},
+		{
+			"id": "8c225267-7fa1-4996-bb9b-c356f9a7b4a6",
+			"date": "2026-01-09T05:26:33.776Z",
+			"ticker": "BTC",
+			"type": "BUY",
+			"amount": 0.0004,
+			"price": 75000,
+			"fee": 0.075
+		}
+	],
+	"favorites": [
+		"BTC",
+		"SOL",
+		"SUI",
+		"PEPE",
+		"TAO",
+		"RENDER",
+		"ONDO",
+		"KAS",
+		"VIRTUAL"
+	]
 }

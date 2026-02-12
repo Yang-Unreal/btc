@@ -1,5 +1,7 @@
 import { json } from "@solidjs/router";
 import type { APIEvent } from "@solidjs/start/server";
+import { ASSET_MAP, KRAKEN_INTERVAL_MAP } from "../../lib/constants";
+import type { Interval } from "../../lib/types";
 
 // Kraken OHLC item: [time, open, high, low, close, vwap, volume, count]
 type KrakenOHLCItem = [
@@ -13,55 +15,6 @@ type KrakenOHLCItem = [
 	number,
 ];
 
-// Mapping from Standard Symbol to Kraken API Asset Code
-const ASSET_MAP: Record<string, string> = {
-	BTC: "XBT",
-	ETH: "ETH",
-	SOL: "SOL",
-	DOGE: "XDG",
-	LINK: "LINK",
-	TIA: "TIA",
-	ONDO: "ONDO",
-	PENDLE: "PENDLE",
-	TAO: "TAO",
-	AERO: "AERO",
-	UNI: "UNI",
-	MATIC: "MATIC",
-	ATOM: "ATOM",
-	AVAX: "AVAX",
-	RENDER: "RENDER",
-	AKT: "AKT",
-	EWT: "EWT",
-	AAVE: "AAVE",
-	TON: "TON",
-	HNT: "HNT",
-	KAS: "KAS",
-	NIGHT: "NIGHT",
-	SUI: "SUI",
-	PEPE: "PEPE",
-	VIRTUAL: "VIRTUAL",
-};
-
-const mapIntervalToKraken = (interval: string): number => {
-	// Kraken API interval values are in minutes
-	const map: Record<string, number> = {
-		"1m": 1,
-		"3m": 5,
-		"5m": 5,
-		"15m": 15,
-		"30m": 30,
-		"1h": 60,
-		"2h": 120, // Kraken supports 240, not 120 directly usually, but let's map best effort
-		"4h": 240,
-		"12h": 720,
-		"1d": 1440,
-		"3d": 4320, // 1440 * 3
-		"1w": 10080,
-		"1M": 21600,
-	};
-	return map[interval] || 60;
-};
-
 export async function GET({ request }: APIEvent) {
 	const url = new URL(request.url);
 	const interval = url.searchParams.get("interval") || "1h";
@@ -71,11 +24,11 @@ export async function GET({ request }: APIEvent) {
 
 	// Resolve Kraken Pair
 	// e.g. BTC + USD -> XBTUSD (Kraken will normalize to XXBTZUSD in response)
-	const krakenAsset = ASSET_MAP[symbol] || symbol;
+	const krakenAsset = ASSET_MAP[symbol]?.krakenId || symbol;
 	// Handle special currency cases if needed, but USD/EUR/GBP are standard
 	const pairParam = `${krakenAsset}${currency}`;
 
-	const krakenInterval = mapIntervalToKraken(interval);
+	const krakenInterval = KRAKEN_INTERVAL_MAP[interval as Interval] || 60;
 
 	// Kraken API URL
 	let krakenUrl = `https://api.kraken.com/0/public/OHLC?pair=${pairParam}&interval=${krakenInterval}`;
@@ -130,6 +83,6 @@ export async function GET({ request }: APIEvent) {
 		return json(mappedData);
 	} catch (error) {
 		console.error("Data Proxy Error:", error);
-		return json([]);
+		return json({ error: "Internal Server Error" }, { status: 500 });
 	}
 }

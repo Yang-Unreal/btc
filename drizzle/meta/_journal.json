@@ -1,27 +1,27 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1767501962601,
-      "tag": "0000_blue_secret_warriors",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1767938888688,
-      "tag": "0001_worried_synch",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1767939041953,
-      "tag": "0002_fine_tusk",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1767501962601,
+			"tag": "0000_blue_secret_warriors",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1767938888688,
+			"tag": "0001_worried_synch",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1767939041953,
+			"tag": "0002_fine_tusk",
+			"breakpoints": true
+		}
+	]
 }

@@ -1,7 +1,7 @@
-import { json } from "@solidjs/router";
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { json } from "@solidjs/router";
 
 const DATA_FILE = join(process.cwd(), "src", "data", "portfolio.json");
 

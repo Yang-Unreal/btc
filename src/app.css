@@ -28,16 +28,18 @@ html {
 }
 
 body {
-	font-family: "Inter", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-family:
+		"Inter", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+		Consolas, monospace;
 	background-color: var(--color-bg);
 	color: var(--color-text-primary);
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
-	
+
 	/* CRITICAL: Prevents horizontal scroll from overflowing content */
 	overflow-x: hidden;
 	min-height: 100vh;
-	
+
 	/* CRITICAL: Disables browser's auto-scroll adjustment causing the "move down" effect */
 	overflow-anchor: none;
 
@@ -59,11 +61,19 @@ body {
 }
 
 /* Navigation */
-.nav-item { transition: all 0.2s var(--ease-out); }
-.nav-item:hover { transform: translateY(-1px); }
+.nav-item {
+	transition: all 0.2s var(--ease-out);
+}
+.nav-item:hover {
+	transform: translateY(-1px);
+}
 
 /* Utility */
-.layout-container { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+.layout-container {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 0 1rem;
+}
 .label-mono {
 	font-family: ui-monospace, monospace;
 	text-transform: uppercase;
@@ -77,13 +87,27 @@ body {
 }
 
 /* Scrollbars */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
 
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: var(--color-bg); }
-::-webkit-scrollbar-thumb { background: var(--color-border-strong); }
-::-webkit-scrollbar-thumb:hover { background: var(--color-text-dim); }
+::-webkit-scrollbar {
+	width: 4px;
+	height: 4px;
+}
+::-webkit-scrollbar-track {
+	background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+	background: var(--color-border-strong);
+}
+::-webkit-scrollbar-thumb:hover {
+	background: var(--color-text-dim);
+}
 
 /* Badges */
 .badge-directive {
