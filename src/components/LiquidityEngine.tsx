@@ -142,7 +142,7 @@ interface IndicatorCardProps {
 	value: string | number | null;
 	suffix?: string;
 	icon: JSX.Element;
-	iconBg: string;
+	iconBg: string; // Deprecated but kept for compatibility
 	signal: SignalType;
 	signalLabel: string;
 	description: string;
@@ -244,101 +244,62 @@ const analyzeFedRate = (
 // --- Indicator Card Component ---
 const IndicatorCard: Component<IndicatorCardProps> = (props) => {
 	return (
-		<div class="directive-card flex flex-col h-full hover:bg-white/2 transition-colors">
+		<div class="directive-card flex flex-col h-full bg-[#0B1221] border border-white/5 hover:border-white/10 transition-all p-6">
 			{/* Header */}
-			<div class="p-6 pb-2">
-				<div class="flex justify-between items-start mb-6">
-					<div class="flex items-center gap-3">
-						<div
-							class={`w-10 h-10 border border-white/10 bg-white/5 flex items-center justify-center`}
-						>
-							{props.icon}
-						</div>
-						<div>
-							<h3 class="font-black text-white uppercase tracking-tighter text-sm leading-tight">
-								{props.title}
-							</h3>
-							<div class="flex items-center gap-2 mt-1">
-								<span class="label-mono text-[9px] opacity-50">
-									Correlation: {props.correlation}
-								</span>
-								<Show when={props.isDemo}>
-									<span class="badge-directive text-rose-400 border-rose-400/30 bg-rose-400/5">
-										DEMO
-									</span>
-								</Show>
-							</div>
-						</div>
+			<div class="flex justify-between items-start mb-6">
+				<div class="flex items-center gap-3">
+					<div class="w-8 h-8 rounded bg-white/5 flex items-center justify-center text-indigo-400">
+						{props.icon}
 					</div>
-				</div>
-
-				{/* Value */}
-				<div class="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 mb-6 overflow-hidden">
-					<Show
-						when={!props.loading && props.value !== null}
-						fallback={<div class="h-10 w-32 bg-white/5 animate-pulse" />}
-					>
-						<div class="flex items-center gap-2 truncate">
-							<span
-								class={`data-value text-3xl sm:text-4xl ${
-									props.trend === "up"
-										? "text-emerald-400"
-										: props.trend === "down"
-											? "text-rose-400"
-											: "text-white"
-								}`}
-							>
-								{typeof props.value === "number"
-									? props.value >= 1000
-										? (props.value / 1000).toFixed(2) + "T"
-										: props.value.toFixed(2)
-									: props.value}
-								{props.suffix &&
-								(typeof props.value !== "number" || props.value < 1000)
-									? props.suffix
-									: ""}
-							</span>
-							<Show when={props.trend}>
-								{props.trend === "up" ? (
-									<IconTrendUp class="w-5 h-5 text-emerald-400 shrink-0" />
-								) : (
-									<IconTrendDown class="w-5 h-5 text-rose-400 shrink-0" />
-								)}
-							</Show>
-						</div>
-					</Show>
+					<div>
+						<h3 class="text-xs font-bold text-white uppercase tracking-wide">
+							{props.title}
+						</h3>
+						<span class="label-mono text-slate-500 text-[10px]">
+							{props.correlation} Correlation
+						</span>
+					</div>
 				</div>
 			</div>
 
-			{/* Signal Section */}
-			<div
-				class={`mt-auto p-4 border-t border-white/5 ${
-					props.signal === "Bullish"
-						? "bg-emerald-500/5"
-						: props.signal === "Bearish"
-							? "bg-rose-500/5"
-							: "bg-white/2"
-				}`}
-			>
-				<div class="flex justify-between items-center mb-2">
-					<span class="label-mono text-[9px] opacity-40 uppercase">
-						BTC Impact Analysis
-					</span>
-					<span
-						class={`text-[10px] font-black px-2 py-0.5 border uppercase ${
-							props.signal === "Bullish"
-								? "border-emerald-500/40 text-emerald-400"
-								: props.signal === "Bearish"
-									? "border-rose-500/40 text-rose-400"
-									: "border-white/10 text-slate-400"
-						}`}
-					>
-						{props.signal}
-					</span>
-				</div>
-				<p class="text-[11px] font-bold text-slate-500 uppercase tracking-tight leading-tight">
-					{props.description}
-				</p>
+			{/* Value */}
+			<div class="mb-6">
+				<Show
+					when={!props.loading && props.value !== null}
+					fallback={<div class="h-8 w-24 bg-white/5 animate-pulse rounded" />}
+				>
+					<div class="flex items-baseline gap-2">
+						<span class="font-mono text-xl md:text-2xl font-medium text-white tracking-tight">
+							{typeof props.value === "number"
+								? props.value.toFixed(2)
+								: props.value}
+							{props.suffix}
+						</span>
+						<Show when={props.trend}>
+							{props.trend === "up" ? (
+								<IconTrendUp class="w-4 h-4 text-emerald-400" />
+							) : (
+								<IconTrendDown class="w-4 h-4 text-rose-400" />
+							)}
+						</Show>
+					</div>
+				</Show>
+			</div>
+
+			{/* Signal */}
+			<div class="mt-auto pt-4 border-t border-white/5 flex justify-between items-center">
+				<span class="label-mono text-slate-500">Status</span>
+				<span
+					class={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
+						props.signal === "Bullish"
+							? "bg-emerald-500/10 text-emerald-400"
+							: props.signal === "Bearish"
+								? "bg-rose-500/10 text-rose-400"
+								: "bg-slate-500/10 text-slate-400"
+					}`}
+				>
+					{props.signal}
+				</span>
 			</div>
 		</div>
 	);
@@ -353,7 +314,6 @@ export default function LiquidityEngine() {
 		impliedFedRate: null,
 	});
 	const [loading, setLoading] = createSignal(true);
-	const [lastUpdated, setLastUpdated] = createSignal<Date | null>(null);
 
 	const fetchData = async () => {
 		setLoading(true);
@@ -362,7 +322,6 @@ export default function LiquidityEngine() {
 			if (res.ok) {
 				const json = await res.json();
 				setData(json);
-				setLastUpdated(new Date());
 			}
 		} catch (e) {
 			console.error("Failed to fetch liquidity data:", e);
@@ -383,43 +342,31 @@ export default function LiquidityEngine() {
 	const fedAnalysis = () => analyzeFedRate(data().impliedFedRate);
 
 	return (
-		<div class="my-8 md:my-12">
-			{/* Section Header - Institutional Style */}
-			<div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6 border-l-4 border-indigo-500 pl-6 py-2">
-				<div class="min-w-0">
-					<div class="flex items-center gap-3 mb-3 flex-wrap">
-						<span class="badge-directive text-indigo-400 border-indigo-500/30 bg-indigo-500/5">
-							Tactical Level 01
-						</span>
-						<span class="label-mono opacity-40">Global Liquidity Engine</span>
-					</div>
-					<h2 class="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-tight">
-						Macro Liquidity
-					</h2>
-					<p class="text-slate-500 mt-3 max-w-2xl text-[13px] font-bold leading-relaxed uppercase tracking-tight">
-						Crypto is a <span class="text-white">"Liquidity Sponge"</span>.
-						Systematic monitoring of global capital flows and interest rate
-						regimes to determine primary asset direction.
-					</p>
+		<div class="space-y-6">
+			{/* Controls */}
+			<div class="flex justify-between items-center mb-4">
+				<div class="flex items-center gap-3">
+					<div class="h-px w-8 bg-indigo-500/50"></div>
+					<span class="label-mono text-indigo-500 text-[10px]">
+						Macro Environment
+					</span>
 				</div>
 				<button
 					type="button"
 					onClick={fetchData}
-					class="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all active:scale-95"
+					class="p-1.5 text-slate-500 hover:text-white transition-colors"
+					title="Sync Data"
 				>
-					<IconRefresh
-						class={`w-3.5 h-3.5 ${loading() ? "animate-spin" : ""}`}
-					/>
-					{loading() ? "Syncing..." : "Sync Data"}
+					<IconRefresh class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`} />
 				</button>
 			</div>
 
-			{/* Cards Grid - Directive Style */}
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1">
+			{/* Cards Grid */}
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 				<IndicatorCard
-					title="U.S. Dollar Index (DXY)"
+					title="U.S. Dollar (DXY)"
 					value={data().dxy}
-					icon={<IconGlobe class="w-5 h-5 text-indigo-400" />}
+					icon={<IconGlobe class="w-full h-full" />}
 					iconBg="bg-white/5"
 					signal={dxyAnalysis().signal}
 					signalLabel={dxyAnalysis().label}
@@ -429,10 +376,10 @@ export default function LiquidityEngine() {
 				/>
 
 				<IndicatorCard
-					title="10Y Treasury Yield"
+					title="10Y Yield"
 					value={data().us10y}
 					suffix="%"
-					icon={<IconChartBar class="w-5 h-5 text-indigo-400" />}
+					icon={<IconChartBar class="w-full h-full" />}
 					iconBg="bg-white/5"
 					signal={yieldsAnalysis().signal}
 					signalLabel={yieldsAnalysis().label}
@@ -442,10 +389,10 @@ export default function LiquidityEngine() {
 				/>
 
 				<IndicatorCard
-					title="Real Interest Rate"
+					title="Real Rates"
 					value={data().realRate}
 					suffix="%"
-					icon={<IconDollar class="w-5 h-5 text-indigo-400" />}
+					icon={<IconDollar class="w-full h-full" />}
 					iconBg="bg-white/5"
 					signal={realRateAnalysis().signal}
 					signalLabel={realRateAnalysis().label}
@@ -458,7 +405,7 @@ export default function LiquidityEngine() {
 					title="Implied Fed Rate"
 					value={data().impliedFedRate}
 					suffix="%"
-					icon={<IconBank class="w-5 h-5 text-indigo-400" />}
+					icon={<IconBank class="w-full h-full" />}
 					iconBg="bg-white/5"
 					signal={fedAnalysis().signal}
 					signalLabel={fedAnalysis().label}
@@ -466,45 +413,6 @@ export default function LiquidityEngine() {
 					correlation="Inverse"
 					loading={loading()}
 				/>
-			</div>
-
-			{/* Golden Rule Note */}
-			<div class="mt-8 p-4 bg-indigo-500/5 border border-indigo-500/10">
-				<div class="flex items-start gap-4">
-					<span class="text-2xl filter saturate-0 grayscale opacity-50">
-						💡
-					</span>
-					<div>
-						<p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">
-							Protocol Heuristic
-						</p>
-						<p class="text-[11px] text-slate-400 font-bold tracking-tight leading-normal">
-							<span class="text-white">DXY falling + Yields falling</span>{" "}
-							results in maximum risk-on tailwinds. Global Liquidity determines
-							the fundamental velocity of the BTC cycle.
-						</p>
-					</div>
-				</div>
-			</div>
-
-			{/* Status Bar */}
-			<div class="mt-6 flex justify-between items-center">
-				<div class="flex items-center gap-2">
-					<div class="w-1.5 h-1.5 bg-indigo-500 animate-pulse rounded-full"></div>
-					<span class="label-mono text-[9px] opacity-40 uppercase">
-						Macro Stream Active
-					</span>
-				</div>
-				<span class="label-mono text-[9px] opacity-40 uppercase">
-					Last Sync:{" "}
-					{lastUpdated()
-						? lastUpdated()?.toLocaleTimeString([], {
-								hour: "2-digit",
-								minute: "2-digit",
-								second: "2-digit",
-							})
-						: "UNKNOWN"}
-				</span>
 			</div>
 		</div>
 	);

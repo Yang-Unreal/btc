@@ -384,23 +384,16 @@ export default function TitanTriggers() {
 	};
 
 	return (
-		<div class="space-y-6">
-			<div class="flex items-center gap-4 flex-wrap">
-				<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
-					Titan 09 Matrix
-				</span>
-				<div class="h-px grow bg-white/5"></div>
-			</div>
-
-			<div class="overflow-x-auto">
-				<table class="w-full text-left border-collapse">
+		<div class="space-y-4">
+			<div class="overflow-x-auto no-scrollbar">
+				<table class="w-full text-left border-collapse min-w-[900px]">
 					<thead>
-						<tr class="border-b border-white/5 text-[10px] uppercase text-slate-500 tracking-widest bg-white/5">
-							<th class="py-4 px-4 font-bold">Ticker</th>
-							<th class="py-4 px-4 font-bold">Role</th>
-							<th class="py-4 px-4 font-bold">Allocation (L/R)</th>
-							<th class="py-4 px-4 font-bold text-center">Entry Trigger</th>
-							<th class="py-4 px-4 font-bold text-center">Exit / Trail</th>
+						<tr class="border-b border-white/5 text-slate-500 text-[10px] uppercase font-bold tracking-wider bg-white/5">
+							<th class="py-4 px-4">Ticker</th>
+							<th class="py-4 px-4">Role</th>
+							<th class="py-4 px-4">Allocation (L/R)</th>
+							<th class="py-4 px-4 text-center">Entry Trigger</th>
+							<th class="py-4 px-4 text-center">Exit / Trail</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-white/5">
@@ -410,7 +403,7 @@ export default function TitanTriggers() {
 
 								return (
 									<tr class="hover:bg-white/5 transition-colors">
-										<td class="py-4 px-4 font-bold text-white">
+										<td class="py-4 px-4 font-bold text-white text-sm">
 											{asset.ticker}
 										</td>
 										<td class="py-4 px-4 text-xs text-slate-400">
@@ -422,19 +415,19 @@ export default function TitanTriggers() {
 
 										{/* Entry Trigger */}
 										<td class="py-4 px-4 text-center">
-											<div class="flex flex-col items-center gap-1">
+											<div class="flex flex-col items-center gap-1.5">
 												<div
-													class={`w-2 h-2 rounded-full ${
+													class={`w-2 h-2 rounded-full ring-2 ring-opacity-20 ${
 														status().loading
-															? "bg-slate-700 animate-pulse"
+															? "bg-slate-700 animate-pulse ring-slate-500"
 															: status().error
-																? "bg-amber-500/50"
+																? "bg-amber-500/50 ring-amber-500"
 																: status().entry
-																	? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-																	: "bg-slate-700"
+																	? "bg-emerald-500 ring-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+																	: "bg-slate-700 ring-transparent"
 													}`}
 												></div>
-												<span class="text-[9px] text-slate-500 uppercase tracking-wide">
+												<span class="text-[9px] text-slate-500 uppercase tracking-wide font-medium">
 													{asset.entryLabel}
 												</span>
 											</div>
@@ -442,21 +435,21 @@ export default function TitanTriggers() {
 
 										{/* Exit / Take Profit */}
 										<td class="py-4 px-4 text-center">
-											<div class="flex flex-col items-center gap-1">
+											<div class="flex flex-col items-center gap-1.5">
 												<div
-													class={`w-2 h-2 rounded-full ${
+													class={`w-2 h-2 rounded-full ring-2 ring-opacity-20 ${
 														status().loading
-															? "bg-slate-700 animate-pulse"
+															? "bg-slate-700 animate-pulse ring-slate-500"
 															: status().error
-																? "bg-amber-500/50"
+																? "bg-amber-500/50 ring-amber-500"
 																: status().freeRide && !status().exit
-																	? "bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)] animate-pulse"
+																	? "bg-purple-500 ring-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)] animate-pulse"
 																	: status().exit
-																		? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"
-																		: "bg-slate-700"
+																		? "bg-rose-500 ring-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]"
+																		: "bg-slate-700 ring-transparent"
 													}`}
 												></div>
-												<span class="text-[9px] text-slate-500 uppercase tracking-wide">
+												<span class="text-[9px] text-slate-500 uppercase tracking-wide font-medium">
 													{status().freeRide
 														? "2X Gain (Ride)"
 														: asset.exitLabel}

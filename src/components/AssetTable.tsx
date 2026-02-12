@@ -62,35 +62,11 @@ export default function AssetTable() {
 		setLoading(true);
 		setError(null);
 		try {
-			console.log("MARKET_UI: Initializing sync...");
 			const marketRes = await fetch("/api/market_cap");
-			console.log("MARKET_UI: Response status:", marketRes.status);
+			if (!marketRes.ok) throw new Error("Sync failed");
 
-			if (!marketRes.ok) {
-				const errorText = await marketRes.text();
-				console.error("MARKET_UI: Error body:", errorText);
-				throw new Error(`Sync failed: ${marketRes.status}`);
-			}
-
-			const rawData = await marketRes.text();
-			let marketData: CryptoAsset[];
-			try {
-				marketData = JSON.parse(rawData);
-			} catch {
-				console.error(
-					"MARKET_UI: JSON Parse Error. Raw body starts with:",
-					rawData.substring(0, 100),
-				);
-				throw new Error("Malformed data protocol");
-			}
-
-			if (!Array.isArray(marketData)) {
-				console.error("MARKET_UI: Expected array, got:", typeof marketData);
-				throw new Error("Invalid data structure");
-			}
-
+			const marketData: CryptoAsset[] = await marketRes.json();
 			setAssets(marketData);
-			console.log("MARKET_UI: Assets loaded:", marketData.length);
 
 			// Favorites (Optional)
 			try {
@@ -100,13 +76,10 @@ export default function AssetTable() {
 					setFavorites(new Set<string>(favData));
 				}
 			} catch (favErr) {
-				console.warn("MARKET_UI: Favorites sync background failure:", favErr);
+				console.warn("Favorites sync background failure:", favErr);
 			}
-		} catch (_err: unknown) {
-			console.error("MARKET_UI: Critical failure:", _err);
-			setError(
-				`Sync Error: ${_err instanceof Error ? _err.message : "Protocol Offline"}`,
-			);
+		} catch (_err) {
+			setError("Market Data Unavailable");
 		} finally {
 			setLoading(false);
 		}
@@ -138,109 +111,84 @@ export default function AssetTable() {
 
 	const filteredAssets = () => {
 		const list = assets();
-		if (showFavoritesOnly()) {
-			return list.filter((a) => favorites().has(a.symbol));
-		}
-		return list;
+		return showFavoritesOnly()
+			? list.filter((a) => favorites().has(a.symbol))
+			: list;
 	};
 
-	// --- Formatting ---
 	const ChangeCell: Component<{ value: number }> = (props) => (
-		<td
-			class={`py-4 px-3 text-center font-mono text-[11px] font-bold ${
-				props.value > 0
-					? "bg-emerald-500/80 text-white"
-					: props.value < 0
-						? "bg-rose-500/80 text-white"
-						: "text-slate-500"
-			}`}
-		>
-			{props.value > 0 ? "+" : ""}
-			{props.value === 0 ? "0%" : `${props.value.toFixed(1)}%`}
+		<td class="py-4 px-4 text-right">
+			<span
+				class={`font-mono text-xs font-medium ${
+					props.value > 0
+						? "text-emerald-400"
+						: props.value < 0
+							? "text-rose-400"
+							: "text-slate-500"
+				}`}
+			>
+				{props.value > 0 ? "+" : ""}
+				{props.value.toFixed(1)}%
+			</span>
 		</td>
 	);
 
 	return (
-		<div class="space-y-6">
-			{/* Error Display */}
-			<Show when={error()}>
-				<div class="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2 rounded">
-					{error()}
-				</div>
-			</Show>
-
-			{/* Header */}
-			<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-l-4 border-indigo-500 pl-6 py-2">
-				<div>
-					<div class="flex items-center gap-3 mb-3 flex-wrap">
-						<span class="badge-directive text-indigo-400 border-indigo-500/30 bg-indigo-500/5">
-							Market Monitor X1
-						</span>
-						<span class="label-mono opacity-40">Systematic Asset View</span>
-					</div>
-					<h2 class="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-tight">
-						Market Overview
-					</h2>
-				</div>
-
-				<div class="flex items-center gap-4">
+		<div class="space-y-4">
+			{/* Controls */}
+			<div class="flex justify-between items-center mb-6">
+				<div class="flex items-center gap-2">
 					<button
 						type="button"
 						onClick={() => setShowFavoritesOnly(!showFavoritesOnly())}
-						class={`flex items-center gap-3 px-4 py-2 border text-[10px] font-black uppercase tracking-widest transition-all ${
+						class={`flex items-center gap-2 px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
 							showFavoritesOnly()
-								? "bg-indigo-500/10 border-indigo-500 text-indigo-400"
-								: "bg-white/5 border-white/10 text-white/40 hover:text-white"
+								? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+								: "text-slate-500 hover:text-slate-300 border border-transparent"
 						}`}
 					>
 						<IconStar class="w-3 h-3" filled={showFavoritesOnly()} />
-						{showFavoritesOnly() ? "Favorites Mode" : "All Assets"}
-					</button>
-
-					<button
-						type="button"
-						onClick={fetchData}
-						class="flex items-center justify-center p-2 bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
-					>
-						<IconRefresh class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`} />
+						{showFavoritesOnly() ? "Favorites" : "All Assets"}
 					</button>
 				</div>
+				<button
+					type="button"
+					onClick={fetchData}
+					class="p-1.5 text-slate-500 hover:text-white transition-colors"
+					title="Refresh"
+				>
+					<IconRefresh class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`} />
+				</button>
 			</div>
 
 			{/* Table */}
-			<div class="directive-card overflow-x-auto no-scrollbar">
-				<table class="w-full text-left border-collapse min-w-[1000px]">
+			<div class="overflow-x-auto no-scrollbar">
+				<table class="w-full text-left border-collapse min-w-[900px]">
 					<thead>
-						<tr class="border-b border-white/5 bg-[#1A1C1E]">
-							<th class="py-4 px-4 w-12 label-mono text-[10px] text-slate-500">
+						<tr class="border-b border-white/5 text-slate-500">
+							<th class="py-3 px-4 w-12 text-[10px] font-bold uppercase tracking-wider">
 								#
 							</th>
-							<th class="py-4 px-2 label-mono text-[10px] text-slate-500">
-								Name
+							<th class="py-3 px-4 text-[10px] font-bold uppercase tracking-wider">
+								Asset
 							</th>
-							<th class="py-4 px-6 label-mono text-[10px] text-slate-500 text-right">
+							<th class="py-3 px-4 text-right text-[10px] font-bold uppercase tracking-wider">
 								Price
 							</th>
-							<th class="py-4 px-6 label-mono text-[10px] text-slate-500 text-right">
-								Market Cap
+							<th class="py-3 px-4 text-right text-[10px] font-bold uppercase tracking-wider">
+								Mkt Cap
 							</th>
-							<th class="py-4 px-6 label-mono text-[10px] text-slate-500 text-right">
-								24h Volume
+							<th class="py-3 px-4 text-right text-[10px] font-bold uppercase tracking-wider">
+								Volume (24h)
 							</th>
-							<th class="py-4 px-3 label-mono text-[10px] text-slate-500 text-center">
-								Hour
+							<th class="py-3 px-4 text-right text-[10px] font-bold uppercase tracking-wider">
+								1h
 							</th>
-							<th class="py-4 px-3 label-mono text-[10px] text-slate-500 text-center">
-								Day
+							<th class="py-3 px-4 text-right text-[10px] font-bold uppercase tracking-wider">
+								24h
 							</th>
-							<th class="py-4 px-3 label-mono text-[10px] text-slate-500 text-center">
-								Week
-							</th>
-							<th class="py-4 px-3 label-mono text-[10px] text-slate-500 text-center">
-								Month
-							</th>
-							<th class="py-4 px-3 label-mono text-[10px] text-slate-500 text-center">
-								Year
+							<th class="py-3 px-4 text-right text-[10px] font-bold uppercase tracking-wider">
+								7d
 							</th>
 						</tr>
 					</thead>
@@ -248,84 +196,69 @@ export default function AssetTable() {
 						<Show
 							when={!loading() || assets().length > 0}
 							fallback={
-								<For each={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}>
-									{() => (
-										<tr>
-											<td colspan="10" class="py-6 px-6">
-												<div class="h-6 bg-white/5 animate-pulse rounded w-full" />
-											</td>
-										</tr>
-									)}
-								</For>
+								<tr>
+									<td
+										colspan="8"
+										class="py-12 text-center text-slate-500 text-xs"
+									>
+										Loading market data...
+									</td>
+								</tr>
 							}
 						>
-							<For
-								each={filteredAssets()}
-								fallback={
-									<tr>
-										<td colspan="10" class="py-20 text-center">
-											<p class="label-mono text-slate-600 text-[10px]">
-												No assets found in current filter regime
-											</p>
-										</td>
-									</tr>
-								}
-							>
+							<For each={filteredAssets()}>
 								{(asset, index) => (
-									<tr class="group hover:bg-white/2 transition-colors">
-										<td class="py-4 px-4">
-											<span class="font-mono text-xs text-slate-500">
-												{index() + 1}
-											</span>
+									<tr class="group hover:bg-white/[0.02] transition-colors">
+										<td class="py-4 px-4 text-xs text-slate-500 font-mono">
+											{index() + 1}
 										</td>
-										<td class="py-4 px-2">
+										<td class="py-4 px-4">
 											<div class="flex items-center gap-3">
 												<button
 													type="button"
 													onClick={() => toggleFavorite(asset.symbol)}
-													class={`w-8 h-8 flex items-center justify-center border transition-all ${
-														favorites().has(asset.symbol)
-															? "bg-indigo-400/20 border-indigo-400 text-indigo-400"
-															: "bg-white/5 border-white/10 text-white/20 hover:text-white"
-													}`}
+													class="text-slate-600 hover:text-indigo-400 transition-colors"
 												>
-													<span class="text-lg leading-none">
-														{favorites().has(asset.symbol) ? "★" : "+"}
-													</span>
+													<IconStar
+														class="w-3.5 h-3.5"
+														filled={favorites().has(asset.symbol)}
+													/>
 												</button>
-
-												<div class="flex items-center gap-3 bg-[#1A1C1E] px-4 py-2 rounded-lg border border-white/5">
+												<div class="flex items-center gap-3">
 													<img
 														src={asset.image}
 														alt={asset.name}
-														class="w-6 h-6 rounded-full"
+														class="w-6 h-6 rounded-full opacity-90 group-hover:opacity-100 transition-opacity"
 													/>
-													<span class="text-sm font-black text-white tracking-tight">
-														{asset.symbol === "BTC" ? "Bitcoin" : asset.name}
-													</span>
+													<div>
+														<span class="text-sm font-bold text-slate-200 block leading-none">
+															{asset.symbol}
+														</span>
+														<span class="text-[10px] text-slate-500 uppercase tracking-wider">
+															{asset.name}
+														</span>
+													</div>
 												</div>
 											</div>
 										</td>
-										<td class="py-4 px-6 text-right">
-											<span class="font-mono text-sm text-white">
+										<td class="py-4 px-4 text-right">
+											<span class="font-mono text-sm font-medium text-slate-200">
 												{formatCryptoPrice(asset.price)}
 											</span>
 										</td>
-										<td class="py-4 px-6 text-right">
-											<span class="font-mono text-sm text-white">
+										<td class="py-4 px-4 text-right">
+											<span class="font-mono text-xs text-slate-400">
 												{formatCompact(asset.marketCap)}
 											</span>
 										</td>
-										<td class="py-4 px-6 text-right">
-											<span class="font-mono text-sm text-white">
+										<td class="py-4 px-4 text-right">
+											<span class="font-mono text-xs text-slate-400">
 												{formatCompact(asset.volume24h)}
 											</span>
 										</td>
 										<ChangeCell value={asset.change1h} />
 										<ChangeCell value={asset.change24h} />
 										<ChangeCell value={asset.change7d} />
-										<ChangeCell value={asset.change30d} />
-										<ChangeCell value={asset.change1y} />
 									</tr>
 								)}
 							</For>

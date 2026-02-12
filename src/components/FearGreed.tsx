@@ -71,12 +71,6 @@ export default function FearGreed() {
 
 	onMount(fetchData);
 
-	const getGaugeRotation = (value: number) => {
-		// 0 to 100 mapped to -90deg to 90deg
-		const limited = Math.min(100, Math.max(0, value));
-		return (limited / 100) * 180 - 90;
-	};
-
 	const getColor = (value: number) => {
 		if (value < 25) return "#ef4444"; // Extreme Fear (Red)
 		if (value < 45) return "#f97316"; // Fear (Orange)
@@ -85,102 +79,104 @@ export default function FearGreed() {
 		return "#10b981"; // Extreme Greed (Emerald)
 	};
 
+	// SVG Gauge Logic
+	const radius = 80;
+	const stroke = 12;
+	const normalizedValue = () => parseInt(data()?.value || "50");
+	const circumference = Math.PI * radius; // Half circle
+	const strokeDashoffset = () =>
+		circumference - (normalizedValue() / 100) * circumference;
+
 	return (
-		<div class="my-8 md:my-12 w-full max-w-7xl mx-auto px-4">
+		<div class="w-full">
 			{/* Section Header */}
-			<div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-l-4 border-purple-500 pl-6 py-2">
+			<div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-l-2 border-purple-500 pl-6 py-2">
 				<div class="min-w-0">
-					<div class="flex items-center gap-3 mb-3 flex-wrap">
-						<span class="text-[10px] font-mono text-purple-500 px-2 py-1 border border-purple-500/30 bg-purple-500/5">
+					<div class="flex items-center gap-3 mb-2 flex-wrap">
+						<span class="badge-directive text-purple-400 border-purple-500/30 bg-purple-500/5">
 							Market Psychology
 						</span>
-						<span class="font-mono text-[10px] text-slate-400 opacity-60 uppercase">
-							Fear & Greed Index
-						</span>
+						<span class="label-mono text-slate-500">Fear & Greed Index</span>
 					</div>
-					<h2 class="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-tight">
+					<h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight">
 						Sentiment Gauge
 					</h2>
-					<p class="text-slate-500 mt-3 max-w-2xl text-xs sm:text-sm font-bold leading-relaxed uppercase tracking-wide">
-						Analyzing <span class="text-white">Emotional bias</span>. Extreme
-						fear can be a buying opportunity, while extreme greed suggests a
-						correction is due.
+					<p class="text-slate-500 mt-2 max-w-2xl text-sm font-medium leading-relaxed">
+						An analysis of emotional bias. Extreme fear can be a buying
+						opportunity, while extreme greed suggests a correction is due.
 					</p>
 				</div>
 				<button
 					type="button"
 					onClick={fetchData}
-					class="flex items-center gap-3 px-5 py-2.5 bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all active:scale-95 whitespace-nowrap"
+					class="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-white font-bold text-xs uppercase hover:bg-white/10 transition-colors rounded"
 				>
 					<IconRefresh
 						class={`w-3.5 h-3.5 ${loading() ? "animate-spin" : ""}`}
 					/>
-					{loading() ? "Updating..." : "Update"}
+					{loading() ? "Updating" : "Update"}
 				</button>
 			</div>
 
 			{/* Main Content */}
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5 border border-white/5 rounded-2xl overflow-hidden">
 				{/* Gauge Card */}
-				<div class="bg-[#0B1221] border border-white/10 p-8 rounded-none relative overflow-hidden flex flex-col items-center justify-center min-h-[300px]">
+				<div class="bg-[#0B1221] p-8 flex flex-col items-center justify-center min-h-[320px] relative">
 					<Show
 						when={!loading() && data()}
 						fallback={
 							<div class="flex flex-col items-center gap-4 animate-pulse">
 								<div class="w-40 h-20 bg-white/5 rounded-t-full"></div>
-								<div class="w-32 h-8 bg-white/5 rounded"></div>
+								<div class="w-24 h-6 bg-white/5 rounded"></div>
 							</div>
 						}
 					>
-						{/* Semicircle Gauge with SVG */}
+						{/* SVG Gauge */}
 						<div class="relative w-64 h-32 mb-8">
-							{/* Background Track */}
-							<div class="absolute inset-0 w-full h-full overflow-hidden">
-								<div class="w-64 h-64 rounded-full border-[1.5rem] border-white/5 border-b-0 absolute top-0 left-0 clip-path-semicircle"></div>
-							</div>
+							<svg class="w-full h-full overflow-visible" viewBox="0 0 200 110">
+								{/* Track */}
+								<path
+									d="M 20 100 A 80 80 0 0 1 180 100"
+									fill="none"
+									stroke="rgba(255,255,255,0.05)"
+									stroke-width={stroke}
+									stroke-linecap="round"
+								/>
+								{/* Fill */}
+								<path
+									d="M 20 100 A 80 80 0 0 1 180 100"
+									fill="none"
+									stroke={getColor(normalizedValue())}
+									stroke-width={stroke}
+									stroke-linecap="round"
+									stroke-dasharray={circumference}
+									stroke-dashoffset={strokeDashoffset()}
+									class="transition-all duration-1000 ease-out"
+								/>
+							</svg>
 
-							{/* Needle */}
-							<div
-								class="absolute bottom-0 left-1/2 w-1 h-32 origin-bottom transition-transform duration-1000 ease-out"
-								style={{
-									transform: `translateX(-50%) rotate(${getGaugeRotation(parseInt(data()?.value || "50"))}deg)`,
-								}}
-							>
-								<div class="w-1 h-full bg-slate-500 relative">
-									<div
-										class="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]"
-										style={{
-											"background-color": getColor(
-												parseInt(data()?.value || "50"),
-											),
-										}}
-									></div>
+							{/* Value Center - Positioned absolutely relative to the container */}
+							<div class="absolute bottom-0 left-0 right-0 text-center transform translate-y-4">
+								<div
+									class="text-6xl font-bold tracking-tighter tabular-nums leading-none"
+									style={{ color: getColor(normalizedValue()) }}
+								>
+									{data()?.value || "--"}
 								</div>
-							</div>
-
-							{/* Center Hub */}
-							<div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-4 h-4 bg-slate-700 rounded-full border-2 border-[#0B1221] z-10" />
-						</div>
-
-						{/* Value Display */}
-						<div class="text-center z-10">
-							<div
-								class="text-6xl font-black tracking-tighter tabular-nums mb-2"
-								style={{ color: getColor(parseInt(data()?.value || "50")) }}
-							>
-								{data()?.value || "--"}
-							</div>
-							<div class="text-sm font-bold text-slate-400 uppercase tracking-widest">
-								{data()?.value_classification || "Unknown"}
+								<div class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">
+									{data()?.value_classification || "Unknown"}
+								</div>
 							</div>
 						</div>
 
 						{/* Range Labels */}
-						<div class="absolute bottom-8 left-8 text-[9px] font-black text-rose-500 uppercase">
-							Fear
-						</div>
-						<div class="absolute bottom-8 right-8 text-[9px] font-black text-emerald-500 uppercase">
-							Greed
+						<div class="w-full flex justify-between px-10 mt-4">
+							<span class="text-[10px] font-bold text-rose-500 uppercase tracking-wider">
+								Fear
+							</span>
+							<span class="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">
+								Greed
+							</span>
 						</div>
 					</Show>
 
@@ -193,50 +189,46 @@ export default function FearGreed() {
 				</div>
 
 				{/* Context / History Card */}
-				<div class="bg-[#0B1221] border border-white/10 p-8 flex flex-col justify-center">
-					<h3 class="font-black text-white uppercase tracking-tighter text-lg mb-6 flex items-center gap-3">
+				<div class="bg-[#0B1221] p-8 flex flex-col justify-center">
+					<h3 class="font-bold text-white text-lg mb-6 flex items-center gap-3">
 						<IconHeart class="w-5 h-5 text-purple-400" />
 						Interpretation
 					</h3>
 
-					<div class="space-y-6">
-						<div class="flex items-start gap-4 p-4 bg-white/5 border border-white/5 rounded-sm">
-							<div class="w-1.5 h-1.5 mt-1.5 bg-rose-500 rounded-full shrink-0"></div>
+					<div class="space-y-4">
+						<div class="flex items-start gap-4 p-4 rounded-lg bg-white/[0.02] border border-white/5">
+							<div class="w-2 h-2 mt-1.5 bg-rose-500 rounded-full shrink-0 shadow-[0_0_8px_rgba(244,63,94,0.4)]"></div>
 							<div>
 								<h4 class="text-xs font-bold text-white uppercase mb-1">
 									Extreme Fear (0-24)
 								</h4>
-								<p class="text-[11px] text-slate-400 leading-relaxed">
-									Investors are worried. Often a sign that investors are too
-									worried, which could be a{" "}
-									<span class="text-emerald-400 font-bold">
-										buying opportunity
-									</span>
-									.
+								<p class="text-sm text-slate-400 leading-relaxed font-medium">
+									Market participants are anxious. Historically, this condition
+									presents a high-probability{" "}
+									<span class="text-emerald-400">Accumulation Zone</span>.
 								</p>
 							</div>
 						</div>
 
-						<div class="flex items-start gap-4 p-4 bg-white/5 border border-white/5 rounded-sm">
-							<div class="w-1.5 h-1.5 mt-1.5 bg-emerald-500 rounded-full shrink-0"></div>
+						<div class="flex items-start gap-4 p-4 rounded-lg bg-white/[0.02] border border-white/5">
+							<div class="w-2 h-2 mt-1.5 bg-emerald-500 rounded-full shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
 							<div>
 								<h4 class="text-xs font-bold text-white uppercase mb-1">
 									Extreme Greed (75-100)
 								</h4>
-								<p class="text-[11px] text-slate-400 leading-relaxed">
-									Investors limitlessly confident. The market is due for a
-									correction. Time to{" "}
-									<span class="text-rose-400 font-bold">take profits</span> or
-									tighten stops.
+								<p class="text-sm text-slate-400 leading-relaxed font-medium">
+									FOMO is driving price action. The likelihood of a severe
+									correction or liquidation cascade is{" "}
+									<span class="text-rose-400">Critical</span>.
 								</p>
 							</div>
 						</div>
 
-						<div class="pt-4 border-t border-white/5 flex justify-between items-center">
-							<span class="text-[10px] text-slate-500 uppercase font-mono">
-								Update Frequency: Daily
+						<div class="pt-6 mt-2 border-t border-white/5 flex justify-between items-center opacity-50">
+							<span class="label-mono text-slate-500 text-[10px]">
+								Frequency: Daily
 							</span>
-							<span class="text-[10px] text-slate-500 uppercase font-mono">
+							<span class="label-mono text-slate-500 text-[10px]">
 								Source: alternative.me
 							</span>
 						</div>
