@@ -21,11 +21,17 @@ class SimpleCache {
 		if (!entry) return null;
 
 		if (Date.now() - entry.timestamp > entry.ttl) {
-			this.cache.delete(key);
+			// Do not delete immediately to allow stale retrieval
+			// this.cache.delete(key);
 			return null;
 		}
 
 		return entry.data as T;
+	}
+
+	getStale<T>(key: string): T | null {
+		const entry = this.cache.get(key);
+		return entry ? (entry.data as T) : null;
 	}
 
 	clear(): void {

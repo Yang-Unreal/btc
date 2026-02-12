@@ -182,15 +182,17 @@ export default function TitanTriggers() {
 		}
 		setLoadingMap(initialMap);
 
-		for (const asset of TITAN_ASSETS) {
+		// Parallel Fetching
+		const promises = TITAN_ASSETS.map(async (asset) => {
+			if (currency() !== cur) return; // Abort if currency changed
 			const data = await fetchHistory(asset.ticker, asset.interval, cur);
 			if (currency() !== cur) return;
 
 			setAssetData((prev) => ({ ...prev, [asset.ticker]: data }));
 			setLoadingMap((prev) => ({ ...prev, [asset.ticker]: false }));
-			await new Promise((r) => setTimeout(r, 600));
-		}
+		});
 
+		await Promise.all(promises);
 		connectWebSocket(cur);
 	});
 

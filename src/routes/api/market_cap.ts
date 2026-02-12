@@ -92,49 +92,62 @@ export async function GET() {
 		const cgIds = Object.values(COINGECKO_MAP).join(",");
 		const krakenPairs = Object.values(KRAKEN_MAP).join(",");
 
-		const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${cgIds}&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=1h,24h,7d,30d,1y`;
-		const krakenUrl = `https://api.kraken.com/0/public/Ticker?pair=${krakenPairs}`;
-
-		const [cgRes, krakenRes] = await Promise.all([
-			fetch(cgUrl, { headers: { "User-Agent": "BTCInsight/1.0" } }).catch(
-				(e) => ({ ok: false, error: e }),
-			),
-			fetch(krakenUrl).catch((e) => ({ ok: false, error: e })),
-		]);
-
-		console.log(
-			"MARKET_API: Fetch complete. CG:",
-			cgRes.ok,
-			"Kraken:",
-			krakenRes.ok,
-		);
-
+		// --- 1. Fetch CoinGecko (Longer Cache / Stale Fallback) ---
 		let cgData: CoinGeckoMarket[] = [];
-		if (cgRes.ok) {
-			const text = await (cgRes as Response).text();
+		const cgCacheKey = "market_cap_cg_raw";
+		const cachedCG = apiCache.get<CoinGeckoMarket[]>(cgCacheKey);
+
+		if (cachedCG) {
+			cgData = cachedCG;
+			console.log("MARKET_API: Using cached CoinGecko data");
+		} else {
+			const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${cgIds}&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=1h,24h,7d,30d,1y`;
 			try {
-				cgData = JSON.parse(text);
-				if (!Array.isArray(cgData)) {
-					console.warn(
-						"MARKET_API: CG data is not an array:",
-						text.substring(0, 100),
-					);
-					cgData = [];
+				const cgRes = await fetch(cgUrl, {
+					headers: { "User-Agent": "BTCInsight/1.0" },
+				});
+
+				if (cgRes.ok) {
+					const text = await cgRes.text();
+					const parsed = JSON.parse(text);
+					if (Array.isArray(parsed) && parsed.length > 0) {
+						cgData = parsed;
+						// Cache for 5 minutes
+						apiCache.set(cgCacheKey, cgData, 5 * 60 * 1000);
+						console.log("MARKET_API: Fetched & Cached new CoinGecko data");
+					} else {
+						console.warn("MARKET_API: CG data invalid/empty");
+					}
+				} else {
+					console.warn(`MARKET_API: CG Fetch Failed ${cgRes.status}`);
+					throw new Error(`Status ${cgRes.status}`);
 				}
-			} catch {
-				console.error("MARKET_API: CG JSON parse failed");
-				cgData = [];
+			} catch (e) {
+				console.warn("MARKET_API: CoinGecko Error:", e);
+				// Fallback to stale data
+				const stale = apiCache.getStale<CoinGeckoMarket[]>(cgCacheKey);
+				if (stale && stale.length > 0) {
+					console.log("MARKET_API: Using STALE CoinGecko data as fallback");
+					cgData = stale;
+				}
 			}
 		}
 
+		// --- 2. Fetch Kraken (Always Fresh) ---
 		let krakenData: Record<string, KrakenTicker> = {};
-		if (krakenRes.ok) {
-			try {
-				const res = await (krakenRes as Response).json();
-				krakenData = res.result || {};
-			} catch {
-				console.error("MARKET_API: Kraken JSON parse failed");
+		const krakenUrl = `https://api.kraken.com/0/public/Ticker?pair=${krakenPairs}`;
+		try {
+			const kRes = await fetch(krakenUrl);
+			if (kRes.ok) {
+				const json = await kRes.json();
+				if (json.error?.length > 0) {
+					console.warn("MARKET_API: Kraken Warning:", json.error);
+				} else {
+					krakenData = json.result || {};
+				}
 			}
+		} catch (e) {
+			console.error("MARKET_API: Kraken Fetch Failed:", e);
 		}
 
 		const result = Object.keys(COINGECKO_MAP).map((symbol) => {
@@ -177,8 +190,23 @@ export async function GET() {
 		});
 
 		result.sort((a, b) => a.rank - b.rank);
-		apiCache.set(cacheKey, result, CACHE_DURATIONS.MARKET_DATA);
-		console.log("MARKET_API: Success, returning", result.length, "assets");
+		// Check data quality before caching
+		const validDataCount = result.filter(
+			(r) => r.price > 0 || r.change24h !== 0,
+		).length;
+		const isPartialData = validDataCount < result.length * 0.5;
+
+		if (isPartialData) {
+			console.warn(
+				"MARKET_API: Partial data detected. Caching for shorter duration.",
+			);
+			// Cache for only 10 seconds if data is poor to allow retry soon
+			apiCache.set(cacheKey, result, 10 * 1000);
+		} else {
+			apiCache.set(cacheKey, result, CACHE_DURATIONS.MARKET_DATA);
+			console.log("MARKET_API: Success, caching full result.");
+		}
+
 		return json(result);
 	} catch (error: unknown) {
 		console.error("CRITICAL MARKET API ERROR:", error);

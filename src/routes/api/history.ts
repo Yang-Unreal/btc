@@ -1,5 +1,7 @@
 import { json } from "@solidjs/router";
 import type { APIEvent } from "@solidjs/start/server";
+import { apiCache, CACHE_DURATIONS } from "../../lib/cache";
+
 import { ASSET_MAP, KRAKEN_INTERVAL_MAP } from "../../lib/constants";
 import type { Interval } from "../../lib/types";
 
@@ -42,6 +44,13 @@ export async function GET({ request }: APIEvent) {
 		krakenUrl += `&since=${sinceTimestamp}`;
 	}
 
+	const cacheKey = `history_${symbol}_${currency}_${interval}_${toParam || "latest"}`;
+	const cachedData = apiCache.get(cacheKey);
+
+	if (cachedData) {
+		return json(cachedData);
+	}
+
 	try {
 		const response = await fetch(krakenUrl);
 
@@ -80,9 +89,16 @@ export async function GET({ request }: APIEvent) {
 			mappedData = mappedData.filter((d: number[]) => d[0] < limitTime);
 		}
 
+		apiCache.set(cacheKey, mappedData, CACHE_DURATIONS.HISTORICAL_DATA);
 		return json(mappedData);
 	} catch (error) {
 		console.error("Data Proxy Error:", error);
+		// If Kraken fails, check for stale cache
+		const stale = apiCache.getStale(cacheKey);
+		if (stale) {
+			console.log(`[History] Using stale cache for ${cacheKey}`);
+			return json(stale);
+		}
 		return json({ error: "Internal Server Error" }, { status: 500 });
 	}
 }
