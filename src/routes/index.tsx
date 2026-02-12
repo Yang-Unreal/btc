@@ -2,110 +2,117 @@ import { Title } from "@solidjs/meta";
 import AssetTable from "~/components/AssetTable";
 import BTCChart from "~/components/BTCChart";
 import DerivativesTrigger from "~/components/DerivativesTrigger";
+import FearGreed from "~/components/FearGreed";
 import LiquidityEngine from "~/components/LiquidityEngine";
 import OnChainTruth from "~/components/OnChainTruth";
 import TitanTriggers from "~/components/TitanTriggers";
 
 export default function Home() {
 	return (
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
-			<Title>Directive | Capital Allocation Framework</Title>
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16 bg-[#09090b]">
+			<Title>Titan Terminal | Crypto Analytics</Title>
 
-			{/* Hero Section - Serious & Stripped back */}
-			<div class="max-w-4xl mb-20 relative">
-				<h1 class="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight mb-6 leading-none">
-					CAPITAL ALLOCATION <br class="hidden sm:block" />
-					<span class="text-indigo-500">DIRECTIVE.</span>
-				</h1>
+			{/* Hero Section - Simplified & Functional */}
+			<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16 border-b border-white/5 pb-8">
+				<div>
+					<h1 class="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight mb-4 leading-none uppercase">
+						Market <span class="text-indigo-500">Command</span>
+					</h1>
+					<p class="text-sm md:text-base text-slate-400 font-medium leading-relaxed max-w-xl">
+						Real-time institutional analytics, on-chain metrics, and automated
+						signal detection for crypto assets.
+					</p>
+				</div>
 
-				<p class="text-sm md:text-base text-slate-400 font-medium leading-relaxed max-w-xl mb-8">
-					Closed-loop framework for the management of institutional bitcoin
-					risk. Filtering noise via{" "}
-					<span class="text-white font-bold">Liquidity Physics</span> and{" "}
-					<span class="text-white font-bold">On-chain Verification</span>.
-				</p>
-
+				{/* Quick Status Badges */}
 				<div class="flex flex-wrap gap-2">
-					<span class="badge-directive text-slate-400 border-white/10">
-						<span class="w-1.5 h-1.5 bg-slate-700 mr-2"></span>
-						Macro Filter
-					</span>
-					<span class="badge-directive text-indigo-400 border-indigo-500/20">
-						<span class="w-1.5 h-1.5 bg-indigo-500 mr-2"></span>
-						Technical Alpha
-					</span>
-					<span class="badge-directive text-rose-400 border-rose-500/20">
-						<span class="w-1.5 h-1.5 bg-rose-500 mr-2"></span>
-						Risk Mitigation
-					</span>
+					<div class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+						<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+						System Online
+					</div>
+					<div class="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
+						BTC Dominance High
+					</div>
 				</div>
 			</div>
 
-			{/* Dashboard Sections - Strict Grid */}
+			{/* Main Grid Layout */}
 			<div class="space-y-24">
-				{/* LEVEL 0: MARKET INTELLIGENCE */}
+				{/* 1. Market Overview */}
 				<section class="space-y-6">
-					<div class="flex items-center gap-4 flex-wrap">
-						<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
-							00 Market Intel
-						</span>
-						<div class="h-px grow bg-white/5"></div>
+					<div class="flex items-center gap-4">
+						<div class="w-1 h-6 bg-indigo-500"></div>
+						<h2 class="text-xl font-bold text-white uppercase tracking-tight">
+							Market Overview
+						</h2>
 					</div>
-					<div class="directive-card p-6 md:p-8">
+					<div class="directive-card p-6 md:p-8 border border-white/5 bg-[#0b0e14]">
 						<AssetTable />
 					</div>
 				</section>
 
-				{/* LEVEL 1: MACRO FILTER */}
+				{/* 2. Global Liquidity (Macro) */}
 				<section class="space-y-6">
-					<div class="flex items-center gap-4 flex-wrap">
-						<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
-							01 Macro Engine
-						</span>
-						<div class="h-px grow bg-white/5"></div>
+					<div class="flex items-center gap-4">
+						<div class="w-1 h-6 bg-indigo-500"></div>
+						<h2 class="text-xl font-bold text-white uppercase tracking-tight">
+							Global Liquidity Context
+						</h2>
 					</div>
-					<div class="directive-card p-6 md:p-8">
+					<div class="directive-card p-6 md:p-8 border border-white/5 bg-[#0b0e14]">
 						<LiquidityEngine />
 					</div>
 				</section>
 
-				{/* LEVEL 2: TECHNICAL OVERSIGHT */}
+				{/* 3. Technical Analysis */}
 				<section class="space-y-6">
-					<div class="flex items-center gap-4 flex-wrap">
-						<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
-							02 Technical Ops
-						</span>
-						<div class="h-px grow bg-white/5"></div>
+					<div class="flex items-center gap-4">
+						<div class="w-1 h-6 bg-indigo-500"></div>
+						<h2 class="text-xl font-bold text-white uppercase tracking-tight">
+							Technical Analysis
+						</h2>
 					</div>
-					<div class="directive-card overflow-hidden">
+					<div class="directive-card overflow-hidden border border-white/5 bg-[#0b0e14]">
 						<BTCChart />
 					</div>
 				</section>
 
-				{/* TITAN 9 PROTOCOL */}
+				{/* 4. Strategy Matrix */}
 				<section class="space-y-6">
-					<div class="directive-card p-6 md:p-8">
+					<div class="flex items-center gap-4">
+						<div class="w-1 h-6 bg-indigo-500"></div>
+						<h2 class="text-xl font-bold text-white uppercase tracking-tight">
+							Titan Strategy Matrix
+						</h2>
+					</div>
+					<div class="directive-card p-6 md:p-8 border border-white/5 bg-[#0b0e14]">
 						<TitanTriggers />
 					</div>
 				</section>
 
-				{/* MARKET UNDERPINNINGS */}
+				{/* 5. Deep Data Suite (Derivatives, OnChain, Sentiment) */}
 				<section class="space-y-12">
-					<div class="flex items-center gap-4 flex-wrap">
-						<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-[0.4em]">
-							Tactical Data Suite
-						</span>
-						<div class="h-px grow bg-white/5"></div>
+					<div class="flex items-center gap-4">
+						<div class="w-1 h-6 bg-indigo-500"></div>
+						<h2 class="text-xl font-bold text-white uppercase tracking-tight">
+							Deep Data Analytics
+						</h2>
 					</div>
 
 					<div class="space-y-12">
-						{/* Full width for complex components death */}
-						<div class="directive-card p-8">
+						{/* Derivatives */}
+						<div class="directive-card p-0 overflow-hidden border border-white/5 bg-[#0b0e14]">
 							<DerivativesTrigger />
 						</div>
 
-						<div class="directive-card p-8">
+						{/* On-Chain */}
+						<div class="directive-card p-0 overflow-hidden border border-white/5 bg-[#0b0e14]">
 							<OnChainTruth />
+						</div>
+
+						{/* Sentiment (New Feature) */}
+						<div class="directive-card p-0 overflow-hidden border border-white/5 bg-[#0b0e14]">
+							<FearGreed />
 						</div>
 					</div>
 				</section>
