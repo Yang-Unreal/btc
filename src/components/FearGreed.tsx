@@ -134,6 +134,7 @@ export default function FearGreed() {
 						{/* SVG Gauge */}
 						<div class="relative w-64 h-32 mb-8">
 							<svg class="w-full h-full overflow-visible" viewBox="0 0 200 110">
+								<title>Fear & Greed Index Gauge</title>
 								{/* Track */}
 								<path
 									d="M 20 100 A 80 80 0 0 1 180 100"
@@ -149,8 +150,8 @@ export default function FearGreed() {
 									stroke={getColor(normalizedValue())}
 									stroke-width={stroke}
 									stroke-linecap="round"
-									stroke-dasharray={circumference}
-									stroke-dashoffset={strokeDashoffset()}
+									stroke-dasharray={circumference.toString()}
+									stroke-dashoffset={strokeDashoffset().toString()}
 									class="transition-all duration-1000 ease-out"
 								/>
 							</svg>
@@ -196,7 +197,7 @@ export default function FearGreed() {
 					</h3>
 
 					<div class="space-y-4">
-						<div class="flex items-start gap-4 p-4 rounded-lg bg-white/[0.02] border border-white/5">
+						<div class="flex items-start gap-4 p-4 rounded-lg bg-white/2 border border-white/5">
 							<div class="w-2 h-2 mt-1.5 bg-rose-500 rounded-full shrink-0 shadow-[0_0_8px_rgba(244,63,94,0.4)]"></div>
 							<div>
 								<h4 class="text-xs font-bold text-white uppercase mb-1">
@@ -210,7 +211,7 @@ export default function FearGreed() {
 							</div>
 						</div>
 
-						<div class="flex items-start gap-4 p-4 rounded-lg bg-white/[0.02] border border-white/5">
+						<div class="flex items-start gap-4 p-4 rounded-lg bg-white/2 border border-white/5">
 							<div class="w-2 h-2 mt-1.5 bg-emerald-500 rounded-full shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
 							<div>
 								<h4 class="text-xs font-bold text-white uppercase mb-1">

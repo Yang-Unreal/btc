@@ -120,7 +120,6 @@ const formatCurrency = (val: number) => {
 export default function OnChainTruth() {
 	const [data, setData] = createSignal<OnChainData | null>(null);
 	const [loading, setLoading] = createSignal(true);
-	const [lastUpdated, setLastUpdated] = createSignal<Date | null>(null);
 
 	const fetchData = async () => {
 		setLoading(true);
@@ -130,7 +129,6 @@ export default function OnChainTruth() {
 				const json = await res.json();
 				if (!json.error) {
 					setData(json);
-					setLastUpdated(new Date());
 				}
 			}
 		} catch (e) {
@@ -187,7 +185,7 @@ export default function OnChainTruth() {
 					</div>
 
 					<Show
-						when={!loading() && data()}
+						when={data()}
 						fallback={
 							<div class="space-y-4 animate-pulse">
 								<div class="h-8 w-24 bg-white/5 rounded" />
@@ -257,7 +255,7 @@ export default function OnChainTruth() {
 					</div>
 
 					<Show
-						when={!loading() && data()}
+						when={data()}
 						fallback={
 							<div class="space-y-4 animate-pulse">
 								<div class="h-8 w-32 bg-white/5 rounded" />
@@ -331,7 +329,7 @@ export default function OnChainTruth() {
 					</div>
 
 					<Show
-						when={!loading() && data()}
+						when={data()}
 						fallback={
 							<div class="space-y-4 animate-pulse">
 								<div class="h-8 w-32 bg-white/5 rounded" />

@@ -1,14 +1,9 @@
 // @refresh reload
-import {
-	type APIEvent,
-	createHandler,
-	StartServer,
-} from "@solidjs/start/server";
+import { createHandler, StartServer } from "@solidjs/start/server";
 
-export default createHandler((event: APIEvent) => {
+export default createHandler(() => {
 	return (
 		<StartServer
-			event={event}
 			document={({ assets, children, scripts }) => (
 				<html lang="en">
 					<head>
@@ -22,7 +17,7 @@ export default createHandler((event: APIEvent) => {
 						<link
 							rel="preconnect"
 							href="https://fonts.gstatic.com"
-							crossorigin="anonymous"
+							crossOrigin="anonymous"
 						/>
 						<link
 							href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"

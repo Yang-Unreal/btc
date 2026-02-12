@@ -1,5 +1,4 @@
 import { json } from "@solidjs/router";
-import type { APIEvent } from "@solidjs/start/server";
 import { apiCache } from "~/lib/cache";
 
 interface FearGreedData {
@@ -17,7 +16,7 @@ interface AlternativeMeResponse {
 	};
 }
 
-export async function GET({ request }: APIEvent) {
+export async function GET() {
 	const cacheKey = "sentiment_fng";
 	const cachedData = apiCache.get(cacheKey);
 

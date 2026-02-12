@@ -194,74 +194,88 @@ export default function AssetTable() {
 					</thead>
 					<tbody class="divide-y divide-white/5">
 						<Show
-							when={!loading() || assets().length > 0}
+							when={!error()}
 							fallback={
 								<tr>
 									<td
 										colspan="8"
-										class="py-12 text-center text-slate-500 text-xs"
+										class="py-12 text-center text-rose-400 text-xs"
 									>
-										Loading market data...
+										{error()}
 									</td>
 								</tr>
 							}
 						>
-							<For each={filteredAssets()}>
-								{(asset, index) => (
-									<tr class="group hover:bg-white/[0.02] transition-colors">
-										<td class="py-4 px-4 text-xs text-slate-500 font-mono">
-											{index() + 1}
+							<Show
+								when={!loading() || assets().length > 0}
+								fallback={
+									<tr>
+										<td
+											colspan="8"
+											class="py-12 text-center text-slate-500 text-xs"
+										>
+											Loading market data...
 										</td>
-										<td class="py-4 px-4">
-											<div class="flex items-center gap-3">
-												<button
-													type="button"
-													onClick={() => toggleFavorite(asset.symbol)}
-													class="text-slate-600 hover:text-indigo-400 transition-colors"
-												>
-													<IconStar
-														class="w-3.5 h-3.5"
-														filled={favorites().has(asset.symbol)}
-													/>
-												</button>
+									</tr>
+								}
+							>
+								<For each={filteredAssets()}>
+									{(asset, index) => (
+										<tr class="group hover:bg-white/2 transition-colors">
+											<td class="py-4 px-4 text-xs text-slate-500 font-mono">
+												{index() + 1}
+											</td>
+											<td class="py-4 px-4">
 												<div class="flex items-center gap-3">
-													<img
-														src={asset.image}
-														alt={asset.name}
-														class="w-6 h-6 rounded-full opacity-90 group-hover:opacity-100 transition-opacity"
-													/>
-													<div>
-														<span class="text-sm font-bold text-slate-200 block leading-none">
-															{asset.symbol}
-														</span>
-														<span class="text-[10px] text-slate-500 uppercase tracking-wider">
-															{asset.name}
-														</span>
+													<button
+														type="button"
+														onClick={() => toggleFavorite(asset.symbol)}
+														class="text-slate-600 hover:text-indigo-400 transition-colors"
+													>
+														<IconStar
+															class="w-3.5 h-3.5"
+															filled={favorites().has(asset.symbol)}
+														/>
+													</button>
+													<div class="flex items-center gap-3">
+														<img
+															src={asset.image}
+															alt={asset.name}
+															class="w-6 h-6 rounded-full opacity-90 group-hover:opacity-100 transition-opacity"
+														/>
+														<div>
+															<span class="text-sm font-bold text-slate-200 block leading-none">
+																{asset.symbol}
+															</span>
+															<span class="text-[10px] text-slate-500 uppercase tracking-wider">
+																{asset.name}
+															</span>
+														</div>
 													</div>
 												</div>
-											</div>
-										</td>
-										<td class="py-4 px-4 text-right">
-											<span class="font-mono text-sm font-medium text-slate-200">
-												{formatCryptoPrice(asset.price)}
-											</span>
-										</td>
-										<td class="py-4 px-4 text-right">
-											<span class="font-mono text-xs text-slate-400">
-												{formatCompact(asset.marketCap)}
-											</span>
-										</td>
-										<td class="py-4 px-4 text-right">
-											<span class="font-mono text-xs text-slate-400">
-												{formatCompact(asset.volume24h)}
-											</span>
-										</td>
-										<ChangeCell value={asset.change1h} />
-										<ChangeCell value={asset.change24h} />
-										<ChangeCell value={asset.change7d} />
-									</tr>
-								)}
-							</For>
+											</td>
+											<td class="py-4 px-4 text-right">
+												<span class="font-mono text-sm font-medium text-slate-200">
+													{formatCryptoPrice(asset.price)}
+												</span>
+											</td>
+											<td class="py-4 px-4 text-right">
+												<span class="font-mono text-xs text-slate-400">
+													{formatCompact(asset.marketCap)}
+												</span>
+											</td>
+											<td class="py-4 px-4 text-right">
+												<span class="font-mono text-xs text-slate-400">
+													{formatCompact(asset.volume24h)}
+												</span>
+											</td>
+											<ChangeCell value={asset.change1h} />
+											<ChangeCell value={asset.change24h} />
+											<ChangeCell value={asset.change7d} />
+										</tr>
+									)}
+								</For>
+							</Show>
 						</Show>
 					</tbody>
 				</table>
