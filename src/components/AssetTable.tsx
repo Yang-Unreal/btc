@@ -2,7 +2,9 @@ import { type Component, createSignal, For, onMount, Show } from "solid-js";
 import { formatCompact, formatCryptoPrice } from "../lib/format";
 
 // --- Icons ---
-const IconStar: Component<{ class?: string; filled?: boolean }> = (props) => (
+export const IconStar: Component<{ class?: string; filled?: boolean }> = (
+	props,
+) => (
 	<svg
 		class={props.class}
 		fill={props.filled ? "currentColor" : "none"}
@@ -54,8 +56,8 @@ interface CryptoAsset {
 export default function AssetTable() {
 	const [assets, setAssets] = createSignal<CryptoAsset[]>([]);
 	const [favorites, setFavorites] = createSignal<Set<string>>(new Set());
+	const [viewFavorites, setViewFavorites] = createSignal(false);
 	const [loading, setLoading] = createSignal(true);
-	const [showFavoritesOnly, setShowFavoritesOnly] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
 
 	const fetchData = async () => {
@@ -111,7 +113,7 @@ export default function AssetTable() {
 
 	const filteredAssets = () => {
 		const list = assets();
-		return showFavoritesOnly()
+		return viewFavorites()
 			? list.filter((a) => favorites().has(a.symbol))
 			: list;
 	};
@@ -136,25 +138,23 @@ export default function AssetTable() {
 	return (
 		<div class="space-y-4">
 			{/* Controls */}
-			<div class="flex justify-between items-center mb-6">
-				<div class="flex items-center gap-2">
-					<button
-						type="button"
-						onClick={() => setShowFavoritesOnly(!showFavoritesOnly())}
-						class={`flex items-center gap-2 px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
-							showFavoritesOnly()
-								? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
-								: "text-slate-500 hover:text-slate-300 border border-transparent"
-						}`}
-					>
-						<IconStar class="w-3 h-3" filled={showFavoritesOnly()} />
-						{showFavoritesOnly() ? "Favorites" : "All Assets"}
-					</button>
-				</div>
+			<div class="flex justify-end items-center mb-6 gap-2">
+				<button
+					type="button"
+					onClick={() => setViewFavorites(!viewFavorites())}
+					class={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[10px] font-bold uppercase tracking-wider ${
+						viewFavorites()
+							? "bg-indigo-500/20 border-indigo-500/50 text-indigo-400"
+							: "bg-white/5 border-white/10 text-slate-500 hover:text-slate-300"
+					}`}
+				>
+					<IconStar class="w-3 h-3" filled={viewFavorites()} />
+					{viewFavorites() ? "Watchlist" : "All Assets"}
+				</button>
 				<button
 					type="button"
 					onClick={fetchData}
-					class="p-1.5 text-slate-500 hover:text-white transition-colors"
+					class="p-1.5 text-slate-500 hover:text-white transition-colors border border-white/10 rounded-lg hover:bg-white/5"
 					title="Refresh"
 				>
 					<IconRefresh class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`} />
