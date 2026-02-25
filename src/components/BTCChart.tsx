@@ -58,14 +58,9 @@ interface TooltipData {
 	ema20?: string;
 	ema60?: string;
 	ema120?: string;
-	ema150?: string;
-	ema200?: string;
-	ema21?: string;
-	sma10?: string;
-	sma20?: string;
-	sma50?: string;
-	sma100?: string;
-	sma200?: string;
+	ma20?: string;
+	ma60?: string;
+	ma120?: string;
 	donchianHigh?: string;
 	prevHigh?: string;
 	rsi?: string;
@@ -190,14 +185,9 @@ export default function BTCChart() {
 	let ema20Series: ISeriesApi<"Line"> | undefined;
 	let ema60Series: ISeriesApi<"Line"> | undefined;
 	let ema120Series: ISeriesApi<"Line"> | undefined;
-	let ema150Series: ISeriesApi<"Line"> | undefined;
-	let ema200Series: ISeriesApi<"Line"> | undefined;
-	let ema21Series: ISeriesApi<"Line"> | undefined;
-	let sma10Series: ISeriesApi<"Line"> | undefined;
-	let sma20Series: ISeriesApi<"Line"> | undefined;
-	let sma50Series: ISeriesApi<"Line"> | undefined;
-	let sma100Series: ISeriesApi<"Line"> | undefined;
-	let sma200Series: ISeriesApi<"Line"> | undefined;
+	let ma20Series: ISeriesApi<"Line"> | undefined;
+	let ma60Series: ISeriesApi<"Line"> | undefined;
+	let ma120Series: ISeriesApi<"Line"> | undefined;
 	let donchianHighSeries: ISeriesApi<"Line"> | undefined;
 	let prevHighSeries: ISeriesApi<"Line"> | undefined;
 	let rsiSeries: ISeriesApi<"Line"> | undefined;
@@ -232,19 +222,14 @@ export default function BTCChart() {
 	const [priceColor, setPriceColor] = createSignal("text-gray-900");
 
 	const [indicators, setIndicators] = createSignal<Record<string, boolean>>({
-		ema21: false,
-		sma10: false,
-		sma20: false,
-		sma50: false,
-		sma100: false,
-		sma200: false,
+		ma20: false,
+		ma60: false,
+		ma120: false,
 		donchianHigh: false,
 		prevHigh: false,
 		ema20: false,
 		ema60: false,
 		ema120: false,
-		ema150: false,
-		ema200: false,
 		rsi: false,
 		fng: false,
 		tdSeq: false,
@@ -256,14 +241,6 @@ export default function BTCChart() {
 	const [divMap, setDivMap] = createSignal<Map<number, DivergenceState>>(
 		new Map(),
 	);
-
-	// EMA Cache signals
-	const [lastEMA20, setLastEMA20] = createSignal<number | null>(null);
-	const [lastEMA60, setLastEMA60] = createSignal<number | null>(null);
-	const [lastEMA120, setLastEMA120] = createSignal<number | null>(null);
-	const [lastEMA150, setLastEMA150] = createSignal<number | null>(null);
-	const [lastEMA200, setLastEMA200] = createSignal<number | null>(null);
-	const [lastEMA21, setLastEMA21] = createSignal<number | null>(null);
 
 	const intervals: { label: string; value: Interval }[] = [
 		{ label: "15m", value: "15m" },
@@ -278,39 +255,25 @@ export default function BTCChart() {
 
 	const indicatorConfig = [
 		{
-			key: "sma10",
-			label: "SMA 10",
-			color: "bg-cyan-500",
-			textColor: "text-cyan-500",
-			borderColor: "border-cyan-500",
-		},
-		{
-			key: "sma20",
-			label: "SMA 20",
+			key: "ma20",
+			label: "MA 20",
 			color: "bg-teal-500",
 			textColor: "text-teal-500",
 			borderColor: "border-teal-500",
 		},
 		{
-			key: "sma50",
-			label: "SMA 50",
+			key: "ma60",
+			label: "MA 60",
 			color: "bg-lime-500",
 			textColor: "text-lime-500",
 			borderColor: "border-lime-500",
 		},
 		{
-			key: "sma100",
-			label: "SMA 100",
+			key: "ma120",
+			label: "MA 120",
 			color: "bg-indigo-500",
 			textColor: "text-indigo-500",
 			borderColor: "border-indigo-500",
-		},
-		{
-			key: "sma200",
-			label: "SMA 200",
-			color: "bg-[#795548]",
-			textColor: "text-[#795548]",
-			borderColor: "border-[#795548]",
 		},
 		{
 			key: "donchianHigh",
@@ -334,13 +297,6 @@ export default function BTCChart() {
 			borderColor: "border-[#2196F3]",
 		},
 		{
-			key: "ema21",
-			label: "EMA 21",
-			color: "bg-blue-500",
-			textColor: "text-blue-500",
-			borderColor: "border-blue-500",
-		},
-		{
 			key: "ema60",
 			label: "EMA 60",
 			color: "bg-[#10B981]",
@@ -353,20 +309,6 @@ export default function BTCChart() {
 			color: "bg-[#F59E0B]",
 			textColor: "text-[#F59E0B]",
 			borderColor: "border-[#F59E0B]",
-		},
-		{
-			key: "ema150",
-			label: "EMA 150",
-			color: "bg-[#EC4899]",
-			textColor: "text-[#EC4899]",
-			borderColor: "border-[#EC4899]",
-		},
-		{
-			key: "ema200",
-			label: "EMA 200",
-			color: "bg-[#9C27B0]",
-			textColor: "text-[#9C27B0]",
-			borderColor: "border-[#9C27B0]",
 		},
 		{
 			key: "rsi",
@@ -726,16 +668,19 @@ export default function BTCChart() {
 									: "rgba(239, 68, 68, 0.5)",
 						});
 					}
+					let currentData: BTCData[] = [];
 					setBtcData((prev) => {
 						const last = prev[prev.length - 1];
 						if (last && last.time === newData.time) {
 							const copy = [...prev];
 							copy[copy.length - 1] = newData;
+							currentData = copy;
 							return copy;
 						}
-						return [...prev, newData];
+						currentData = [...prev, newData];
+						return currentData;
 					});
-					updateIndicatorRealtime(newData);
+					updateIndicatorRealtime(currentData);
 				}
 			} catch (err) {
 				console.error("WebSocket message error:", err);
@@ -743,98 +688,66 @@ export default function BTCChart() {
 		};
 	};
 
-	// --- Update Realtime Indicators (Same as original) ---
-	const updateIndicatorRealtime = (newData: BTCData) => {
+	// --- Update Realtime Indicators (Optimized) ---
+	const updateIndicatorRealtime = (allData: BTCData[]) => {
 		const currentInd = indicators();
-		const currentData = btcData();
+		const lastCandle = allData[allData.length - 1];
+		if (!lastCandle) return;
 
-		const updateEMA = (
+		// Use a sufficient slice for calculation to ensure EMA convergence
+		// 1000 bars is usually enough for EMA200
+		const slice = allData.slice(-1000);
+		const closes = slice.map((d) => d.close);
+
+		const updateSeries = (
 			series: ISeriesApi<"Line"> | undefined,
-			lastVal: number | null,
-			setLast: (v: number) => void,
+			calcFn: (data: number[], p: number) => number[],
 			period: number,
 		) => {
-			if (series && lastVal !== null) {
-				const multiplier = 2 / (period + 1);
-				const newVal = (newData.close - lastVal) * multiplier + lastVal;
-				setLast(newVal);
-				series.update({ time: newData.time, value: newVal });
+			if (series && closes.length >= period) {
+				const vals = calcFn(closes, period);
+				const val = vals[vals.length - 1];
+				if (!Number.isNaN(val)) {
+					series.update({ time: lastCandle.time, value: val });
+				}
 			}
 		};
 
-		if (currentInd.ema20) updateEMA(ema20Series, lastEMA20(), setLastEMA20, 20);
-		if (currentInd.ema60) updateEMA(ema60Series, lastEMA60(), setLastEMA60, 60);
-		if (currentInd.ema120)
-			updateEMA(ema120Series, lastEMA120(), setLastEMA120, 120);
-		if (currentInd.ema150)
-			updateEMA(ema150Series, lastEMA150(), setLastEMA150, 150);
-		if (currentInd.ema200)
-			updateEMA(ema200Series, lastEMA200(), setLastEMA200, 200);
+		if (currentInd.ema20) updateSeries(ema20Series, calculateEMA, 20);
+		if (currentInd.ema60) updateSeries(ema60Series, calculateEMA, 60);
+		if (currentInd.ema120) updateSeries(ema120Series, calculateEMA, 120);
 
-		// Titan 9
-		if (currentInd.ema21) updateEMA(ema21Series, lastEMA21(), setLastEMA21, 21);
+		if (currentInd.ma20) updateSeries(ma20Series, calculateSMA, 20);
+		if (currentInd.ma60) updateSeries(ma60Series, calculateSMA, 60);
+		if (currentInd.ma120) updateSeries(ma120Series, calculateSMA, 120);
 
-		const recent = [...currentData.slice(-200), newData];
-		const recentCloses = recent.map((d) => d.close);
-
-		if (currentInd.sma10 && sma10Series && recentCloses.length >= 10) {
-			const vals = calculateSMA(recentCloses, 10);
+		if (currentInd.donchianHigh && donchianHighSeries && slice.length >= 20) {
+			const highs = slice.map((d) => d.high);
+			const vals = calculateDonchianHigh(highs, 20);
 			const val = vals[vals.length - 1];
 			if (!Number.isNaN(val)) {
-				sma10Series.update({ time: newData.time, value: val });
-			}
-		}
-		if (currentInd.sma50 && sma50Series && recentCloses.length >= 50) {
-			const vals = calculateSMA(recentCloses, 50);
-			const val = vals[vals.length - 1];
-			if (!Number.isNaN(val)) {
-				sma50Series.update({ time: newData.time, value: val });
-			}
-		}
-		if (currentInd.sma100 && sma100Series && recentCloses.length >= 100) {
-			const vals = calculateSMA(recentCloses, 100);
-			const val = vals[vals.length - 1];
-			if (!Number.isNaN(val)) {
-				sma100Series.update({ time: newData.time, value: val });
-			}
-		}
-		if (currentInd.sma200 && sma200Series && recentCloses.length >= 200) {
-			const vals = calculateSMA(recentCloses, 200);
-			const val = vals[vals.length - 1];
-			if (!Number.isNaN(val)) {
-				sma200Series.update({ time: newData.time, value: val });
-			}
-		}
-		if (currentInd.donchianHigh && donchianHighSeries && recent.length >= 20) {
-			const recentHighs = recent.map((d) => d.high);
-			const vals = calculateDonchianHigh(recentHighs, 20);
-			const val = vals[vals.length - 1];
-			if (!Number.isNaN(val)) {
-				donchianHighSeries.update({ time: newData.time, value: val });
+				donchianHighSeries.update({ time: lastCandle.time, value: val });
 			}
 		}
 
-		if (currentInd.rsi && rsiSeries && currentData.length > 20) {
-			const lookback = 50;
-			const slice = currentData.slice(-lookback);
-			const closes = slice.map((d) => d.close);
+		if (currentInd.rsi && rsiSeries && slice.length > 20) {
 			const rsiValues = calculateRSI(closes, 14);
 			const lastRSI = rsiValues[rsiValues.length - 1];
 			if (!Number.isNaN(lastRSI)) {
-				rsiSeries.update({ time: newData.time, value: lastRSI });
+				rsiSeries.update({ time: lastCandle.time, value: lastRSI });
 			}
 		}
 
 		if (currentInd.fng && fngSeries) {
-			const date = new Date((newData.time as number) * 1000);
+			const date = new Date((lastCandle.time as number) * 1000);
 			date.setUTCHours(0, 0, 0, 0);
 			const dayTs = Math.floor(date.getTime() / 1000);
 			const val = fngCache().get(dayTs);
 			if (val !== undefined) {
-				fngSeries.update({ time: newData.time, value: val });
+				fngSeries.update({ time: lastCandle.time, value: val });
 			}
 		}
-		refreshAllMarkers(currentData);
+		refreshAllMarkers(allData);
 	};
 
 	const syncAllIndicators = () => {
@@ -847,14 +760,9 @@ export default function BTCChart() {
 		ema20Series?.applyOptions({ visible: !!currentInd.ema20 });
 		ema60Series?.applyOptions({ visible: !!currentInd.ema60 });
 		ema120Series?.applyOptions({ visible: !!currentInd.ema120 });
-		ema150Series?.applyOptions({ visible: !!currentInd.ema150 });
-		ema200Series?.applyOptions({ visible: !!currentInd.ema200 });
-		ema21Series?.applyOptions({ visible: !!currentInd.ema21 });
-		sma10Series?.applyOptions({ visible: !!currentInd.sma10 });
-		sma20Series?.applyOptions({ visible: !!currentInd.sma20 });
-		sma50Series?.applyOptions({ visible: !!currentInd.sma50 });
-		sma100Series?.applyOptions({ visible: !!currentInd.sma100 });
-		sma200Series?.applyOptions({ visible: !!currentInd.sma200 });
+		ma20Series?.applyOptions({ visible: !!currentInd.ma20 });
+		ma60Series?.applyOptions({ visible: !!currentInd.ma60 });
+		ma120Series?.applyOptions({ visible: !!currentInd.ma120 });
 		donchianHighSeries?.applyOptions({ visible: !!currentInd.donchianHigh });
 		prevHighSeries?.applyOptions({ visible: !!currentInd.prevHigh });
 		rsiSeries?.applyOptions({ visible: !!currentInd.rsi });
@@ -904,7 +812,6 @@ export default function BTCChart() {
 			active: boolean,
 			series: ISeriesApi<"Line"> | undefined,
 			period: number,
-			setLast: (n: number | null) => void,
 		) => {
 			if (active && series && closes.length >= period) {
 				const vals = calculateEMA(closes, period);
@@ -914,22 +821,15 @@ export default function BTCChart() {
 						lineData.push({ time: currentData[i].time, value: vals[i] });
 				}
 				series.setData(lineData);
-				setLast(vals[vals.length - 1]);
 			} else if (series) {
 				series.setData([]);
-				setLast(null);
 			}
 		};
-		processEMA(currentInd.ema20, ema20Series, 20, setLastEMA20);
-		processEMA(currentInd.ema60, ema60Series, 60, setLastEMA60);
-		processEMA(currentInd.ema120, ema120Series, 120, setLastEMA120);
-		processEMA(currentInd.ema150, ema150Series, 150, setLastEMA150);
-		processEMA(currentInd.ema200, ema200Series, 200, setLastEMA200);
+		processEMA(currentInd.ema20, ema20Series, 20);
+		processEMA(currentInd.ema60, ema60Series, 60);
+		processEMA(currentInd.ema120, ema120Series, 120);
 
-		// Titan 9
-		processEMA(currentInd.ema21, ema21Series, 21, setLastEMA21);
-
-		const processSMA = (
+		const processMA = (
 			active: boolean,
 			series: ISeriesApi<"Line"> | undefined,
 			period: number,
@@ -946,11 +846,9 @@ export default function BTCChart() {
 				series.setData([]);
 			}
 		};
-		processSMA(currentInd.sma10, sma10Series, 10);
-		processSMA(currentInd.sma20, sma20Series, 20);
-		processSMA(currentInd.sma50, sma50Series, 50);
-		processSMA(currentInd.sma100, sma100Series, 100);
-		processSMA(currentInd.sma200, sma200Series, 200);
+		processMA(currentInd.ma20, ma20Series, 20);
+		processMA(currentInd.ma60, ma60Series, 60);
+		processMA(currentInd.ma120, ma120Series, 120);
 
 		if (
 			currentInd.donchianHigh &&
@@ -1045,14 +943,9 @@ export default function BTCChart() {
 			ema20Series,
 			ema60Series,
 			ema120Series,
-			ema150Series,
-			ema200Series,
-			ema21Series,
-			sma10Series,
-			sma20Series,
-			sma50Series,
-			sma100Series,
-			sma200Series,
+			ma20Series,
+			ma60Series,
+			ma120Series,
 			donchianHighSeries,
 			prevHighSeries,
 			rsiSeries,
@@ -1171,16 +1064,10 @@ export default function BTCChart() {
 		ema20Series = createLineSeries("#2196F3");
 		ema60Series = createLineSeries("#10B981");
 		ema120Series = createLineSeries("#F59E0B");
-		ema150Series = createLineSeries("#EC4899");
-		ema200Series = createLineSeries("#9C27B0");
 
-		// Titan 9
-		ema21Series = createLineSeries("#3b82f6"); // blue-500
-		sma10Series = createLineSeries("#06b6d4"); // cyan-500
-		sma20Series = createLineSeries("#14b8a6"); // teal-500
-		sma50Series = createLineSeries("#84cc16"); // lime-500
-		sma100Series = createLineSeries("#6366f1"); // indigo-500
-		sma200Series = createLineSeries("#795548"); // brown
+		ma20Series = createLineSeries("#14b8a6"); // teal-500
+		ma60Series = createLineSeries("#84cc16"); // lime-500
+		ma120Series = createLineSeries("#6366f1"); // indigo-500
 		donchianHighSeries = createLineSeries("#f43f5e"); // rose-500
 		prevHighSeries = createLineSeries("#f97316"); // orange-500
 
@@ -1293,25 +1180,6 @@ export default function BTCChart() {
 			const prevHighVal = prevHighSeries
 				? (param.seriesData.get(prevHighSeries) as LineData)
 				: undefined;
-			const ema21Val = ema21Series
-				? (param.seriesData.get(ema21Series) as LineData)
-				: undefined;
-			const sma10Val = sma10Series
-				? (param.seriesData.get(sma10Series) as LineData)
-				: undefined;
-			const sma20Val = sma20Series
-				? (param.seriesData.get(sma20Series) as LineData)
-				: undefined;
-			const sma50Val = sma50Series
-				? (param.seriesData.get(sma50Series) as LineData)
-				: undefined;
-			const sma100Val = sma100Series
-				? (param.seriesData.get(sma100Series) as LineData)
-				: undefined;
-			const sma200Val = sma200Series
-				? (param.seriesData.get(sma200Series) as LineData)
-				: undefined;
-
 			const snapY = candlestickSeries.priceToCoordinate(candle.close);
 
 			const fngNum = fngVal ? Math.round(fngVal.value) : undefined;
@@ -1344,11 +1212,14 @@ export default function BTCChart() {
 			const ema120Val = ema120Series
 				? (param.seriesData.get(ema120Series) as LineData)
 				: undefined;
-			const ema150Val = ema150Series
-				? (param.seriesData.get(ema150Series) as LineData)
+			const ma20Val = ma20Series
+				? (param.seriesData.get(ma20Series) as LineData)
 				: undefined;
-			const ema200Val = ema200Series
-				? (param.seriesData.get(ema200Series) as LineData)
+			const ma60Val = ma60Series
+				? (param.seriesData.get(ma60Series) as LineData)
+				: undefined;
+			const ma120Val = ma120Series
+				? (param.seriesData.get(ma120Series) as LineData)
 				: undefined;
 
 			lastTooltipTime = param.time as number;
@@ -1365,14 +1236,9 @@ export default function BTCChart() {
 				ema20: formatTooltipPrice(ema20Val?.value),
 				ema60: formatTooltipPrice(ema60Val?.value),
 				ema120: formatTooltipPrice(ema120Val?.value),
-				ema150: formatTooltipPrice(ema150Val?.value),
-				ema200: formatTooltipPrice(ema200Val?.value),
-				ema21: formatTooltipPrice(ema21Val?.value),
-				sma10: formatTooltipPrice(sma10Val?.value),
-				sma20: formatTooltipPrice(sma20Val?.value),
-				sma50: formatTooltipPrice(sma50Val?.value),
-				sma100: formatTooltipPrice(sma100Val?.value),
-				sma200: formatTooltipPrice(sma200Val?.value),
+				ma20: formatTooltipPrice(ma20Val?.value),
+				ma60: formatTooltipPrice(ma60Val?.value),
+				ma120: formatTooltipPrice(ma120Val?.value),
 				donchianHigh: formatTooltipPrice(donchianHighVal?.value),
 				prevHigh: formatTooltipPrice(prevHighVal?.value),
 				rsi:
@@ -1760,13 +1626,9 @@ export default function BTCChart() {
 											t.ema20 ||
 											t.ema60 ||
 											t.ema120 ||
-											t.ema150 ||
-											t.ema200 ||
-											t.ema21 ||
-											t.sma10 ||
-											t.sma50 ||
-											t.sma100 ||
-											t.sma200 ||
+											t.ma20 ||
+											t.ma60 ||
+											t.ma120 ||
 											t.donchianHigh ||
 											t.rsi ||
 											t.fng ||
@@ -1781,13 +1643,9 @@ export default function BTCChart() {
 														t.ema20 ||
 														t.ema60 ||
 														t.ema120 ||
-														t.ema150 ||
-														t.ema200 ||
-														t.ema21 ||
-														t.sma10 ||
-														t.sma50 ||
-														t.sma100 ||
-														t.sma200 ||
+														t.ma20 ||
+														t.ma60 ||
+														t.ma120 ||
 														t.donchianHigh
 													}
 												>
@@ -1796,53 +1654,33 @@ export default function BTCChart() {
 															Active Signals
 														</span>
 														<div class="grid grid-cols-1 gap-y-1.5">
-															<Show when={t.sma10}>
+															<Show when={t.ma20}>
 																<div class="flex justify-between items-center gap-4">
 																	<span class="text-[8px] font-bold text-slate-400">
-																		SMA 10
-																	</span>
-																	<span class="text-[9px] font-mono text-cyan-400">
-																		{t.sma10}
-																	</span>
-																</div>
-															</Show>
-															<Show when={t.sma20}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		SMA 20
+																		MA 20
 																	</span>
 																	<span class="text-[9px] font-mono text-teal-400">
-																		{t.sma20}
+																		{t.ma20}
 																	</span>
 																</div>
 															</Show>
-															<Show when={t.sma50}>
+															<Show when={t.ma60}>
 																<div class="flex justify-between items-center gap-4">
 																	<span class="text-[8px] font-bold text-slate-400">
-																		SMA 50
+																		MA 60
 																	</span>
 																	<span class="text-[9px] font-mono text-lime-400">
-																		{t.sma50}
+																		{t.ma60}
 																	</span>
 																</div>
 															</Show>
-															<Show when={t.sma100}>
+															<Show when={t.ma120}>
 																<div class="flex justify-between items-center gap-4">
 																	<span class="text-[8px] font-bold text-slate-400">
-																		SMA 100
+																		MA 120
 																	</span>
 																	<span class="text-[9px] font-mono text-indigo-400">
-																		{t.sma100}
-																	</span>
-																</div>
-															</Show>
-															<Show when={t.sma200}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		SMA 200
-																	</span>
-																	<span class="text-[9px] font-mono text-[#795548]">
-																		{t.sma200}
+																		{t.ma120}
 																	</span>
 																</div>
 															</Show>
@@ -1876,16 +1714,6 @@ export default function BTCChart() {
 																	</span>
 																</div>
 															</Show>
-															<Show when={t.ema21}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		EMA 21
-																	</span>
-																	<span class="text-[9px] font-mono text-blue-400">
-																		{t.ema21}
-																	</span>
-																</div>
-															</Show>
 															<Show when={t.ema60}>
 																<div class="flex justify-between items-center gap-4">
 																	<span class="text-[8px] font-bold text-slate-400">
@@ -1903,26 +1731,6 @@ export default function BTCChart() {
 																	</span>
 																	<span class="text-[9px] font-mono text-orange-300">
 																		{t.ema120}
-																	</span>
-																</div>
-															</Show>
-															<Show when={t.ema150}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		EMA 150
-																	</span>
-																	<span class="text-[9px] font-mono text-pink-300">
-																		{t.ema150}
-																	</span>
-																</div>
-															</Show>
-															<Show when={t.ema200}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		EMA 200
-																	</span>
-																	<span class="text-[9px] font-mono text-purple-300">
-																		{t.ema200}
 																	</span>
 																</div>
 															</Show>
