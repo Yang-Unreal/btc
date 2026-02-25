@@ -253,23 +253,23 @@ export default function BTCChart() {
 		{
 			key: "ma20",
 			label: "MA 20",
-			color: "bg-teal-500",
-			textColor: "text-teal-500",
-			borderColor: "border-teal-500",
+			color: "bg-red-500",
+			textColor: "text-red-500",
+			borderColor: "border-red-500",
 		},
 		{
 			key: "ma60",
 			label: "MA 60",
-			color: "bg-lime-500",
-			textColor: "text-lime-500",
-			borderColor: "border-lime-500",
+			color: "bg-green-500",
+			textColor: "text-green-500",
+			borderColor: "border-green-500",
 		},
 		{
 			key: "ma120",
 			label: "MA 120",
-			color: "bg-indigo-500",
-			textColor: "text-indigo-500",
-			borderColor: "border-indigo-500",
+			color: "bg-blue-600",
+			textColor: "text-blue-600",
+			borderColor: "border-blue-600",
 		},
 		{
 			key: "donchianHigh",
@@ -288,23 +288,23 @@ export default function BTCChart() {
 		{
 			key: "ema20",
 			label: "EMA 20",
-			color: "bg-[#2196F3]",
-			textColor: "text-[#2196F3]",
-			borderColor: "border-[#2196F3]",
+			color: "bg-yellow-400",
+			textColor: "text-yellow-400",
+			borderColor: "border-yellow-400",
 		},
 		{
 			key: "ema60",
 			label: "EMA 60",
-			color: "bg-[#10B981]",
-			textColor: "text-[#10B981]",
-			borderColor: "border-[#10B981]",
+			color: "bg-purple-400",
+			textColor: "text-purple-400",
+			borderColor: "border-purple-400",
 		},
 		{
 			key: "ema120",
 			label: "EMA 120",
-			color: "bg-[#F59E0B]",
-			textColor: "text-[#F59E0B]",
-			borderColor: "border-[#F59E0B]",
+			color: "bg-orange-400",
+			textColor: "text-orange-400",
+			borderColor: "border-orange-400",
 		},
 		{
 			key: "rsi",
@@ -1080,13 +1080,13 @@ export default function BTCChart() {
 				visible: false,
 			});
 
-		ema20Series = createLineSeries("#2196F3");
-		ema60Series = createLineSeries("#10B981");
-		ema120Series = createLineSeries("#F59E0B");
+		ema20Series = createLineSeries("#FACC15"); // yellow-400
+		ema60Series = createLineSeries("#C084FC"); // purple-400
+		ema120Series = createLineSeries("#FB923C"); // orange-400
 
-		ma20Series = createLineSeries("#14b8a6"); // teal-500
-		ma60Series = createLineSeries("#84cc16"); // lime-500
-		ma120Series = createLineSeries("#6366f1"); // indigo-500
+		ma20Series = createLineSeries("#EF4444"); // red-500
+		ma60Series = createLineSeries("#22C55E"); // green-500
+		ma120Series = createLineSeries("#2563EB"); // blue-600
 		donchianHighSeries = createLineSeries("#f43f5e"); // rose-500
 		prevHighSeries = createLineSeries("#f97316"); // orange-500
 
@@ -1678,7 +1678,7 @@ export default function BTCChart() {
 																	<span class="text-[8px] font-bold text-slate-400">
 																		MA 20
 																	</span>
-																	<span class="text-[9px] font-mono text-teal-400">
+																	<span class="text-[9px] font-mono text-red-500">
 																		{t.ma20}
 																	</span>
 																</div>
@@ -1688,7 +1688,7 @@ export default function BTCChart() {
 																	<span class="text-[8px] font-bold text-slate-400">
 																		MA 60
 																	</span>
-																	<span class="text-[9px] font-mono text-lime-400">
+																	<span class="text-[9px] font-mono text-green-500">
 																		{t.ma60}
 																	</span>
 																</div>
@@ -1698,7 +1698,7 @@ export default function BTCChart() {
 																	<span class="text-[8px] font-bold text-slate-400">
 																		MA 120
 																	</span>
-																	<span class="text-[9px] font-mono text-indigo-400">
+																	<span class="text-[9px] font-mono text-blue-600">
 																		{t.ma120}
 																	</span>
 																</div>
@@ -1728,7 +1728,7 @@ export default function BTCChart() {
 																	<span class="text-[8px] font-bold text-slate-400">
 																		EMA 20
 																	</span>
-																	<span class="text-[9px] font-mono text-blue-300">
+																	<span class="text-[9px] font-mono text-yellow-400">
 																		{t.ema20}
 																	</span>
 																</div>
@@ -1738,7 +1738,7 @@ export default function BTCChart() {
 																	<span class="text-[8px] font-bold text-slate-400">
 																		EMA 60
 																	</span>
-																	<span class="text-[9px] font-mono text-emerald-300">
+																	<span class="text-[9px] font-mono text-purple-400">
 																		{t.ema60}
 																	</span>
 																</div>
@@ -1748,7 +1748,7 @@ export default function BTCChart() {
 																	<span class="text-[8px] font-bold text-slate-400">
 																		EMA 120
 																	</span>
-																	<span class="text-[9px] font-mono text-orange-300">
+																	<span class="text-[9px] font-mono text-orange-400">
 																		{t.ema120}
 																	</span>
 																</div>
