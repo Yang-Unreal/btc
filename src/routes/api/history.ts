@@ -2,19 +2,18 @@ import { json } from "@solidjs/router";
 import type { APIEvent } from "@solidjs/start/server";
 import { apiCache, CACHE_DURATIONS } from "../../lib/cache";
 
-import { ASSET_MAP, KRAKEN_INTERVAL_MAP } from "../../lib/constants";
+import { BITGET_INTERVAL_MAP } from "../../lib/constants";
 import type { Interval } from "../../lib/types";
 
-// Kraken OHLC item: [time, open, high, low, close, vwap, volume, count]
-type KrakenOHLCItem = [
-	number,
-	string,
-	string,
-	string,
-	string,
-	string,
-	string,
-	number,
+// Bitget OHLC item: [time, open, high, low, close, volume, quoteVol, ...]
+type BitgetOHLCItem = [
+	string, // time
+	string, // open
+	string, // high
+	string, // low
+	string, // close
+	string, // volume
+	string, // quoteVol
 ];
 
 export async function GET({ request }: APIEvent) {
@@ -24,27 +23,21 @@ export async function GET({ request }: APIEvent) {
 	const symbol = url.searchParams.get("symbol") || "BTC"; // Default to BTC
 	const toParam = url.searchParams.get("to");
 
-	// Resolve Kraken Pair
-	// e.g. BTC + USD -> XBTUSD (Kraken will normalize to XXBTZUSD in response)
-	const krakenAsset = ASSET_MAP[symbol]?.krakenId || symbol;
-	// Handle special currency cases if needed, but USD/EUR/GBP are standard
-	const pairParam = `${krakenAsset}${currency}`;
+	// Bitget Symbol Logic
+	// Always append USDT for Bitget Spot API as USD pairs are rare/USDT is standard
+	const bitgetSymbol = `${symbol}USDT`;
+	const bitgetInterval = BITGET_INTERVAL_MAP[interval as Interval] || "1h";
 
-	const krakenInterval = KRAKEN_INTERVAL_MAP[interval as Interval] || 60;
-
-	// Kraken API URL
-	let krakenUrl = `https://api.kraken.com/0/public/OHLC?pair=${pairParam}&interval=${krakenInterval}`;
+	// Bitget API URL
+	let bitgetUrl = `https://api.bitget.com/api/v2/spot/market/candles?symbol=${bitgetSymbol}&granularity=${bitgetInterval}&limit=1000`;
 
 	// Pagination Logic
 	if (toParam) {
 		const toTimeMs = parseInt(toParam);
-		const toTimeSec = Math.floor(toTimeMs / 1000);
-		const lookbackWindow = 720 * (krakenInterval * 60);
-		const sinceTimestamp = toTimeSec - lookbackWindow;
-		krakenUrl += `&since=${sinceTimestamp}`;
+		bitgetUrl += `&endTime=${toTimeMs}`;
 	}
 
-	const cacheKey = `history_${symbol}_${currency}_${interval}_${toParam || "latest"}`;
+	const cacheKey = `history_bitget_${symbol}_${currency}_${interval}_${toParam || "latest"}`;
 	const cachedData = apiCache.get(cacheKey);
 
 	if (cachedData) {
@@ -52,7 +45,7 @@ export async function GET({ request }: APIEvent) {
 	}
 
 	try {
-		const response = await fetch(krakenUrl);
+		const response = await fetch(bitgetUrl);
 
 		if (!response.ok) {
 			return json([]);
@@ -60,29 +53,29 @@ export async function GET({ request }: APIEvent) {
 
 		const data = await response.json();
 
-		if (data.error && data.error.length > 0) {
-			console.warn("Kraken API Warning:", data.error);
+		if (data.code !== "00000") {
+			console.warn("Bitget API Warning:", data.msg);
 			return json([]);
 		}
 
-		// Kraken returns data keyed by the Pair Name.
-		// Since the Pair Name changes based on request (XXBTZUSD, XXBTZEUR), access dynamically.
-		const resultKeys = Object.keys(data.result || {});
-		const result = resultKeys.length > 0 ? data.result[resultKeys[0]] : [];
+		const result = data.data;
 
 		if (!Array.isArray(result)) {
 			return json([]);
 		}
 
-		// Map to chart format: [time(ms), open, high, low, close]
-		let mappedData = result.map((item: KrakenOHLCItem) => [
-			item[0] * 1000,
+		// Map to chart format: [time(ms), open, high, low, close, volume]
+		let mappedData = result.map((item: BitgetOHLCItem) => [
+			parseInt(item[0]), // Time is already ms string
 			parseFloat(item[1]),
 			parseFloat(item[2]),
 			parseFloat(item[3]),
 			parseFloat(item[4]),
-			parseFloat(item[6]), // Volume
+			parseFloat(item[5]), // Volume
 		]);
+
+		// Bitget returns descending (newest first). Sort to ascending.
+		mappedData.sort((a, b) => a[0] - b[0]);
 
 		if (toParam) {
 			const limitTime = parseInt(toParam);

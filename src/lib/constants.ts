@@ -54,3 +54,19 @@ export const KRAKEN_INTERVAL_MAP: Record<Interval, number> = {
 	"1w": 10080,
 	"1M": 21600,
 };
+
+export const BITGET_INTERVAL_MAP: Record<Interval, string> = {
+	"1m": "1min",
+	"3m": "5min",
+	"5m": "5min",
+	"15m": "15min",
+	"30m": "30min",
+	"1h": "1h",
+	"2h": "1h",
+	"4h": "4h",
+	"12h": "12h",
+	"1d": "1day",
+	"3d": "1day",
+	"1w": "1week",
+	"1M": "1month",
+};

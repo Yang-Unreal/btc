@@ -22,11 +22,7 @@ import {
 	Show,
 	untrack,
 } from "solid-js";
-import {
-	CURRENCIES,
-	KRAKEN_INTERVAL_MAP,
-	SUPPORTED_ASSETS,
-} from "../lib/constants";
+import { CURRENCIES, SUPPORTED_ASSETS } from "../lib/constants";
 import { formatCryptoPrice } from "../lib/format";
 import {
 	calculateDonchianHigh,
@@ -597,29 +593,50 @@ export default function BTCChart() {
 		}
 	};
 
-	const mapIntervalToKrakenWS = (interval: Interval): number => {
-		return KRAKEN_INTERVAL_MAP[interval] || 1440;
+	const mapIntervalToBitgetWS = (interval: Interval): string => {
+		// Bitget WS channels: candle1m, candle5m, candle15m, candle30m, candle1H, candle4H, candle12H, candle1D, candle1W
+		const map: Record<string, string> = {
+			"1m": "candle1m",
+			"3m": "candle5m", // Fallback
+			"5m": "candle5m",
+			"15m": "candle15m",
+			"30m": "candle30m",
+			"1h": "candle1H",
+			"2h": "candle1H",
+			"4h": "candle4H",
+			"12h": "candle12H",
+			"1d": "candle1D",
+			"3d": "candle1D",
+			"1w": "candle1W",
+			"1M": "candle1M", // Check support if needed, assuming 1M exists or fallback
+		};
+		return map[interval] || "candle1H";
 	};
 
-	// --- Modified WebSocket Connection ---
+	// --- Modified WebSocket Connection (Bitget) ---
 	const connectWebSocket = (
 		activeInterval: Interval,
 		currencyConfig: CurrencyConfig,
 		assetConfig: AssetConfig,
 	) => {
 		if (ws) ws.close();
-		ws = new WebSocket("wss://ws.kraken.com");
+		ws = new WebSocket("wss://ws.bitget.com/v2/ws/public");
 
-		const wsPair = `${assetConfig.krakenId}/${currencyConfig.code}`;
+		const wsSymbol = `${assetConfig.symbol}USDT`; // Bitget uses USDT pairs
+		const wsChannel = mapIntervalToBitgetWS(activeInterval);
 
 		ws.onopen = () => {
 			setWsConnected(true);
-			const krakenInterval = mapIntervalToKrakenWS(activeInterval);
 			ws?.send(
 				JSON.stringify({
-					event: "subscribe",
-					pair: [wsPair], // Dynamic Pair
-					subscription: { name: "ohlc", interval: krakenInterval },
+					op: "subscribe",
+					args: [
+						{
+							instType: "SPOT",
+							channel: wsChannel,
+							instId: wsSymbol,
+						},
+					],
 				}),
 			);
 		};
@@ -628,27 +645,30 @@ export default function BTCChart() {
 		ws.onerror = () => setWsConnected(false);
 
 		ws.onmessage = (event) => {
+			if (event.data === "pong") return;
 			try {
 				const data = JSON.parse(event.data);
-				// Check if array and has valid structure (API sometimes sends heartbeat/status objects)
-				if (Array.isArray(data) && data[1] && candlestickSeries) {
-					// Ensure we are processing the correct pair (last element usually string pair name)
-					const pairName = data[data.length - 1];
-					const currentWsPair = `${assetConfig.krakenId}/${currencyConfig.code}`;
-					if (pairName !== currentWsPair) return;
+				// Bitget format: { action: "snapshot"|"update", arg: {...}, data: [[ts, o, h, l, c, v, ...]] }
+				if (
+					(data.action === "snapshot" || data.action === "update") &&
+					data.data &&
+					data.data.length > 0 &&
+					candlestickSeries
+				) {
+					// Verify pair
+					if (data.arg.instId !== wsSymbol) return;
 
-					const kline = data[1];
-					const endTime = parseFloat(kline[1]);
-					const intervalMinutes = mapIntervalToKrakenWS(activeInterval);
-					const startTime = endTime - intervalMinutes * 60;
+					const candle = data.data[0];
+					// candle: [ts(ms string), open, high, low, close, vol, ...]
+					const ts = Math.floor(parseInt(candle[0]) / 1000) as UTCTimestamp;
 
 					const newData: BTCData = {
-						time: Math.floor(startTime) as UTCTimestamp,
-						open: parseFloat(kline[2]),
-						high: parseFloat(kline[3]),
-						low: parseFloat(kline[4]),
-						close: parseFloat(kline[5]),
-						volume: parseFloat(kline[7]),
+						time: ts,
+						open: parseFloat(candle[1]),
+						high: parseFloat(candle[2]),
+						low: parseFloat(candle[3]),
+						close: parseFloat(candle[4]),
+						volume: parseFloat(candle[5]),
 					};
 
 					const price = newData.close;
