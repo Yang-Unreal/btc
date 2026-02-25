@@ -25,10 +25,12 @@ import {
 import { CURRENCIES, SUPPORTED_ASSETS } from "../lib/constants";
 import { formatCryptoPrice } from "../lib/format";
 import {
+	calculateATR,
 	calculateDonchianHigh,
 	calculateEMA,
 	calculateRSI,
 	calculateSMA,
+	findLastSwingHigh,
 } from "../lib/indicators";
 import type {
 	AssetConfig,
@@ -61,6 +63,7 @@ interface TooltipData {
 	prevHigh?: string;
 	rsi?: string;
 	rsiDivergence?: string;
+	atr?: string;
 	fng?: string;
 	fngClass?: string;
 	tdLabel?: string;
@@ -188,6 +191,7 @@ export default function BTCChart() {
 	let prevHighSeries: ISeriesApi<"Line"> | undefined;
 	let rsiSeries: ISeriesApi<"Line"> | undefined;
 	let fngSeries: ISeriesApi<"Line"> | undefined;
+	let atrSeries: ISeriesApi<"Line"> | undefined;
 
 	let ws: WebSocket | undefined;
 
@@ -229,6 +233,7 @@ export default function BTCChart() {
 		rsi: false,
 		fng: false,
 		tdSeq: false,
+		atr: false,
 	});
 
 	const [btcData, setBtcData] = createSignal<BTCData[]>([]);
@@ -237,6 +242,7 @@ export default function BTCChart() {
 	const [divMap, setDivMap] = createSignal<Map<number, DivergenceState>>(
 		new Map(),
 	);
+	const [legendData, setLegendData] = createSignal<TooltipData | null>(null);
 
 	const intervals: { label: string; value: Interval }[] = [
 		{ label: "15m", value: "15m" },
@@ -326,6 +332,13 @@ export default function BTCChart() {
 			color: "bg-emerald-600",
 			textColor: "text-emerald-600",
 			borderColor: "border-emerald-600",
+		},
+		{
+			key: "atr",
+			label: "ATR 14",
+			color: "bg-slate-400",
+			textColor: "text-slate-400",
+			borderColor: "border-slate-400",
 		},
 	];
 
@@ -766,7 +779,106 @@ export default function BTCChart() {
 				fngSeries.update({ time: lastCandle.time, value: val });
 			}
 		}
+
+		if (currentInd.atr && atrSeries && slice.length > 14) {
+			const atrValues = calculateATR(
+				slice.map((d) => ({ high: d.high, low: d.low, close: d.close })),
+				14,
+			);
+			const lastATR = atrValues[atrValues.length - 1];
+			if (!Number.isNaN(lastATR)) {
+				atrSeries.update({ time: lastCandle.time, value: lastATR });
+			}
+		}
+
 		refreshAllMarkers(allData);
+		updateLegendToLatest(allData);
+	};
+
+	const updateLegendToLatest = (data: BTCData[]) => {
+		if (tooltip() || data.length === 0) return;
+		const lastCandle = data[data.length - 1];
+		const currentInd = indicators();
+
+		const dateStr = new Date(Number(lastCandle.time) * 1000).toLocaleString(
+			"en-US",
+			{ month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" },
+		);
+
+		const formatValue = (val: number | undefined) => {
+			if (val === undefined || val === null || Number.isNaN(val)) return "—";
+			return formatCryptoPrice(val, activeCurrency().code);
+		};
+
+		const volumeVal = lastCandle.volume;
+		const formattedVolume = volumeVal
+			? (Math.round(volumeVal * 100) / 100).toLocaleString()
+			: "—";
+
+		// Calculate values for latest candle
+		const closes = data.map((d) => d.close);
+		const highs = data.map((d) => d.high);
+
+		const rsiValues = calculateRSI(closes, 14);
+		const lastRSI = rsiValues[rsiValues.length - 1];
+
+		const ema20 = calculateEMA(closes, 20);
+		const ema60 = calculateEMA(closes, 60);
+		const ema120 = calculateEMA(closes, 120);
+		const ma20 = calculateSMA(closes, 20);
+		const ma60 = calculateSMA(closes, 60);
+		const ma120 = calculateSMA(closes, 120);
+		const donchianHigh = calculateDonchianHigh(highs, 20);
+		const lastPrevHigh = findLastSwingHigh(highs, 10, 2);
+
+		setLegendData({
+			time: dateStr,
+			open: formatValue(lastCandle.open),
+			high: formatValue(lastCandle.high),
+			low: formatValue(lastCandle.low),
+			close: formatValue(lastCandle.close),
+			volume: formattedVolume,
+			currencySymbol: activeCurrency().symbol,
+			changeColor:
+				lastCandle.close >= lastCandle.open
+					? "text-emerald-500"
+					: "text-rose-500",
+			ema20: formatValue(ema20[ema20.length - 1]),
+			ema60: formatValue(ema60[ema60.length - 1]),
+			ema120: formatValue(ema120[ema120.length - 1]),
+			ma20: formatValue(ma20[ma20.length - 1]),
+			ma60: formatValue(ma60[ma60.length - 1]),
+			ma120: formatValue(ma120[ma120.length - 1]),
+			donchianHigh: formatValue(donchianHigh[donchianHigh.length - 1]),
+			prevHigh: formatValue(lastPrevHigh ?? undefined),
+			rsi: !Number.isNaN(lastRSI) ? lastRSI.toFixed(1) : undefined,
+			atr: currentInd.atr
+				? formatValue(
+						calculateATR(
+							data.map((d) => ({ high: d.high, low: d.low, close: d.close })),
+							14,
+						).pop(),
+					)
+				: undefined,
+			tdLabel: tdMap().get(lastCandle.time as number)?.label,
+			fng: currentInd.fng
+				? fngCache()
+						.get(
+							Math.floor(
+								new Date((lastCandle.time as number) * 1000).setUTCHours(
+									0,
+									0,
+									0,
+									0,
+								) / 1000,
+							),
+						)
+						?.toString()
+				: undefined,
+			x: 0,
+			y: 0,
+			snapY: 0,
+		} as TooltipData);
 	};
 
 	const syncAllIndicators = () => {
@@ -786,8 +898,9 @@ export default function BTCChart() {
 		prevHighSeries?.applyOptions({ visible: !!currentInd.prevHigh });
 		rsiSeries?.applyOptions({ visible: !!currentInd.rsi });
 		fngSeries?.applyOptions({ visible: !!currentInd.fng });
+		atrSeries?.applyOptions({ visible: !!currentInd.atr });
 
-		if (currentInd.rsi || currentInd.fng) {
+		if (currentInd.rsi || currentInd.fng || currentInd.atr) {
 			chart
 				.priceScale("right")
 				.applyOptions({ scaleMargins: { top: 0.1, bottom: 0.3 } });
@@ -933,6 +1046,21 @@ export default function BTCChart() {
 		} else if (rsiSeries) {
 			rsiSeries.setData([]);
 		}
+
+		if (currentInd.atr && atrSeries && currentData.length > 14) {
+			const atrVals = calculateATR(
+				currentData.map((d) => ({ high: d.high, low: d.low, close: d.close })),
+				14,
+			);
+			const atrData: LineData[] = [];
+			for (let i = 0; i < atrVals.length; i++) {
+				if (!Number.isNaN(atrVals[i]))
+					atrData.push({ time: currentData[i].time, value: atrVals[i] });
+			}
+			atrSeries.setData(atrData);
+		} else if (atrSeries) {
+			atrSeries.setData([]);
+		}
 	};
 
 	// --- Load Data ---
@@ -997,6 +1125,7 @@ export default function BTCChart() {
 
 			chart?.timeScale().fitContent();
 			syncAllIndicators();
+			updateLegendToLatest(history);
 		}
 
 		connectWebSocket(activeInterval, assetConfig);
@@ -1105,6 +1234,12 @@ export default function BTCChart() {
 			visible: false,
 		});
 
+		atrSeries = chart.addSeries(LineSeries, {
+			...oscillatorOptions,
+			color: "#94a3b8", // slate-400
+			visible: false,
+		});
+
 		rsiSeries.createPriceLine({
 			price: 70,
 			color: "#cbd5e1",
@@ -1142,6 +1277,7 @@ export default function BTCChart() {
 				param.point.y > chartContainer.clientHeight
 			) {
 				setTooltip(null);
+				updateLegendToLatest(btcData());
 				lastTooltipTime = null;
 				cachedTooltipData = null;
 				return;
@@ -1272,9 +1408,20 @@ export default function BTCChart() {
 				rsiDivergence: divStatus
 					? `${divStatus.type === "bullish" ? "Bull" : "Bear"} Div: ${divStatus.priceAction} / RSI ${divStatus.rsiAction}`
 					: undefined,
+				atr: formatTooltipPrice(
+					atrSeries
+						? (param.seriesData.get(atrSeries) as LineData)?.value
+						: undefined,
+				),
 			};
 
 			setTooltip({
+				...cachedTooltipData,
+				x: param.point.x,
+				y: param.point.y,
+				snapY: snapY ?? param.point.y,
+			} as TooltipData);
+			setLegendData({
 				...cachedTooltipData,
 				x: param.point.x,
 				y: param.point.y,
@@ -1531,6 +1678,135 @@ export default function BTCChart() {
 				</Show>
 
 				<div ref={chartContainer} class="w-full h-full opacity-90" />
+
+				{/* Bitget-style Legend Overlay */}
+				<div class="absolute top-1 left-2 z-30 pointer-events-none flex flex-col gap-0.5 select-none transition-all duration-200 overflow-hidden max-w-[calc(100%-20px)]">
+					<Show when={legendData()}>
+						{(t) => (
+							<>
+								{/* Asset Info & OHLC */}
+								<div class="flex flex-wrap items-center gap-x-2 text-[11px] leading-tight font-bold whitespace-nowrap">
+									<span class="text-slate-200">
+										{activeAsset().symbol}/USDT · {interval().toUpperCase()} ·
+										Bitget
+									</span>
+									<div class="flex items-center gap-1 ml-1 scale-95 origin-left">
+										<span class="text-slate-500 font-medium">O</span>
+										<span class={t().changeColor}>{t().open}</span>
+										<span class="text-slate-500 font-medium ml-1">H</span>
+										<span class={t().changeColor}>{t().high}</span>
+										<span class="text-slate-500 font-medium ml-1">L</span>
+										<span class={t().changeColor}>{t().low}</span>
+										<span class="text-slate-500 font-medium ml-1">C</span>
+										<span class={t().changeColor}>{t().close}</span>
+									</div>
+								</div>
+
+								{/* Indicators */}
+								<div class="flex flex-col gap-px mt-0.5">
+									<Show
+										when={indicators().ma20 && t().ma20 && t().ma20 !== "—"}
+									>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-red-500">MA 20 close 0</span>
+											<span class="text-red-500">{t().ma20}</span>
+										</div>
+									</Show>
+									<Show
+										when={indicators().ma60 && t().ma60 && t().ma60 !== "—"}
+									>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-green-500">MA 60 close 0</span>
+											<span class="text-green-500">{t().ma60}</span>
+										</div>
+									</Show>
+									<Show
+										when={indicators().ma120 && t().ma120 && t().ma120 !== "—"}
+									>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-blue-600">MA 120 close 0</span>
+											<span class="text-blue-600">{t().ma120}</span>
+										</div>
+									</Show>
+									<Show
+										when={indicators().ema20 && t().ema20 && t().ema20 !== "—"}
+									>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-yellow-400">EMA 20 close 0</span>
+											<span class="text-yellow-400">{t().ema20}</span>
+										</div>
+									</Show>
+									<Show
+										when={indicators().ema60 && t().ema60 && t().ema60 !== "—"}
+									>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-purple-400">EMA 60 close 0</span>
+											<span class="text-purple-400">{t().ema60}</span>
+										</div>
+									</Show>
+									<Show
+										when={
+											indicators().ema120 && t().ema120 && t().ema120 !== "—"
+										}
+									>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-orange-400">EMA 120 close 0</span>
+											<span class="text-orange-400">{t().ema120}</span>
+										</div>
+									</Show>
+									<Show
+										when={
+											indicators().donchianHigh &&
+											t().donchianHigh &&
+											t().donchianHigh !== "—"
+										}
+									>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-rose-500">20D HIGH</span>
+											<span class="text-rose-500">{t().donchianHigh}</span>
+										</div>
+									</Show>
+									<Show
+										when={
+											indicators().prevHigh &&
+											t().prevHigh &&
+											t().prevHigh !== "—"
+										}
+									>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-orange-500">PREV HIGH</span>
+											<span class="text-orange-500">{t().prevHigh}</span>
+										</div>
+									</Show>
+									<Show when={indicators().rsi && t().rsi}>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-[#7E57C2]">RSI 14</span>
+											<span class="text-[#7E57C2]">{t().rsi}</span>
+										</div>
+									</Show>
+									<Show when={indicators().atr && t().atr && t().atr !== "—"}>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-slate-400">ATR 14</span>
+											<span class="text-slate-400">{t().atr}</span>
+										</div>
+									</Show>
+									<Show when={indicators().fng && t().fng}>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-[#F7931A]">Fear & Greed</span>
+											<span class="text-[#F7931A]">{t().fng}</span>
+										</div>
+									</Show>
+									<Show when={indicators().tdSeq && t().tdLabel}>
+										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+											<span class="text-emerald-500">TD Sequential</span>
+											<span class="text-emerald-500">{t().tdLabel}</span>
+										</div>
+									</Show>
+								</div>
+							</>
+						)}
+					</Show>
+				</div>
 
 				{/* Institutional Floating Tooltip */}
 				<Show when={tooltip()} keyed>

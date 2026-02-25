@@ -130,3 +130,43 @@ export const findLastSwingLow = (
 	}
 	return null;
 };
+
+export const calculateATR = (
+	data: { high: number; low: number; close: number }[],
+	period = 14,
+): number[] => {
+	if (data.length <= 1) return Array(data.length).fill(NaN);
+	const tr: number[] = [NaN];
+	for (let i = 1; i < data.length; i++) {
+		const h = data[i].high;
+		const l = data[i].low;
+		const pc = data[i - 1].close;
+		tr.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
+	}
+	// ATR is typically an EMA or Wilder's MA of TR
+	// We'll use EMA for consistency with other indicators here
+	const atr: number[] = [];
+	const alpha = 1 / period;
+	let currentAtr = 0;
+
+	// Initial ATR is average of first 'period' TR values
+	let firstSum = 0;
+	let validCount = 0;
+	for (let i = 1; i <= period && i < tr.length; i++) {
+		firstSum += tr[i];
+		validCount++;
+	}
+	currentAtr = firstSum / validCount;
+
+	for (let i = 0; i < tr.length; i++) {
+		if (i < period) {
+			atr.push(NaN);
+		} else if (i === period) {
+			atr.push(currentAtr);
+		} else {
+			currentAtr = (tr[i] - currentAtr) * alpha + currentAtr;
+			atr.push(currentAtr);
+		}
+	}
+	return atr;
+};
