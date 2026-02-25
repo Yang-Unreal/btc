@@ -1479,7 +1479,7 @@ export default function BTCChart() {
 	return (
 		<div class="my-4 md:my-8 directive-card overflow-hidden">
 			{/* Top Bar - High Density */}
-			<div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center p-3 sm:p-4 border-b border-white/5 bg-white/2">
+			<div class="relative z-50 flex flex-col lg:flex-row justify-between items-stretch lg:items-center p-3 sm:p-4 border-b border-white/5 bg-white/2">
 				<div class="flex items-center gap-3 mb-4 lg:mb-0 justify-between lg:justify-start">
 					<div class="flex items-center gap-3">
 						<div class="w-8 h-8 bg-white/5 border border-white/10 flex items-center justify-center text-white font-mono font-bold text-xs">
@@ -1607,7 +1607,7 @@ export default function BTCChart() {
 			</div>
 
 			{/* Secondary Bar: Indicators - Refactored to Dropdown */}
-			<div class="relative z-30 px-4 py-2 border-b border-white/5 bg-white/1 backdrop-blur-sm flex items-center justify-start">
+			<div class="relative z-40 px-4 py-2 border-b border-white/5 bg-white/1 backdrop-blur-sm flex items-center justify-start">
 				<div class="relative">
 					<button
 						type="button"
