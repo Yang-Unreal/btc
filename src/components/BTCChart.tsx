@@ -1477,7 +1477,7 @@ export default function BTCChart() {
 	});
 
 	return (
-		<div class="my-4 md:my-8 directive-card overflow-hidden">
+		<div class="directive-card overflow-hidden">
 			{/* Top Bar - High Density */}
 			<div class="relative z-50 flex flex-col lg:flex-row justify-between items-stretch lg:items-center p-3 sm:p-4 border-b border-white/5 bg-white/2">
 				<div class="flex items-center gap-3 mb-4 lg:mb-0 justify-between lg:justify-start">
