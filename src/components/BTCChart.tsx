@@ -196,6 +196,7 @@ export default function BTCChart() {
 	let ws: WebSocket | undefined;
 
 	const [isLoading, setIsLoading] = createSignal(true);
+	const [isLoadingMore, setIsLoadingMore] = createSignal(false);
 	const [wsConnected, setWsConnected] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
 
@@ -554,10 +555,14 @@ export default function BTCChart() {
 		activeInterval: Interval,
 		currency: CurrencyCode,
 		assetSymbol: string,
+		toTimestamp?: number,
 	): Promise<BTCData[]> => {
 		try {
 			// Pass currency and symbol to API
-			const url = `/api/history?interval=${activeInterval}&currency=${currency}&symbol=${assetSymbol}`;
+			let url = `/api/history?interval=${activeInterval}&currency=${currency}&symbol=${assetSymbol}`;
+			if (toTimestamp) {
+				url += `&to=${toTimestamp}`;
+			}
 			const response = await fetch(url);
 			if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
 			const data = await response.json();
@@ -581,6 +586,70 @@ export default function BTCChart() {
 			console.error("Error fetching history:", err);
 			setError("Failed to load chart data");
 			return [];
+		}
+	};
+
+	// --- Fetch More Historical Data (Infinite Scroll) ---
+	let loadMoreTimer: ReturnType<typeof setTimeout> | null = null;
+	const fetchMoreHistoricalData = async () => {
+		if (isLoadingMore() || isLoading()) return;
+		const currentData = btcData();
+		if (currentData.length === 0) return;
+
+		const earliestCandle = currentData[0];
+		const earliestTimeMs = (earliestCandle.time as number) * 1000;
+
+		setIsLoadingMore(true);
+		try {
+			const olderData = await fetchHistoricalData(
+				interval(),
+				activeCurrency().code,
+				activeAsset().symbol,
+				earliestTimeMs,
+			);
+
+			if (olderData.length === 0) {
+				setIsLoadingMore(false);
+				return;
+			}
+
+			// Filter out any duplicates
+			const existingTimes = new Set(currentData.map((d) => d.time as number));
+			const newData = olderData.filter(
+				(d) => !existingTimes.has(d.time as number),
+			);
+
+			if (newData.length === 0) {
+				setIsLoadingMore(false);
+				return;
+			}
+
+			const mergedData = [...newData, ...currentData].sort(
+				(a, b) => (a.time as number) - (b.time as number),
+			);
+
+			// Update all series with merged data
+			if (candlestickSeries) {
+				candlestickSeries.setData(mergedData);
+			}
+			if (volumeSeries) {
+				const volumeData = mergedData.map((d) => ({
+					time: d.time,
+					value: d.volume || 0,
+					color:
+						d.close >= d.open
+							? "rgba(16, 185, 129, 0.5)"
+							: "rgba(239, 68, 68, 0.5)",
+				}));
+				volumeSeries.setData(volumeData);
+			}
+
+			setBtcData(mergedData);
+			syncAllIndicators();
+		} catch (err) {
+			console.error("Error fetching more history:", err);
+		} finally {
+			setIsLoadingMore(false);
 		}
 	};
 
@@ -1427,6 +1496,18 @@ export default function BTCChart() {
 				y: param.point.y,
 				snapY: snapY ?? param.point.y,
 			} as TooltipData);
+		});
+
+		// --- Subscribe to visible range for infinite scroll ---
+		chart.timeScale().subscribeVisibleLogicalRangeChange((logicalRange) => {
+			if (!logicalRange || isLoadingMore() || isLoading()) return;
+			// Preload when within 200 bars of the start — triggers well before reaching the edge
+			if (logicalRange.from <= 200) {
+				if (loadMoreTimer) clearTimeout(loadMoreTimer);
+				loadMoreTimer = setTimeout(() => {
+					fetchMoreHistoricalData();
+				}, 100);
+			}
 		});
 
 		// Initial Load
