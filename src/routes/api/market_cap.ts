@@ -26,30 +26,6 @@ const COINGECKO_MAP: Record<string, string> = {
 	VIRTUAL: "virtual-protocol",
 };
 
-const KRAKEN_MAP: Record<string, string> = {
-	BTC: "XXBTZUSD",
-	ETH: "XETHZUSD",
-	SOL: "SOLUSD",
-	DOGE: "XDGUSD",
-	LINK: "LINKUSD",
-	TIA: "TIAUSD",
-	ONDO: "ONDOUSD",
-	PENDLE: "PENDLEUSD",
-	TAO: "TAOUSD",
-	AERO: "AEROUSD",
-	RENDER: "RENDERUSD",
-	AKT: "AKTUSD",
-	EWT: "EWTUSD",
-	AAVE: "AAVEUSD",
-	TON: "TONUSD",
-	HNT: "HNTUSD",
-	KAS: "KASUSD",
-	NIGHT: "NIGHTUSD",
-	SUI: "SUIUSD",
-	PEPE: "PEPEUSD",
-	VIRTUAL: "VIRTUALUSD",
-};
-
 interface CoinGeckoMarket {
 	id: string;
 	symbol: string;
@@ -66,16 +42,16 @@ interface CoinGeckoMarket {
 	market_cap_rank: number;
 }
 
-interface KrakenTicker {
-	a: string[]; // ask
-	b: string[]; // bid
-	c: string[]; // last trade: [price, whole lot volume]
-	v: string[]; // volume
-	p: string[]; // vwap
-	t: number[]; // trades
-	l: string[]; // low
-	h: string[]; // high
-	o: string; // opening price
+interface BitgetTicker {
+	symbol: string;
+	lastPr: string;
+	open24h: string;
+	high24h: string;
+	low24h: string;
+	quoteVolume: string;
+	baseVolume: string;
+	usdtVolume: string;
+	ts: string;
 }
 
 export async function GET() {
@@ -90,7 +66,6 @@ export async function GET() {
 
 		console.log("MARKET_API: Fetching fresh data...");
 		const cgIds = Object.values(COINGECKO_MAP).join(",");
-		const krakenPairs = Object.values(KRAKEN_MAP).join(",");
 
 		// --- 1. Fetch CoinGecko (Longer Cache / Stale Fallback) ---
 		let cgData: CoinGeckoMarket[] = [];
@@ -133,40 +108,43 @@ export async function GET() {
 			}
 		}
 
-		// --- 2. Fetch Kraken (Always Fresh) ---
-		let krakenData: Record<string, KrakenTicker> = {};
-		const krakenUrl = `https://api.kraken.com/0/public/Ticker?pair=${krakenPairs}`;
+		// --- 2. Fetch Bitget (Always Fresh) ---
+		const bitgetData: Record<string, BitgetTicker> = {};
+		// Fetch all tickers to find matches
+		const bitgetUrl = "https://api.bitget.com/api/v2/spot/market/tickers";
 		try {
-			const kRes = await fetch(krakenUrl);
-			if (kRes.ok) {
-				const json = await kRes.json();
-				if (json.error?.length > 0) {
-					console.warn("MARKET_API: Kraken Warning:", json.error);
-				} else {
-					krakenData = json.result || {};
+			const bRes = await fetch(bitgetUrl);
+			if (bRes.ok) {
+				const json = await bRes.json();
+				if (json.code !== "00000") {
+					console.warn("MARKET_API: Bitget Warning:", json.msg);
+				} else if (Array.isArray(json.data)) {
+					json.data.forEach((t: BitgetTicker) => {
+						bitgetData[t.symbol] = t;
+					});
 				}
 			}
 		} catch (e) {
-			console.error("MARKET_API: Kraken Fetch Failed:", e);
+			console.error("MARKET_API: Bitget Fetch Failed:", e);
 		}
 
 		const result = Object.keys(COINGECKO_MAP).map((symbol) => {
 			const cgId = COINGECKO_MAP[symbol];
-			const krakenPair = KRAKEN_MAP[symbol];
+			const bitgetSymbol = `${symbol}USDT`;
 
 			const cgAsset = Array.isArray(cgData)
 				? cgData.find((c) => c.id === cgId)
 				: null;
-			const kAsset = krakenData ? krakenData[krakenPair] : null;
+			const bAsset = bitgetData[bitgetSymbol];
 
 			let price = cgAsset?.current_price || 0;
 			let change24h = cgAsset?.price_change_percentage_24h || 0;
 
-			if (kAsset?.c?.[0]) {
-				const kPrice = Number.parseFloat(kAsset.c[0]);
-				if (!Number.isNaN(kPrice)) {
-					price = kPrice;
-					const openPrice = Number.parseFloat(kAsset.o);
+			if (bAsset) {
+				const bPrice = Number.parseFloat(bAsset.lastPr);
+				if (!Number.isNaN(bPrice)) {
+					price = bPrice;
+					const openPrice = Number.parseFloat(bAsset.open24h);
 					if (openPrice > 0) {
 						change24h = ((price - openPrice) / openPrice) * 100;
 					}

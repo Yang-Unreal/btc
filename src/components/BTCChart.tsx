@@ -616,7 +616,6 @@ export default function BTCChart() {
 	// --- Modified WebSocket Connection (Bitget) ---
 	const connectWebSocket = (
 		activeInterval: Interval,
-		currencyConfig: CurrencyConfig,
 		assetConfig: AssetConfig,
 	) => {
 		if (ws) ws.close();
@@ -660,7 +659,7 @@ export default function BTCChart() {
 
 					const candle = data.data[0];
 					// candle: [ts(ms string), open, high, low, close, vol, ...]
-					const ts = Math.floor(parseInt(candle[0]) / 1000) as UTCTimestamp;
+					const ts = Math.floor(parseInt(candle[0], 10) / 1000) as UTCTimestamp;
 
 					const newData: BTCData = {
 						time: ts,
@@ -1000,7 +999,7 @@ export default function BTCChart() {
 			syncAllIndicators();
 		}
 
-		connectWebSocket(activeInterval, currencyConfig, assetConfig);
+		connectWebSocket(activeInterval, assetConfig);
 		setIsLoading(false);
 	};
 
