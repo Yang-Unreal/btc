@@ -1,7 +1,7 @@
 import { json } from "@solidjs/router";
 import { eq } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { userSettings } from "../../lib/db/schema";
+import { type NewUserSettings, userSettings } from "../../lib/db/schema";
 
 export async function GET() {
 	try {
@@ -35,7 +35,7 @@ export async function POST({ request }: { request: Request }) {
 		const body = await request.json();
 		const { currency, indicators } = body;
 
-		const updateData: any = { updatedAt: new Date() };
+		const updateData: Partial<NewUserSettings> = { updatedAt: new Date() };
 		if (currency && ["USD", "EUR"].includes(currency)) {
 			updateData.currency = currency;
 		}
