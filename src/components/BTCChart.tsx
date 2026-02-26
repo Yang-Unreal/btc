@@ -1784,12 +1784,12 @@ export default function BTCChart() {
 				<div ref={chartContainer} class="w-full h-full opacity-90" />
 
 				{/* Bitget-style Legend Overlay */}
-				<div class="absolute top-1 left-2 z-30 pointer-events-none flex flex-col gap-0.5 select-none transition-all duration-200 overflow-hidden max-w-[calc(100%-20px)]">
+				<div class="absolute top-1 left-2 z-30 pointer-events-none flex flex-col gap-1 select-none transition-all duration-200 overflow-hidden max-w-[calc(100%-20px)]">
 					<Show when={legendData()}>
 						{(t) => (
 							<>
 								{/* Asset Info & OHLC */}
-								<div class="flex flex-wrap items-center gap-x-2 text-[11px] leading-tight font-bold whitespace-nowrap">
+								<div class="bg-black/20 backdrop-blur-sm p-1.5 rounded w-fit flex flex-wrap items-center gap-x-2 text-[11px] leading-tight font-bold whitespace-nowrap">
 									<span class="text-slate-200">
 										{activeAsset().symbol}/USDT · {interval().toUpperCase()} ·
 										Bitget
@@ -1807,106 +1807,114 @@ export default function BTCChart() {
 								</div>
 
 								{/* Indicators */}
-								<div class="flex flex-col gap-px mt-0.5">
-									<Show
-										when={indicators().ma20 && t().ma20 && t().ma20 !== "—"}
-									>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-red-500">MA 20 close 0</span>
-											<span class="text-red-500">{t().ma20}</span>
-										</div>
-									</Show>
-									<Show
-										when={indicators().ma60 && t().ma60 && t().ma60 !== "—"}
-									>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-green-500">MA 60 close 0</span>
-											<span class="text-green-500">{t().ma60}</span>
-										</div>
-									</Show>
-									<Show
-										when={indicators().ma120 && t().ma120 && t().ma120 !== "—"}
-									>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-blue-600">MA 120 close 0</span>
-											<span class="text-blue-600">{t().ma120}</span>
-										</div>
-									</Show>
-									<Show
-										when={indicators().ema20 && t().ema20 && t().ema20 !== "—"}
-									>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-yellow-400">EMA 20 close 0</span>
-											<span class="text-yellow-400">{t().ema20}</span>
-										</div>
-									</Show>
-									<Show
-										when={indicators().ema60 && t().ema60 && t().ema60 !== "—"}
-									>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-purple-400">EMA 60 close 0</span>
-											<span class="text-purple-400">{t().ema60}</span>
-										</div>
-									</Show>
-									<Show
-										when={
-											indicators().ema120 && t().ema120 && t().ema120 !== "—"
-										}
-									>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-orange-400">EMA 120 close 0</span>
-											<span class="text-orange-400">{t().ema120}</span>
-										</div>
-									</Show>
-									<Show
-										when={
-											indicators().donchianHigh &&
-											t().donchianHigh &&
-											t().donchianHigh !== "—"
-										}
-									>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-rose-500">20D HIGH</span>
-											<span class="text-rose-500">{t().donchianHigh}</span>
-										</div>
-									</Show>
-									<Show
-										when={
-											indicators().prevHigh &&
-											t().prevHigh &&
-											t().prevHigh !== "—"
-										}
-									>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-orange-500">PREV HIGH</span>
-											<span class="text-orange-500">{t().prevHigh}</span>
-										</div>
-									</Show>
-									<Show when={indicators().rsi && t().rsi}>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-[#7E57C2]">RSI 14</span>
-											<span class="text-[#7E57C2]">{t().rsi}</span>
-										</div>
-									</Show>
-									<Show when={indicators().atr && t().atr && t().atr !== "—"}>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-slate-400">ATR 14</span>
-											<span class="text-slate-400">{t().atr}</span>
-										</div>
-									</Show>
-									<Show when={indicators().fng && t().fng}>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-[#F7931A]">Fear & Greed</span>
-											<span class="text-[#F7931A]">{t().fng}</span>
-										</div>
-									</Show>
-									<Show when={indicators().tdSeq && t().tdLabel}>
-										<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-											<span class="text-emerald-500">TD Sequential</span>
-											<span class="text-emerald-500">{t().tdLabel}</span>
-										</div>
-									</Show>
-								</div>
+								<Show when={Object.values(indicators()).some((v) => v)}>
+									<div class="bg-black/20 backdrop-blur-sm p-1.5 rounded w-fit flex flex-col gap-px">
+										<Show
+											when={indicators().ma20 && t().ma20 && t().ma20 !== "—"}
+										>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-red-500">MA 20 close 0</span>
+												<span class="text-red-500">{t().ma20}</span>
+											</div>
+										</Show>
+										<Show
+											when={indicators().ma60 && t().ma60 && t().ma60 !== "—"}
+										>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-green-500">MA 60 close 0</span>
+												<span class="text-green-500">{t().ma60}</span>
+											</div>
+										</Show>
+										<Show
+											when={
+												indicators().ma120 && t().ma120 && t().ma120 !== "—"
+											}
+										>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-blue-600">MA 120 close 0</span>
+												<span class="text-blue-600">{t().ma120}</span>
+											</div>
+										</Show>
+										<Show
+											when={
+												indicators().ema20 && t().ema20 && t().ema20 !== "—"
+											}
+										>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-yellow-400">EMA 20 close 0</span>
+												<span class="text-yellow-400">{t().ema20}</span>
+											</div>
+										</Show>
+										<Show
+											when={
+												indicators().ema60 && t().ema60 && t().ema60 !== "—"
+											}
+										>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-purple-400">EMA 60 close 0</span>
+												<span class="text-purple-400">{t().ema60}</span>
+											</div>
+										</Show>
+										<Show
+											when={
+												indicators().ema120 && t().ema120 && t().ema120 !== "—"
+											}
+										>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-orange-400">EMA 120 close 0</span>
+												<span class="text-orange-400">{t().ema120}</span>
+											</div>
+										</Show>
+										<Show
+											when={
+												indicators().donchianHigh &&
+												t().donchianHigh &&
+												t().donchianHigh !== "—"
+											}
+										>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-rose-500">20D HIGH</span>
+												<span class="text-rose-500">{t().donchianHigh}</span>
+											</div>
+										</Show>
+										<Show
+											when={
+												indicators().prevHigh &&
+												t().prevHigh &&
+												t().prevHigh !== "—"
+											}
+										>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-orange-500">PREV HIGH</span>
+												<span class="text-orange-500">{t().prevHigh}</span>
+											</div>
+										</Show>
+										<Show when={indicators().rsi && t().rsi}>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-[#7E57C2]">RSI 14</span>
+												<span class="text-[#7E57C2]">{t().rsi}</span>
+											</div>
+										</Show>
+										<Show when={indicators().atr && t().atr && t().atr !== "—"}>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-slate-400">ATR 14</span>
+												<span class="text-slate-400">{t().atr}</span>
+											</div>
+										</Show>
+										<Show when={indicators().fng && t().fng}>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-[#F7931A]">Fear & Greed</span>
+												<span class="text-[#F7931A]">{t().fng}</span>
+											</div>
+										</Show>
+										<Show when={indicators().tdSeq && t().tdLabel}>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-emerald-500">TD Sequential</span>
+												<span class="text-emerald-500">{t().tdLabel}</span>
+											</div>
+										</Show>
+									</div>
+								</Show>
 							</>
 						)}
 					</Show>
