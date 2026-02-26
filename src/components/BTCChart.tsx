@@ -1278,6 +1278,8 @@ export default function BTCChart() {
 				type: "volume",
 			},
 			priceScaleId: "volume",
+			priceLineVisible: false,
+			lastValueVisible: true,
 		});
 
 		chart.priceScale("volume").applyOptions({
@@ -1299,6 +1301,8 @@ export default function BTCChart() {
 				lineWidth: 1,
 				crosshairMarkerVisible: false,
 				visible: false,
+				priceLineVisible: false,
+				lastValueVisible: true,
 			});
 
 		ema20Series = createLineSeries("#FACC15"); // yellow-400
@@ -1315,6 +1319,8 @@ export default function BTCChart() {
 			priceScaleId: "oscillators",
 			crosshairMarkerVisible: false,
 			lineWidth: 1 as const,
+			priceLineVisible: false,
+			lastValueVisible: true,
 		};
 		rsiSeries = chart.addSeries(LineSeries, {
 			...oscillatorOptions,
