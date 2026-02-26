@@ -15,6 +15,7 @@ export const openInterestHistory = pgTable("open_interest_history", {
 export const userSettings = pgTable("user_settings", {
 	id: text("id").primaryKey().default("default"),
 	currency: text("currency").notNull().default("USD"),
+	indicators: text("indicators"), // Store as JSON string since pg-core json might vary
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

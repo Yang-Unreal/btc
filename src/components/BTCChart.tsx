@@ -225,8 +225,6 @@ export default function BTCChart() {
 		ma20: false,
 		ma60: false,
 		ma120: false,
-		donchianHigh: false,
-		prevHigh: false,
 		ema20: false,
 		ema60: false,
 		ema120: false,
@@ -234,6 +232,42 @@ export default function BTCChart() {
 		fng: false,
 		tdSeq: false,
 		atr: false,
+	});
+
+	// Persistence: Fetch initial indicators
+	onMount(async () => {
+		try {
+			const res = await fetch("/api/settings");
+			const data = await res.json();
+			if (data.indicators) {
+				setIndicators(data.indicators);
+			}
+			if (data.currency) {
+				const currency = CURRENCIES.find((c) => c.code === data.currency);
+				if (currency) setActiveCurrency(currency);
+			}
+		} catch (e) {
+			console.error("Failed to load indicators from DB", e);
+		}
+	});
+
+	// Persistence: Save indicators when changed
+	let isFirstIndicatorsEffect = true;
+	createEffect(() => {
+		const currentIndicators = indicators();
+		const currentCurrency = activeCurrency();
+		if (isFirstIndicatorsEffect) {
+			isFirstIndicatorsEffect = false;
+			return;
+		}
+		// Debounce or at least run in background
+		fetch("/api/settings", {
+			method: "POST",
+			body: JSON.stringify({
+				indicators: currentIndicators,
+				currency: currentCurrency.code,
+			}),
+		}).catch((err) => console.error("Failed to save settings", err));
 	});
 
 	const [btcData, setBtcData] = createSignal<BTCData[]>([]);
@@ -276,20 +310,6 @@ export default function BTCChart() {
 			color: "bg-blue-600",
 			textColor: "text-blue-600",
 			borderColor: "border-blue-600",
-		},
-		{
-			key: "donchianHigh",
-			label: "20D High",
-			color: "bg-rose-500",
-			textColor: "text-rose-500",
-			borderColor: "border-rose-500",
-		},
-		{
-			key: "prevHigh",
-			label: "Prev High",
-			color: "bg-orange-500",
-			textColor: "text-orange-500",
-			borderColor: "border-orange-500",
 		},
 		{
 			key: "ema20",

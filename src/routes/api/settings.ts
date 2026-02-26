@@ -18,7 +18,12 @@ export async function GET() {
 				.from(userSettings)
 				.where(eq(userSettings.id, "default"));
 		}
-		return json({ currency: settings[0].currency });
+		return json({
+			currency: settings[0].currency,
+			indicators: settings[0].indicators
+				? JSON.parse(settings[0].indicators)
+				: null,
+		});
 	} catch (e) {
 		console.error(e);
 		return json({ error: "Failed to fetch settings" }, { status: 500 });
@@ -28,19 +33,27 @@ export async function GET() {
 export async function POST({ request }: { request: Request }) {
 	try {
 		const body = await request.json();
-		const { currency } = body;
+		const { currency, indicators } = body;
 
-		if (!currency || !["USD", "EUR"].includes(currency)) {
-			return json({ error: "Invalid currency" }, { status: 400 });
+		const updateData: any = { updatedAt: new Date() };
+		if (currency && ["USD", "EUR"].includes(currency)) {
+			updateData.currency = currency;
+		}
+		if (indicators) {
+			updateData.indicators = JSON.stringify(indicators);
+		}
+
+		if (Object.keys(updateData).length <= 1) {
+			return json({ error: "No valid data to update" }, { status: 400 });
 		}
 
 		// Update or insert
 		await db
 			.insert(userSettings)
-			.values({ id: "default", currency, updatedAt: new Date() })
+			.values({ id: "default", ...updateData })
 			.onConflictDoUpdate({
 				target: userSettings.id,
-				set: { currency, updatedAt: new Date() },
+				set: updateData,
 			});
 
 		return json({ success: true });
