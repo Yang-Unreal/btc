@@ -40,7 +40,6 @@ import type {
 } from "../lib/types";
 
 type BTCData = CandlestickData<UTCTimestamp> & { volume?: number };
-type RawKlineData = [number, number, number, number, number, number];
 
 // ... [Existing Interfaces for TooltipData, FNGData, etc. remain unchanged] ...
 interface TooltipData {
@@ -568,16 +567,24 @@ export default function BTCChart() {
 			const data = await response.json();
 			if (data.error) throw new Error(data.error);
 
-			if (!Array.isArray(data)) return [];
+			// Filter out any potential duplicates and sort by time
+			const seen = new Set<number>();
+			const mappedData: BTCData[] = [];
 
-			const mappedData = data.map((item: RawKlineData) => ({
-				time: Math.floor(item[0] / 1000) as UTCTimestamp,
-				open: item[1],
-				high: item[2],
-				low: item[3],
-				close: item[4],
-				volume: item[5],
-			}));
+			for (const item of data) {
+				const ts = Math.floor(item[0] / 1000);
+				if (!seen.has(ts)) {
+					seen.add(ts);
+					mappedData.push({
+						time: ts as UTCTimestamp,
+						open: item[1],
+						high: item[2],
+						low: item[3],
+						close: item[4],
+						volume: item[5],
+					});
+				}
+			}
 
 			return mappedData.sort(
 				(a: BTCData, b: BTCData) => (a.time as number) - (b.time as number),
@@ -1166,39 +1173,55 @@ export default function BTCChart() {
 			prevHighSeries,
 			rsiSeries,
 			fngSeries,
+			atrSeries,
 		].forEach((s) => {
-			if (s) s.setData([]);
+			if (s) {
+				try {
+					s.setData([]);
+				} catch (e) {
+					console.warn("Failed to clear series data:", e);
+				}
+			}
 		});
 
-		const history = await fetchHistoricalData(
-			activeInterval,
-			currencyConfig.code,
-			assetConfig.symbol,
-		);
+		try {
+			const history = await fetchHistoricalData(
+				activeInterval,
+				currencyConfig.code,
+				assetConfig.symbol,
+			);
 
-		if (history.length > 0) {
-			candlestickSeries.setData(history);
-			if (volumeSeries) {
-				const volumeData = history.map((d) => ({
-					time: d.time,
-					value: d.volume || 0,
-					color:
-						d.close >= d.open
-							? "rgba(16, 185, 129, 0.5)"
-							: "rgba(239, 68, 68, 0.5)",
-				}));
-				volumeSeries.setData(volumeData);
+			if (history.length > 0) {
+				candlestickSeries.setData(history);
+				if (volumeSeries) {
+					const volumeData = history.map((d) => ({
+						time: d.time,
+						value: d.volume || 0,
+						color:
+							d.close >= d.open
+								? "rgba(16, 185, 129, 0.5)"
+								: "rgba(239, 68, 68, 0.5)",
+					}));
+					volumeSeries.setData(volumeData);
+				}
+				setBtcData(history);
+				setCurrentPrice(history[history.length - 1].close);
+
+				chart?.timeScale().fitContent();
+				// Use requestAnimationFrame to ensure chart has processed the main data before indicators
+				requestAnimationFrame(() => {
+					syncAllIndicators();
+					updateLegendToLatest(history);
+				});
 			}
-			setBtcData(history);
-			setCurrentPrice(history[history.length - 1].close);
 
-			chart?.timeScale().fitContent();
-			syncAllIndicators();
-			updateLegendToLatest(history);
+			connectWebSocket(activeInterval, assetConfig);
+		} catch (err) {
+			console.error("Critical error in loadData:", err);
+			setError("A serious error occurred while loading data");
+		} finally {
+			setIsLoading(false);
 		}
-
-		connectWebSocket(activeInterval, assetConfig);
-		setIsLoading(false);
 	};
 
 	onMount(() => {
