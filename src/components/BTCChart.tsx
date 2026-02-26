@@ -213,8 +213,8 @@ export default function BTCChart() {
 
 	// Dropdown States
 
-	const [showCurrencyMenu, setShowCurrencyMenu] = createSignal(false);
 	const [showAssetMenu, setShowAssetMenu] = createSignal(false);
+	const [assetSearchQuery, setAssetSearchQuery] = createSignal("");
 	const [showIndicatorMenu, setShowIndicatorMenu] = createSignal(false);
 
 	const [tooltip, setTooltip] = createSignal<TooltipData | null>(null);
@@ -1632,81 +1632,106 @@ export default function BTCChart() {
 									<button
 										type="button"
 										onClick={() => setShowAssetMenu(!showAssetMenu())}
-										class="flex items-center gap-1 text-sm font-black text-white uppercase tracking-tighter hover:text-indigo-400 transition-colors"
+										class="flex items-center gap-1.5 text-sm font-black text-white uppercase tracking-tighter hover:text-indigo-400 transition-colors group"
 									>
-										{activeAsset().name}
+										<span class="text-white group-hover:text-indigo-400 transition-colors">
+											{activeAsset().symbol}
+										</span>
+										<span class="text-slate-500 font-medium">/</span>
+										<span class="text-slate-500 font-medium">USDT</span>
 										<IconChevronDown />
 									</button>
 									<Show when={showAssetMenu()}>
 										<div
 											class="fixed inset-0 z-40"
-											onClick={() => setShowAssetMenu(false)}
+											onClick={() => {
+												setShowAssetMenu(false);
+												setAssetSearchQuery("");
+											}}
 											onKeyDown={(e) => {
-												if (e.key === "Escape") setShowAssetMenu(false);
+												if (e.key === "Escape") {
+													setShowAssetMenu(false);
+													setAssetSearchQuery("");
+												}
 											}}
 											tabIndex={-1}
 											role="button"
 										/>
-										<div class="absolute left-0 top-full mt-1 w-48 bg-[#151921] border border-white/10 shadow-2xl z-50 py-1 max-h-64 overflow-y-auto no-scrollbar">
-											<For each={SUPPORTED_ASSETS}>
-												{(asset) => (
-													<button
-														type="button"
-														class={`w-full text-left px-3 py-2 text-[11px] font-bold hover:bg-white/5 flex items-center justify-between ${activeAsset().symbol === asset.symbol ? "text-indigo-400 bg-white/5" : "text-slate-400"}`}
-														onClick={() => {
-															setActiveAsset(asset);
-															setShowAssetMenu(false);
-														}}
-													>
-														<span>{asset.name}</span>
-														<span class="font-mono text-[9px] opacity-50">
-															{asset.symbol}
-														</span>
-													</button>
-												)}
-											</For>
-										</div>
-									</Show>
-								</div>
-
-								<span class="text-white/20 font-light -translate-y-px">|</span>
-
-								{/* Currency Selector */}
-								<div class="relative">
-									<button
-										type="button"
-										onClick={() => setShowCurrencyMenu(!showCurrencyMenu())}
-										class="flex items-center gap-1 text-slate-500 font-bold hover:text-white transition-colors text-[10px] uppercase tracking-widest"
-									>
-										{activeCurrency().code}
-										<IconChevronDown />
-									</button>
-
-									<Show when={showCurrencyMenu()}>
-										<div
-											class="fixed inset-0 z-40"
-											onClick={() => setShowCurrencyMenu(false)}
-											onKeyDown={(e) => {
-												if (e.key === "Escape") setShowCurrencyMenu(false);
-											}}
-											tabIndex={-1}
-											role="button"
-										/>
-										<div class="absolute left-0 top-full mt-1 w-24 bg-[#151921] border border-white/10 shadow-2xl z-50 py-1">
-											<For each={CURRENCIES}>
-												{(c) => (
-													<button
-														type="button"
-														class={`w-full text-left px-3 py-2 text-[10px] font-black hover:bg-white/5 uppercase tracking-widest ${activeCurrency().code === c.code ? "text-indigo-400 bg-white/5" : "text-slate-400"}`}
-														onClick={() => {
-															setActiveCurrency(c);
-															setShowCurrencyMenu(false);
-														}}
-													>
-														{c.code}
-													</button>
-												)}
-											</For>
+										<div class="absolute left-0 top-full mt-1 w-64 bg-[#151921] border border-white/10 shadow-2xl z-50 overflow-hidden flex flex-col">
+											<div class="p-2 border-b border-white/5 bg-white/2">
+												<input
+													type="text"
+													placeholder="Search pair..."
+													class="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-[10px] font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+													value={assetSearchQuery()}
+													onInput={(e) =>
+														setAssetSearchQuery(e.currentTarget.value)
+													}
+													onClick={(e) => e.stopPropagation()}
+													autofocus
+												/>
+											</div>
+											<div class="max-h-80 overflow-y-auto no-scrollbar py-1">
+												<div class="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 mb-1">
+													Spot Pairs
+												</div>
+												<For
+													each={SUPPORTED_ASSETS.filter(
+														(a) =>
+															a.name
+																.toLowerCase()
+																.includes(assetSearchQuery().toLowerCase()) ||
+															a.symbol
+																.toLowerCase()
+																.includes(assetSearchQuery().toLowerCase()),
+													)}
+												>
+													{(asset) => (
+														<button
+															type="button"
+															class={`w-full text-left px-3 py-2.5 text-[11px] font-bold hover:bg-white/5 flex items-center justify-between transition-colors border-l-2 ${activeAsset().symbol === asset.symbol ? "border-indigo-500 bg-white/5 text-white" : "border-transparent text-slate-400"}`}
+															onClick={() => {
+																setActiveAsset(asset);
+																setShowAssetMenu(false);
+																setAssetSearchQuery("");
+															}}
+														>
+															<div class="flex items-center gap-2">
+																<span
+																	class={
+																		activeAsset().symbol === asset.symbol
+																			? "text-white"
+																			: "text-slate-200"
+																	}
+																>
+																	{asset.symbol}
+																</span>
+																<span class="text-slate-500">/USDT</span>
+															</div>
+															<span class="font-mono text-[9px] opacity-40 shrink-0 uppercase">
+																{asset.name}
+															</span>
+														</button>
+													)}
+												</For>
+												<Show
+													when={
+														SUPPORTED_ASSETS.filter(
+															(a) =>
+																a.name
+																	.toLowerCase()
+																	.includes(assetSearchQuery().toLowerCase()) ||
+																a.symbol
+																	.toLowerCase()
+																	.includes(assetSearchQuery().toLowerCase()),
+														).length === 0
+													}
+												>
+													<div class="px-3 py-4 text-center text-[10px] text-slate-600 font-bold uppercase tracking-widest">
+														No Results
+													</div>
+												</Show>
+											</div>
 										</div>
 									</Show>
 								</div>
