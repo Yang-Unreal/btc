@@ -1,5 +1,13 @@
 // @refresh reload
 import { createHandler, StartServer } from "@solidjs/start/server";
+import { startMAMonitor } from "./monitor/ma-convergence";
+
+// 确保在服务器环境下只启动一次监控
+const globalAny = globalThis as any;
+if (typeof window === "undefined" && !globalAny.__MA_MONITOR_STARTED__) {
+	globalAny.__MA_MONITOR_STARTED__ = true;
+	startMAMonitor().catch(console.error);
+}
 
 export default createHandler(() => {
 	return (

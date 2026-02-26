@@ -277,6 +277,23 @@ function ProfileContent() {
 						</button>
 					</div>
 
+					<div class="flex items-center gap-2 bg-zinc-900/80 p-1 rounded-xl border border-white/10">
+						<button
+							type="button"
+							onClick={() =>
+								globalStore.setNotificationsEnabled(
+									!globalStore.notificationsEnabled(),
+								)
+							}
+							class={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${globalStore.notificationsEnabled() ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}
+						>
+							<div
+								class={`w-2 h-2 rounded-full ${globalStore.notificationsEnabled() ? "bg-emerald-400 animate-pulse" : "bg-rose-400"}`}
+							/>
+							Telegram {globalStore.notificationsEnabled() ? "ON" : "OFF"}
+						</button>
+					</div>
+
 					<button
 						type="button"
 						onClick={() => setShowModal(true)}

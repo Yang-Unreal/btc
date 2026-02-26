@@ -20,6 +20,7 @@ export async function GET() {
 		}
 		return json({
 			currency: settings[0].currency,
+			notificationsEnabled: settings[0].notificationsEnabled === "true",
 			indicators: settings[0].indicators
 				? JSON.parse(settings[0].indicators)
 				: null,
@@ -33,7 +34,7 @@ export async function GET() {
 export async function POST({ request }: { request: Request }) {
 	try {
 		const body = await request.json();
-		const { currency, indicators } = body;
+		const { currency, indicators, notificationsEnabled } = body;
 
 		const updateData: Partial<NewUserSettings> = { updatedAt: new Date() };
 		if (currency && ["USD", "EUR"].includes(currency)) {
@@ -41,6 +42,9 @@ export async function POST({ request }: { request: Request }) {
 		}
 		if (indicators) {
 			updateData.indicators = JSON.stringify(indicators);
+		}
+		if (typeof notificationsEnabled === "boolean") {
+			updateData.notificationsEnabled = notificationsEnabled ? "true" : "false";
 		}
 
 		if (Object.keys(updateData).length <= 1) {

@@ -9,6 +9,7 @@ interface AssetHolding {
 
 function createGlobalStore() {
 	const [currency, setCurrency] = createSignal<"USD" | "EUR">("USD");
+	const [notificationsEnabled, setNotificationsEnabled] = createSignal(true);
 	const [loaded, setLoaded] = createSignal(false);
 	const [portfolio, setPortfolio] = createSignal<Record<string, AssetHolding>>(
 		{},
@@ -22,6 +23,9 @@ function createGlobalStore() {
 			if (data.currency && data.currency !== currency()) {
 				setCurrency(data.currency);
 				localStorage.setItem("currency", data.currency);
+			}
+			if (typeof data.notificationsEnabled === "boolean") {
+				setNotificationsEnabled(data.notificationsEnabled);
 			}
 		} catch (e) {
 			// On error, load from localStorage
@@ -66,9 +70,24 @@ function createGlobalStore() {
 		}
 	};
 
+	const saveNotificationsEnabled = async (enabled: boolean) => {
+		setNotificationsEnabled(enabled);
+		try {
+			await fetch("/api/settings", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ notificationsEnabled: enabled }),
+			});
+		} catch (e) {
+			console.error("Failed to save notification settings:", e);
+		}
+	};
+
 	return {
 		currency,
 		setCurrency: saveCurrency,
+		notificationsEnabled,
+		setNotificationsEnabled: saveNotificationsEnabled,
 		loadSettings,
 		loaded,
 		portfolio,
