@@ -232,6 +232,7 @@ export default function BTCChart() {
 		fng: false,
 		tdSeq: false,
 		atr: false,
+		volume: true,
 	});
 
 	// Persistence: Fetch initial indicators
@@ -290,6 +291,13 @@ export default function BTCChart() {
 	// Indicator Config (omitted for brevity, same as original)
 
 	const indicatorConfig = [
+		{
+			key: "volume",
+			label: "Volume",
+			color: "bg-teal-500/50",
+			textColor: "text-teal-400",
+			borderColor: "border-teal-500/20",
+		},
 		{
 			key: "ma20",
 			label: "MA 20",
@@ -995,6 +1003,7 @@ export default function BTCChart() {
 		rsiSeries?.applyOptions({ visible: !!currentInd.rsi });
 		fngSeries?.applyOptions({ visible: !!currentInd.fng });
 		atrSeries?.applyOptions({ visible: !!currentInd.atr });
+		volumeSeries?.applyOptions({ visible: !!currentInd.volume });
 
 		if (currentInd.rsi || currentInd.fng || currentInd.atr) {
 			chart
