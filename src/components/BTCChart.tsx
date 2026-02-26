@@ -1296,7 +1296,7 @@ export default function BTCChart() {
 		const createLineSeries = (color: string) =>
 			(chart as IChartApi).addSeries(LineSeries, {
 				color,
-				lineWidth: 2,
+				lineWidth: 1,
 				crosshairMarkerVisible: false,
 				visible: false,
 			});
@@ -1314,6 +1314,7 @@ export default function BTCChart() {
 		const oscillatorOptions = {
 			priceScaleId: "oscillators",
 			crosshairMarkerVisible: false,
+			lineWidth: 1 as const,
 		};
 		rsiSeries = chart.addSeries(LineSeries, {
 			...oscillatorOptions,
