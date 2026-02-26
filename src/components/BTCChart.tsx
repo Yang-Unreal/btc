@@ -1789,7 +1789,7 @@ export default function BTCChart() {
 						{(t) => (
 							<>
 								{/* Asset Info & OHLC */}
-								<div class="bg-black/20 backdrop-blur-sm p-1.5 rounded w-fit flex flex-wrap items-center gap-x-2 text-[11px] leading-tight font-bold whitespace-nowrap">
+								<div class="bg-black/20 p-1.5 rounded w-fit flex flex-wrap items-center gap-x-2 text-[11px] leading-tight font-bold whitespace-nowrap">
 									<span class="text-slate-200">
 										{activeAsset().symbol}/USDT · {interval().toUpperCase()} ·
 										Bitget
@@ -1808,7 +1808,7 @@ export default function BTCChart() {
 
 								{/* Indicators */}
 								<Show when={Object.values(indicators()).some((v) => v)}>
-									<div class="bg-black/20 backdrop-blur-sm p-1.5 rounded w-fit flex flex-col gap-px">
+									<div class="bg-black/20 p-1.5 rounded w-fit flex flex-col gap-px">
 										<Show
 											when={indicators().ma20 && t().ma20 && t().ma20 !== "—"}
 										>
