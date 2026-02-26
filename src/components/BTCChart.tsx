@@ -1207,8 +1207,8 @@ export default function BTCChart() {
 		chart = createChart(chartContainer, {
 			layout: { background: { color: "transparent" }, textColor: "#64748b" },
 			grid: {
-				vertLines: { color: "#f1f5f9" },
-				horzLines: { color: "#f1f5f9" },
+				vertLines: { color: "rgba(241, 245, 249, 0.08)" },
+				horzLines: { color: "rgba(241, 245, 249, 0.08)" },
 			},
 			width: chartContainer.clientWidth,
 			height: chartContainer.clientHeight,
