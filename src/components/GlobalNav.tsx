@@ -42,22 +42,22 @@ const GlobalNav: Component = () => {
 								<IconTerminal class="w-5 h-5 text-indigo-400" />
 							</div>
 							<div class="flex flex-col">
-								<span class="font-black text-sm tracking-tighter text-white leading-none uppercase">
+								<span class="hidden sm:block font-black text-sm tracking-tighter text-white leading-none uppercase">
 									Homepage
 								</span>
 							</div>
 						</A>
 					</div>
 
-					<div class="flex gap-4 items-center">
+					<div class="flex gap-2 sm:gap-4 items-center">
 						{/* Portfolio Link */}
 						<A
 							href="/profile"
-							class="hidden md:flex items-center gap-3 px-4 py-2 bg-linear-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 rounded-lg hover:from-indigo-600/30 hover:to-purple-600/30 transition-all duration-200"
+							class="flex items-center gap-2 px-3 py-2 bg-linear-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 rounded-lg hover:from-indigo-600/30 hover:to-purple-600/30 transition-all duration-200"
 							activeClass="bg-gradient-to-r from-indigo-600/40 to-purple-600/40 border-indigo-400/50 shadow-lg shadow-indigo-500/20"
 						>
-							<span class="w-3 h-3 bg-linear-to-r from-indigo-400 to-purple-400 rounded-full shadow-lg shadow-indigo-400/50" />
-							<span class="text-xs font-bold text-slate-200 uppercase tracking-widest">
+							<span class="w-2 h-2 sm:w-3 sm:h-3 bg-linear-to-r from-indigo-400 to-purple-400 rounded-full shadow-lg shadow-indigo-400/50" />
+							<span class="text-[10px] sm:text-xs font-bold text-slate-200 uppercase tracking-widest leading-none">
 								Portfolio
 							</span>
 						</A>
@@ -67,7 +67,7 @@ const GlobalNav: Component = () => {
 							<button
 								type="button"
 								onClick={() => setCurrency("USD")}
-								class={`px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${
+								class={`px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold rounded-lg transition-all duration-200 ${
 									loaded() && currency() === "USD"
 										? "bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
 										: "text-slate-400 hover:text-slate-200 hover:bg-white/5"
@@ -78,7 +78,7 @@ const GlobalNav: Component = () => {
 							<button
 								type="button"
 								onClick={() => setCurrency("EUR")}
-								class={`px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${
+								class={`px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold rounded-lg transition-all duration-200 ${
 									loaded() && currency() === "EUR"
 										? "bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
 										: "text-slate-400 hover:text-slate-200 hover:bg-white/5"
@@ -89,12 +89,15 @@ const GlobalNav: Component = () => {
 						</div>
 
 						{/* Live Indicator */}
-						<div class="hidden md:flex items-center px-4 py-2 bg-linear-to-r from-emerald-600/20 to-emerald-700/20 text-emerald-300 border border-emerald-500/30 rounded-lg shadow-inner text-xs font-bold uppercase tracking-widest gap-3">
-							<span class="relative flex h-2.5 w-2.5">
+						<div class="flex items-center px-3 sm:px-4 py-2 bg-linear-to-r from-emerald-600/20 to-emerald-700/20 text-emerald-300 border border-emerald-500/30 rounded-lg shadow-inner text-[10px] sm:text-xs font-bold uppercase tracking-widest gap-2 sm:gap-3">
+							<span class="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
 								<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-								<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-lg shadow-emerald-500/50" />
+								<span class="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500 shadow-lg shadow-emerald-500/50" />
 							</span>
-							<span class="text-emerald-200">Live Operations</span>
+							<span class="hidden md:inline text-emerald-200">
+								Live Operations
+							</span>
+							<span class="md:hidden text-emerald-200">Live</span>
 						</div>
 					</div>
 				</div>

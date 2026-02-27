@@ -10,6 +10,7 @@ import {
 	Show,
 } from "solid-js";
 import AllocationChart from "~/components/AllocationChart";
+import PriceAlerts from "../components/PriceAlerts";
 import { formatCryptoPrice } from "../lib/format";
 import { globalStore } from "../lib/store";
 
@@ -640,6 +641,11 @@ function ProfileContent() {
 								</div>
 							</div>
 						</Card>
+
+						{/* Price Alerts Section */}
+						<div class="mt-6">
+							<PriceAlerts />
+						</div>
 					</div>
 				</div>
 			</Show>

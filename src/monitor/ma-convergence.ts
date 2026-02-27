@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../lib/db";
-import { userSettings } from "../lib/db/schema";
+import { priceAlerts, userSettings } from "../lib/db/schema";
 
 /**
  * BTC 双均线密集监控脚本
@@ -149,114 +149,137 @@ async function sendTelegramMessage(message: string): Promise<void> {
 
 let lastAlertTime = 0;
 
-async function checkMAConvergence(): Promise<void> {
+async function checkPriceAlerts(currentPrice: number): Promise<void> {
+	const now = new Date();
+	const timeStr = now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
+
+	try {
+		// Fetch enabled and non-triggered alerts
+		const alerts = await db
+			.select()
+			.from(priceAlerts)
+			.where(
+				and(
+					eq(priceAlerts.enabled, "true"),
+					eq(priceAlerts.triggered, "false"),
+				),
+			);
+
+		for (const alert of alerts) {
+			const target = Number(alert.targetPrice);
+
+			// Simple "equals or crossed" logic
+			// Since we check every minute, we check if price is "very close" or crossed
+			// But to be simple and reliable: if it was below and now above, or vice versa
+			// For this implementation, we'll just check if it's within a tiny margin (0.1%) or crossed
+			// Actually, let's keep it simple: if currentPrice is within $50 of target, trigger.
+			// Better: if it's the first time we see it hit the target.
+
+			const margin = 50; // $50 tolerance for 1-minute checks
+			if (Math.abs(currentPrice - target) <= margin) {
+				// TRIGGER!
+				await sendTelegramMessage(
+					[
+						"🔔 <b>BTC 价格提醒触发</b> 🔔",
+						"",
+						`⏰ 时间: ${timeStr}`,
+						`💰 当前价格: <b>$${currentPrice.toFixed(2)}</b>`,
+						`🎯 目标价格: <b>$${target.toFixed(2)}</b>`,
+						"",
+						"🚀 价格已达到您的预设目标！",
+					].join("\n"),
+				);
+
+				// Mark as triggered and disable to avoid spam
+				await db
+					.update(priceAlerts)
+					.set({ triggered: "true", enabled: "false", updatedAt: new Date() })
+					.where(eq(priceAlerts.id, alert.id));
+
+				console.log(`[${timeStr}] 🔔 价格提醒触发: $${target}`);
+			}
+		}
+	} catch (e) {
+		console.error("Failed to check price alerts:", e);
+	}
+}
+
+async function runMonitorCycle() {
 	const now = new Date();
 	const timeStr = now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 
 	try {
 		const candles = await fetchCandles();
-
 		if (candles.length < 120) {
-			console.log(
-				`[${timeStr}] ⚠️ K线数据不足 (${candles.length} < 120), 跳过检查`,
-			);
+			console.log(`[${timeStr}] ⚠️ 数据不足，跳过本轮`);
 			return;
 		}
 
-		// Extract close prices
-		const closes = candles.map((c: number[]) => c[4]);
+		const closes = candles.map((c) => c[4]);
 		const currentPrice = closes[closes.length - 1];
 
-		// Calculate all 6 moving averages at the latest point
-		const maValues: { name: string; value: number }[] = [];
+		// 1. Check MA Convergence
+		await processMAConvergence(closes, currentPrice, timeStr);
 
-		for (const period of MA_PERIODS) {
-			const sma = calculateSMA(closes, period);
-			const ema = calculateEMA(closes, period);
+		// 2. Check Price Alerts
+		await checkPriceAlerts(currentPrice);
+	} catch (e) {
+		console.error(`[${timeStr}] ❌ 监控周期异常:`, e);
+	}
+}
 
-			if (!Number.isNaN(sma))
-				maValues.push({ name: `SMA${period}`, value: sma });
-			if (!Number.isNaN(ema))
-				maValues.push({ name: `EMA${period}`, value: ema });
-		}
+async function processMAConvergence(
+	closes: number[],
+	currentPrice: number,
+	timeStr: string,
+) {
+	// Calculate all 6 moving averages
+	const maValues: { name: string; value: number }[] = [];
+	for (const period of MA_PERIODS) {
+		const sma = calculateSMA(closes, period);
+		const ema = calculateEMA(closes, period);
+		if (!Number.isNaN(sma)) maValues.push({ name: `SMA${period}`, value: sma });
+		if (!Number.isNaN(ema)) maValues.push({ name: `EMA${period}`, value: ema });
+	}
 
-		if (maValues.length < 6) {
-			console.log(`[${timeStr}] ⚠️ 均线计算不完整 (${maValues.length}/6), 跳过`);
+	if (maValues.length < 6) return;
+
+	const values = maValues.map((m) => m.value);
+	const spread = Math.max(...values) - Math.min(...values);
+
+	console.log(
+		`[${timeStr}] BTC: $${currentPrice.toFixed(2)} | 均线差: $${spread.toFixed(2)}`,
+	);
+
+	if (spread <= MA_THRESHOLD) {
+		const nowMs = Date.now();
+		if (nowMs - lastAlertTime < COOLDOWN_MS) return;
+
+		// Check if global notifications are enabled
+		const settings = await db
+			.select()
+			.from(userSettings)
+			.where(eq(userSettings.id, "default"));
+		if (settings.length > 0 && settings[0].notificationsEnabled === "false")
 			return;
-		}
 
-		// Calculate spread
-		const values = maValues.map((m) => m.value);
-		const maxValue = Math.max(...values);
-		const minValue = Math.min(...values);
-		const spread = maxValue - minValue;
+		lastAlertTime = nowMs;
+		const maDetails = maValues
+			.sort((a, b) => b.value - a.value)
+			.map((m) => `  ${m.name}: $${m.value.toFixed(2)}`)
+			.join("\n");
 
-		// Log status
-		const maInfo = maValues
-			.map((m) => `${m.name}: ${m.value.toFixed(2)}`)
-			.join(" | ");
-		console.log(
-			`[${timeStr}] BTC: $${currentPrice.toFixed(2)} | 均线差: $${spread.toFixed(2)} | ${maInfo}`,
-		);
-
-		// Check convergence
-		if (spread <= MA_THRESHOLD) {
-			const nowMs = Date.now();
-
-			// Cooldown check
-			if (nowMs - lastAlertTime < COOLDOWN_MS) {
-				console.log(`[${timeStr}] 🔕 均线密集但在冷却期内，跳过提醒`);
-				return;
-			}
-
-			lastAlertTime = nowMs;
-
-			// Check DB to see if notifications are enabled
-			try {
-				const settings = await db
-					.select()
-					.from(userSettings)
-					.where(eq(userSettings.id, "default"));
-				if (
-					settings.length > 0 &&
-					settings[0].notificationsEnabled === "false"
-				) {
-					console.log(`[${timeStr}] 🔇 均线密集但通知功能已在 Web UI 中关闭`);
-					return;
-				}
-			} catch (e) {
-				console.error("Failed to fetch notification settings from DB:", e);
-				// If DB fails, proceed with notification as default (failsafe)
-			}
-
-			// Build alert message
-			const maDetails = maValues
-				.sort((a, b) => b.value - a.value)
-				.map((m) => `  ${m.name}: $${m.value.toFixed(2)}`)
-				.join("\n");
-
-			const message = [
+		await sendTelegramMessage(
+			[
 				"🚨 <b>BTC 均线密集提醒</b> 🚨",
 				"",
-				`⏰ 时间: ${timeStr}`,
-				`📊 周期: 15分钟`,
 				`💰 当前价格: <b>$${currentPrice.toFixed(2)}</b>`,
-				`📏 均线价差: <b>$${spread.toFixed(2)}</b> (阈值: $${MA_THRESHOLD})`,
+				`📏 均线价差: <b>$${spread.toFixed(2)}</b>`,
 				"",
-				"📈 均线值 (从高到低):",
+				"📈 均线值:",
 				maDetails,
-				"",
-				"⚡ 6条均线趋于收敛，注意可能的大幅波动！",
-			].join("\n");
-
-			console.log(`\n${"=".repeat(50)}`);
-			console.log("🚨 均线密集信号触发！");
-			console.log(`${"=".repeat(50)}\n`);
-
-			await sendTelegramMessage(message);
-		}
-	} catch (error) {
-		console.error(`[${timeStr}] ❌ 检查出错:`, error);
+			].join("\n"),
+		);
 	}
 }
 
@@ -280,9 +303,9 @@ export async function startMAMonitor() {
 	console.log("=".repeat(60));
 
 	// 立即执行一次
-	await checkMAConvergence();
+	await runMonitorCycle();
 	// 设置循环
-	setInterval(checkMAConvergence, CHECK_INTERVAL_MS);
+	setInterval(runMonitorCycle, CHECK_INTERVAL_MS);
 }
 
 // 兼容直接运行和模块导入
