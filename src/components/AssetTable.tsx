@@ -190,6 +190,9 @@ export default function AssetTable() {
 							<th class="py-3 px-4 text-right text-[10px] font-bold uppercase tracking-wider">
 								7d
 							</th>
+							<th class="py-3 px-4 text-right text-[10px] font-bold uppercase tracking-wider">
+								1y
+							</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-white/5">
@@ -198,7 +201,7 @@ export default function AssetTable() {
 							fallback={
 								<tr>
 									<td
-										colspan="8"
+										colspan="9"
 										class="py-12 text-center text-rose-400 text-xs"
 									>
 										{error()}
@@ -211,7 +214,7 @@ export default function AssetTable() {
 								fallback={
 									<tr>
 										<td
-											colspan="8"
+											colspan="9"
 											class="py-12 text-center text-slate-500 text-xs"
 										>
 											Loading market data...
@@ -272,6 +275,7 @@ export default function AssetTable() {
 											<ChangeCell value={asset.change1h} />
 											<ChangeCell value={asset.change24h} />
 											<ChangeCell value={asset.change7d} />
+											<ChangeCell value={asset.change1y} />
 										</tr>
 									)}
 								</For>
