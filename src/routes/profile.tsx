@@ -269,7 +269,22 @@ function ProfileContent() {
 							<div
 								class={`w-2 h-2 rounded-full ${globalStore.notificationsEnabled() ? "bg-emerald-400 animate-pulse" : "bg-rose-400"}`}
 							/>
-							Telegram {globalStore.notificationsEnabled() ? "ON" : "OFF"}
+							15M System {globalStore.notificationsEnabled() ? "ON" : "OFF"}
+						</button>
+
+						<button
+							type="button"
+							onClick={() =>
+								globalStore.setFourHAlertEnabled(
+									!globalStore.fourHAlertEnabled(),
+								)
+							}
+							class={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-2 ${globalStore.fourHAlertEnabled() ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}
+						>
+							<div
+								class={`w-2 h-2 rounded-full ${globalStore.fourHAlertEnabled() ? "bg-emerald-400 animate-pulse" : "bg-rose-400"}`}
+							/>
+							4H System {globalStore.fourHAlertEnabled() ? "ON" : "OFF"}
 						</button>
 					</div>
 
@@ -363,9 +378,12 @@ function ProfileContent() {
 							<For each={Object.entries(portfolioData().holdings)}>
 								{([ticker, h]) => {
 									const getPrice = () => prices()[ticker];
-									const getValue = () =>
-										getPrice() ? h.amount * getPrice() : 0;
-									const pnlVal = getValue() - h.totalCost + h.realizedPnL;
+									const getValue = () => {
+										const p = getPrice();
+										return p !== undefined ? h.amount * p : 0; // Fallback to 0 keeps the return type strictly `number`
+									};
+									const getPnlVal = () =>
+										getValue() - h.totalCost + h.realizedPnL;
 
 									return (
 										<div class="p-4 flex items-center justify-between">
@@ -387,10 +405,10 @@ function ProfileContent() {
 													{formatCryptoPrice(getValue(), currency())}
 												</div>
 												<div
-													class={`text-[10px] font-mono ${pnlVal >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+													class={`text-[10px] font-mono ${getPnlVal() >= 0 ? "text-emerald-400" : "text-rose-400"}`}
 												>
-													{pnlVal >= 0 ? "+" : ""}
-													{formatCryptoPrice(pnlVal, currency())}
+													{getPnlVal() >= 0 ? "+" : ""}
+													{formatCryptoPrice(getPnlVal(), currency())}
 												</div>
 											</div>
 										</div>
@@ -416,17 +434,22 @@ function ProfileContent() {
 									<For each={Object.entries(portfolioData().holdings)}>
 										{([ticker, h]) => {
 											const getPrice = () => prices()[ticker];
-											const getValue = () =>
-												getPrice() ? h.amount * getPrice() : null;
-											const getPnL = () =>
-												getValue() !== null
-													? getValue()! - h.totalCost + h.realizedPnL
+											const getValue = () => {
+												const p = getPrice();
+												return p !== undefined ? h.amount * p : null;
+											};
+											const getPnL = () => {
+												const val = getValue();
+												return val !== null
+													? val - h.totalCost + h.realizedPnL
 													: null;
+											};
 
 											return (
 												<tr class="hover:bg-white/5 transition-colors group">
 													<td class="p-4">
 														<button
+															type="button"
 															onClick={() => toggleFavorite(ticker)}
 															class={
 																isFavorite(ticker)
@@ -438,25 +461,39 @@ function ProfileContent() {
 														</button>
 													</td>
 													<td class="p-4 font-bold">{ticker}</td>
+
+													{/* Safe inline evaluation via IIFEs to enforce TypeScript type narrowing */}
 													<td class="p-4 text-right font-mono">
-														{getPrice()
-															? formatCryptoPrice(getPrice(), currency())
-															: "---"}
+														{(() => {
+															const p = getPrice();
+															return p !== undefined
+																? formatCryptoPrice(p, currency())
+																: "---";
+														})()}
 													</td>
+
 													<td class="p-4 text-right font-mono font-bold">
-														{getValue() !== null
-															? formatCryptoPrice(getValue()!, currency())
-															: "--"}
+														{(() => {
+															const v = getValue();
+															return v !== null
+																? formatCryptoPrice(v, currency())
+																: "--";
+														})()}
 													</td>
+
 													<td class="p-4 text-right font-mono text-slate-400">
 														{formatCryptoPrice(h.averageBuyPrice, currency())}
 													</td>
+
 													<td
-														class={`p-4 text-right font-mono font-bold ${(getPnL() || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+														class={`p-4 text-right font-mono font-bold ${(getPnL() ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}
 													>
-														{getPnL() !== null
-															? formatCryptoPrice(getPnL()!, currency())
-															: "--"}
+														{(() => {
+															const pnl = getPnL();
+															return pnl !== null
+																? formatCryptoPrice(pnl, currency())
+																: "--";
+														})()}
 													</td>
 												</tr>
 											);
@@ -489,7 +526,7 @@ function ProfileContent() {
 												{tx.type[0]}
 											</div>
 											<div>
-												<div class="font-bold text-white text-sm lowercase capitalize">
+												<div class="font-bold text-white text-sm capitalize">
 													{tx.ticker}
 												</div>
 												<div class="text-[10px] text-slate-500 font-mono italic">
@@ -522,6 +559,7 @@ function ProfileContent() {
 								{editingTxId() ? "Edit" : "New Transaction"}
 							</h2>
 							<button
+								type="button"
 								onClick={() => {
 									setShowModal(false);
 									resetForm();

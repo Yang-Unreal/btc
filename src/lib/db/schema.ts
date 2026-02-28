@@ -17,6 +17,7 @@ export const userSettings = pgTable("user_settings", {
 	currency: text("currency").notNull().default("USD"),
 	indicators: text("indicators"), // Store as JSON string since pg-core json might vary
 	notificationsEnabled: text("notifications_enabled").notNull().default("true"), // "true" or "false"
+	fourHAlertEnabled: text("four_h_alert_enabled").notNull().default("false"), // "true" or "false"
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

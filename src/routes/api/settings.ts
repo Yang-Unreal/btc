@@ -21,6 +21,7 @@ export async function GET() {
 		return json({
 			currency: settings[0].currency,
 			notificationsEnabled: settings[0].notificationsEnabled === "true",
+			fourHAlertEnabled: settings[0].fourHAlertEnabled === "true",
 			indicators: settings[0].indicators
 				? JSON.parse(settings[0].indicators)
 				: null,
@@ -34,7 +35,8 @@ export async function GET() {
 export async function POST({ request }: { request: Request }) {
 	try {
 		const body = await request.json();
-		const { currency, indicators, notificationsEnabled } = body;
+		const { currency, indicators, notificationsEnabled, fourHAlertEnabled } =
+			body;
 
 		const updateData: Partial<NewUserSettings> = { updatedAt: new Date() };
 		if (currency && ["USD", "EUR"].includes(currency)) {
@@ -45,6 +47,9 @@ export async function POST({ request }: { request: Request }) {
 		}
 		if (typeof notificationsEnabled === "boolean") {
 			updateData.notificationsEnabled = notificationsEnabled ? "true" : "false";
+		}
+		if (typeof fourHAlertEnabled === "boolean") {
+			updateData.fourHAlertEnabled = fourHAlertEnabled ? "true" : "false";
 		}
 
 		if (Object.keys(updateData).length <= 1) {

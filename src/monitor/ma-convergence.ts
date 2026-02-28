@@ -9,8 +9,10 @@ import { priceAlerts, userSettings } from "../lib/db/schema";
  * - SMA 20, 60, 120
  * - EMA 20, 60, 120
  *
- * 当6条均线最大值与最小值差距 ≤ 300 USDT 时，
- * 通过 Telegram Bot 发送提醒。
+ *  当符合以下三大“铁律”时，通过 Telegram Bot 发送提醒：
+ * 1. 极值法: 差值 <= 1.5% * 当前价格
+ * 2. ATR测算法: 差值 <= 1.5 * 当前15m的ATR(14)
+ * 3. 无序交叉法: 均线未处于完美多头或空头排列
  *
  * 使用方式：
  *   bun run src/monitor/ma-convergence.ts
@@ -18,7 +20,6 @@ import { priceAlerts, userSettings } from "../lib/db/schema";
  * 环境变量（在 .env 中配置）：
  *   TELEGRAM_BOT_TOKEN=你的bot token
  *   TELEGRAM_CHAT_ID=你的chat id
- *   MA_THRESHOLD=300          (可选，默认300)
  *   CHECK_INTERVAL_MS=60000   (可选，默认60秒检查一次)
  */
 
@@ -28,7 +29,6 @@ import { priceAlerts, userSettings } from "../lib/db/schema";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
-const MA_THRESHOLD = Number(process.env.MA_THRESHOLD) || 300;
 const CHECK_INTERVAL_MS = Number(process.env.CHECK_INTERVAL_MS) || 60_000; // 60s
 const COOLDOWN_MS = 15 * 60 * 1000; // 15分钟冷却，避免重复提醒
 
@@ -65,6 +65,41 @@ function calculateEMA(closes: number[], period: number): number {
 		ema = (closes[i] - ema) * multiplier + ema;
 	}
 	return ema;
+}
+
+function calculateATR(
+	highs: number[],
+	lows: number[],
+	closes: number[],
+	period: number = 14,
+): number {
+	if (closes.length < period + 1) return NaN;
+
+	const trs: number[] = [];
+	for (let i = 1; i < closes.length; i++) {
+		const high = highs[i];
+		const low = lows[i];
+		const prevClose = closes[i - 1];
+		const tr = Math.max(
+			high - low,
+			Math.abs(high - prevClose),
+			Math.abs(low - prevClose),
+		);
+		trs.push(tr);
+	}
+
+	let atr = 0;
+	for (let i = 0; i < period; i++) {
+		atr += trs[i];
+	}
+	atr /= period;
+
+	// Wilder's Smoothing
+	for (let i = period; i < trs.length; i++) {
+		atr = (atr * (period - 1) + trs[i]) / period;
+	}
+
+	return atr;
 }
 
 // ============================================================
@@ -215,11 +250,14 @@ async function runMonitorCycle() {
 			return;
 		}
 
+		const highs = candles.map((c) => c[2]);
+		const lows = candles.map((c) => c[3]);
 		const closes = candles.map((c) => c[4]);
+		// Keep track of highs, lows, closes for ATR logic as well
 		const currentPrice = closes[closes.length - 1];
 
 		// 1. Check MA Convergence
-		await processMAConvergence(closes, currentPrice, timeStr);
+		await processMAConvergence(highs, lows, closes, currentPrice, timeStr);
 
 		// 2. Check Price Alerts
 		await checkPriceAlerts(currentPrice);
@@ -229,6 +267,8 @@ async function runMonitorCycle() {
 }
 
 async function processMAConvergence(
+	highs: number[],
+	lows: number[],
 	closes: number[],
 	currentPrice: number,
 	timeStr: string,
@@ -245,13 +285,41 @@ async function processMAConvergence(
 	if (maValues.length < 6) return;
 
 	const values = maValues.map((m) => m.value);
-	const spread = Math.max(...values) - Math.min(...values);
+	const maxMa = Math.max(...values);
+	const minMa = Math.min(...values);
+	const spread = maxMa - minMa;
+
+	const atr = calculateATR(highs, lows, closes, 14);
+	if (Number.isNaN(atr)) return;
+
+	// 1. 百分比极值法
+	const spreadPercent = (spread / currentPrice) * 100;
+	const passedRule1 = spreadPercent <= 1.5;
+
+	// 2. ATR 波动率测算法
+	const passedRule2 = spread <= 1.5 * atr;
+
+	// 3. 无序交叉法 (Spaghetti Test)
+	const sma20 = maValues.find((m) => m.name === "SMA20")?.value || 0;
+	const ema20 = maValues.find((m) => m.name === "EMA20")?.value || 0;
+	const sma60 = maValues.find((m) => m.name === "SMA60")?.value || 0;
+	const ema60 = maValues.find((m) => m.name === "EMA60")?.value || 0;
+	const sma120 = maValues.find((m) => m.name === "SMA120")?.value || 0;
+	const ema120 = maValues.find((m) => m.name === "EMA120")?.value || 0;
+
+	const isBullishOrdered =
+		Math.min(sma20, ema20) > Math.max(sma60, ema60) &&
+		Math.min(sma60, ema60) > Math.max(sma120, ema120);
+	const isBearishOrdered =
+		Math.max(sma20, ema20) < Math.min(sma60, ema60) &&
+		Math.max(sma60, ema60) < Math.min(sma120, ema120);
+	const passedRule3 = !isBullishOrdered && !isBearishOrdered;
 
 	console.log(
-		`[${timeStr}] BTC: $${currentPrice.toFixed(2)} | 均线差: $${spread.toFixed(2)}`,
+		`[${timeStr}] 15M BTC: $${currentPrice.toFixed(2)} | Diff: $${spread.toFixed(2)} (${spreadPercent.toFixed(2)}%) | ATR: $${atr.toFixed(2)} | R1:${passedRule1} R2:${passedRule2} R3:${passedRule3}`,
 	);
 
-	if (spread <= MA_THRESHOLD) {
+	if (passedRule1 && passedRule2 && passedRule3) {
 		const nowMs = Date.now();
 		if (nowMs - lastAlertTime < COOLDOWN_MS) return;
 
@@ -271,13 +339,21 @@ async function processMAConvergence(
 
 		await sendTelegramMessage(
 			[
-				"🚨 <b>BTC 均线密集提醒</b> 🚨",
+				"🚨 <b>15分钟 均线绝对纠缠触发!</b> 🚨",
 				"",
 				`💰 当前价格: <b>$${currentPrice.toFixed(2)}</b>`,
-				`📏 均线价差: <b>$${spread.toFixed(2)}</b>`,
+				`📏 均线价差: <b>$${spread.toFixed(2)}</b> (<b>${spreadPercent.toFixed(2)}%</b>)`,
+				`🌪️ 15M ATR(14): <b>$${atr.toFixed(2)}</b>`,
 				"",
-				"📈 均线值:",
+				"✅ 满足所有三大铁律:",
+				"1. 1.5% 极限压缩",
+				"2. 价差 < 1.5 * ATR",
+				"3. 意大利面无序缠绕",
+				"",
+				"📈 当前均线值:",
 				maDetails,
+				"",
+				"🚀 注意：可能即将出现剧烈波动，请密切关注！",
 			].join("\n"),
 		);
 	}
@@ -297,9 +373,7 @@ export async function startMAMonitor() {
 
 	console.log("=".repeat(60));
 	console.log("🔍 BTC 双均线密集监控后台服务启动");
-	console.log(
-		`  均线差阈值: $${MA_THRESHOLD} | 检查间隔: ${CHECK_INTERVAL_MS / 1000}秒`,
-	);
+	console.log(`  检查间隔: ${CHECK_INTERVAL_MS / 1000}秒`);
 	console.log("=".repeat(60));
 
 	// 立即执行一次

@@ -1,5 +1,6 @@
 // @refresh reload
 import { createHandler, StartServer } from "@solidjs/start/server";
+import { start4HMonitor } from "./monitor/4h-entanglement";
 import { startMAMonitor } from "./monitor/ma-convergence";
 
 // 确保在服务器环境下只启动一次监控
@@ -14,6 +15,7 @@ if (
 ) {
 	globalWithMonitor.__MA_MONITOR_STARTED__ = true;
 	startMAMonitor().catch(console.error);
+	start4HMonitor().catch(console.error);
 }
 
 export default createHandler(() => {
