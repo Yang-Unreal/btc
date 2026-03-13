@@ -58,6 +58,9 @@ interface TooltipData {
 	ma20?: string;
 	ma60?: string;
 	ma120?: string;
+	ma7?: string;
+	ma25?: string;
+	ma99?: string;
 	donchianHigh?: string;
 	prevHigh?: string;
 	rsi?: string;
@@ -70,6 +73,8 @@ interface TooltipData {
 	tdDescription?: string;
 	snapY: number;
 	currencySymbol: string;
+	changeVal?: string;
+	changePct?: string;
 }
 
 // ... [Existing Interfaces for FNGData, TDState, etc. remain unchanged] ...
@@ -186,6 +191,9 @@ export default function BTCChart() {
 	let ma20Series: ISeriesApi<"Line"> | undefined;
 	let ma60Series: ISeriesApi<"Line"> | undefined;
 	let ma120Series: ISeriesApi<"Line"> | undefined;
+	let ma7Series: ISeriesApi<"Line"> | undefined;
+	let ma25Series: ISeriesApi<"Line"> | undefined;
+	let ma99Series: ISeriesApi<"Line"> | undefined;
 	let donchianHighSeries: ISeriesApi<"Line"> | undefined;
 	let prevHighSeries: ISeriesApi<"Line"> | undefined;
 	let rsiSeries: ISeriesApi<"Line"> | undefined;
@@ -219,9 +227,11 @@ export default function BTCChart() {
 
 	// const [tooltip, setTooltip] = createSignal<TooltipData | null>(null);
 	const [currentPrice, setCurrentPrice] = createSignal<number>(0);
-	const [priceColor, setPriceColor] = createSignal("text-gray-900");
 
 	const [indicators, setIndicators] = createSignal<Record<string, boolean>>({
+		ma7: true,
+		ma25: true,
+		ma99: true,
 		ma20: false,
 		ma60: false,
 		ma120: false,
@@ -234,6 +244,9 @@ export default function BTCChart() {
 		atr: false,
 		volume: true,
 	});
+
+	const [isLogScale, setIsLogScale] = createSignal(false);
+	const [isAutoScale, setIsAutoScale] = createSignal(true);
 
 	// Persistence: Fetch initial indicators
 	onMount(async () => {
@@ -281,10 +294,12 @@ export default function BTCChart() {
 
 	const intervals: { label: string; value: Interval }[] = [
 		{ label: "1m", value: "1m" },
+		{ label: "5m", value: "5m" },
 		{ label: "15m", value: "15m" },
 		{ label: "30m", value: "30m" },
 		{ label: "1H", value: "1h" },
 		{ label: "4H", value: "4h" },
+		{ label: "12H", value: "12h" },
 		{ label: "1D", value: "1d" },
 		{ label: "1W", value: "1w" },
 	];
@@ -298,6 +313,27 @@ export default function BTCChart() {
 			color: "bg-teal-500/50",
 			textColor: "text-teal-400",
 			borderColor: "border-teal-500/20",
+		},
+		{
+			key: "ma7",
+			label: "MA 7",
+			color: "bg-[#31C1FB]",
+			textColor: "text-[#31C1FB]",
+			borderColor: "border-[#31C1FB]",
+		},
+		{
+			key: "ma25",
+			label: "MA 25",
+			color: "bg-[#F0AD00]",
+			textColor: "text-[#F0AD00]",
+			borderColor: "border-[#F0AD00]",
+		},
+		{
+			key: "ma99",
+			label: "MA 99",
+			color: "bg-[#FF3FD5]",
+			textColor: "text-[#FF3FD5]",
+			borderColor: "border-[#FF3FD5]",
 		},
 		{
 			key: "ma20",
@@ -788,11 +824,7 @@ export default function BTCChart() {
 						volume: parseFloat(candle[5]),
 					};
 
-					const price = newData.close;
-					const prev = currentPrice();
-					if (price > prev) setPriceColor("text-emerald-500");
-					else if (price < prev) setPriceColor("text-rose-500");
-					setCurrentPrice(price);
+					setCurrentPrice(newData.close);
 
 					candlestickSeries.update(newData);
 					if (volumeSeries && newData.volume) {
@@ -857,6 +889,9 @@ export default function BTCChart() {
 		if (currentInd.ma20) updateSeries(ma20Series, calculateSMA, 20);
 		if (currentInd.ma60) updateSeries(ma60Series, calculateSMA, 60);
 		if (currentInd.ma120) updateSeries(ma120Series, calculateSMA, 120);
+		if (currentInd.ma7) updateSeries(ma7Series, calculateSMA, 7);
+		if (currentInd.ma25) updateSeries(ma25Series, calculateSMA, 25);
+		if (currentInd.ma99) updateSeries(ma99Series, calculateSMA, 99);
 
 		if (currentInd.donchianHigh && donchianHighSeries && slice.length >= 20) {
 			const highs = slice.map((d) => d.high);
@@ -933,8 +968,14 @@ export default function BTCChart() {
 		const ma20 = calculateSMA(closes, 20);
 		const ma60 = calculateSMA(closes, 60);
 		const ma120 = calculateSMA(closes, 120);
+		const ma7 = calculateSMA(closes, 7);
+		const ma25 = calculateSMA(closes, 25);
+		const ma99 = calculateSMA(closes, 99);
 		const donchianHigh = calculateDonchianHigh(highs, 20);
 		const lastPrevHigh = findLastSwingHigh(highs, 10, 2);
+
+		const change = lastCandle.close - lastCandle.open;
+		const changePct = (change / lastCandle.open) * 100;
 
 		setLegendData({
 			time: dateStr,
@@ -942,6 +983,8 @@ export default function BTCChart() {
 			high: formatValue(lastCandle.high),
 			low: formatValue(lastCandle.low),
 			close: formatValue(lastCandle.close),
+			changeVal: (change >= 0 ? "+" : "") + formatValue(change),
+			changePct: (change >= 0 ? "+" : "") + changePct.toFixed(2) + "%",
 			volume: formattedVolume,
 			currencySymbol: activeCurrency().symbol,
 			changeColor:
@@ -954,6 +997,9 @@ export default function BTCChart() {
 			ma20: formatValue(ma20[ma20.length - 1]),
 			ma60: formatValue(ma60[ma60.length - 1]),
 			ma120: formatValue(ma120[ma120.length - 1]),
+			ma7: formatValue(ma7[ma7.length - 1]),
+			ma25: formatValue(ma25[ma25.length - 1]),
+			ma99: formatValue(ma99[ma99.length - 1]),
 			donchianHigh: formatValue(donchianHigh[donchianHigh.length - 1]),
 			prevHigh: formatValue(lastPrevHigh ?? undefined),
 			rsi: !Number.isNaN(lastRSI) ? lastRSI.toFixed(1) : undefined,
@@ -999,6 +1045,9 @@ export default function BTCChart() {
 		ma20Series?.applyOptions({ visible: !!currentInd.ma20 });
 		ma60Series?.applyOptions({ visible: !!currentInd.ma60 });
 		ma120Series?.applyOptions({ visible: !!currentInd.ma120 });
+		ma7Series?.applyOptions({ visible: !!currentInd.ma7 });
+		ma25Series?.applyOptions({ visible: !!currentInd.ma25 });
+		ma99Series?.applyOptions({ visible: !!currentInd.ma99 });
 		donchianHighSeries?.applyOptions({ visible: !!currentInd.donchianHigh });
 		prevHighSeries?.applyOptions({ visible: !!currentInd.prevHigh });
 		rsiSeries?.applyOptions({ visible: !!currentInd.rsi });
@@ -1087,6 +1136,9 @@ export default function BTCChart() {
 		processMA(currentInd.ma20, ma20Series, 20);
 		processMA(currentInd.ma60, ma60Series, 60);
 		processMA(currentInd.ma120, ma120Series, 120);
+		processMA(currentInd.ma7, ma7Series, 7);
+		processMA(currentInd.ma25, ma25Series, 25);
+		processMA(currentInd.ma99, ma99Series, 99);
 
 		if (
 			currentInd.donchianHigh &&
@@ -1342,6 +1394,9 @@ export default function BTCChart() {
 		ma20Series = createLineSeries("#EF4444"); // red-500
 		ma60Series = createLineSeries("#22C55E"); // green-500
 		ma120Series = createLineSeries("#2563EB"); // blue-600
+		ma7Series = createLineSeries("#31C1FB"); // Bitget blue
+		ma25Series = createLineSeries("#F0AD00"); // Bitget yellow
+		ma99Series = createLineSeries("#FF3FD5"); // Bitget pink/purple
 		donchianHighSeries = createLineSeries("#f43f5e"); // rose-500
 		prevHighSeries = createLineSeries("#f97316"); // orange-500
 
@@ -1503,6 +1558,15 @@ export default function BTCChart() {
 			const ma120Val = ma120Series
 				? (param.seriesData.get(ma120Series) as LineData)
 				: undefined;
+			const ma7Val = ma7Series
+				? (param.seriesData.get(ma7Series) as LineData)
+				: undefined;
+			const ma25Val = ma25Series
+				? (param.seriesData.get(ma25Series) as LineData)
+				: undefined;
+			const ma99Val = ma99Series
+				? (param.seriesData.get(ma99Series) as LineData)
+				: undefined;
 
 			lastTooltipTime = param.time as number;
 			cachedTooltipData = {
@@ -1511,6 +1575,8 @@ export default function BTCChart() {
 				high: formatTooltipPrice(candle.high),
 				low: formatTooltipPrice(candle.low),
 				close: formatTooltipPrice(candle.close),
+				changeVal: (candle.close - candle.open >= 0 ? "+" : "") + formatTooltipPrice(candle.close - candle.open),
+				changePct: ((candle.close - candle.open) / candle.open * 100 >= 0 ? "+" : "") + ((candle.close - candle.open) / candle.open * 100).toFixed(2) + "%",
 				volume: formattedVolume,
 				currencySymbol: activeCurrency().symbol,
 				changeColor:
@@ -1521,6 +1587,9 @@ export default function BTCChart() {
 				ma20: formatTooltipPrice(ma20Val?.value),
 				ma60: formatTooltipPrice(ma60Val?.value),
 				ma120: formatTooltipPrice(ma120Val?.value),
+				ma7: formatTooltipPrice(ma7Val?.value),
+				ma25: formatTooltipPrice(ma25Val?.value),
+				ma99: formatTooltipPrice(ma99Val?.value),
 				donchianHigh: formatTooltipPrice(donchianHighVal?.value),
 				prevHigh: formatTooltipPrice(prevHighVal?.value),
 				rsi:
@@ -1594,6 +1663,16 @@ export default function BTCChart() {
 		syncAllIndicators();
 	});
 
+	// --- Scale Effect ---
+	createEffect(() => {
+		const log = isLogScale();
+		const auto = isAutoScale();
+		chart?.priceScale("right").applyOptions({
+			mode: log ? 1 : 0, // 1 = Logarithmic, 0 = Normal
+			autoScale: auto,
+		});
+	});
+
 	// --- React to Interval OR Currency Change ---
 	createEffect(() => {
 		// Dependencies: interval(), activeCurrency(), activeAsset()
@@ -1611,206 +1690,183 @@ export default function BTCChart() {
 
 	return (
 		<div class="directive-card overflow-hidden">
-			{/* Top Bar - High Density */}
-			<div class="relative z-50 flex flex-col lg:flex-row justify-between items-stretch lg:items-center p-3 sm:p-4 border-b border-white/5 bg-white/2">
-				<div class="flex items-center gap-3 mb-4 lg:mb-0 justify-between lg:justify-start">
-					<div class="flex items-center gap-3">
-						<div class="w-8 h-8 bg-white/5 border border-white/10 flex items-center justify-center text-white font-mono font-bold text-xs">
-							{activeAsset().symbol.substring(0, 1)}
-						</div>
-						<div class="flex flex-col">
-							<div class="flex items-center gap-2 relative">
-								{/* Asset Dropdown */}
-								<div class="relative">
-									<button
-										type="button"
-										onClick={() => setShowAssetMenu(!showAssetMenu())}
-										class="flex items-center gap-1.5 text-sm font-black text-white uppercase tracking-tighter hover:text-indigo-400 transition-colors group"
+			{/* Bitget-style Unified Toolbar */}
+			<div class="relative z-50 flex flex-wrap items-center justify-between p-1 bg-[#151921] border-b border-white/5">
+				<div class="flex items-center gap-px">
+					{/* Symbol Info */}
+					<div class="relative flex items-center gap-2 px-3 py-1.5 border-r border-white/5 mr-2">
+						<button
+							type="button"
+							onClick={() => setShowAssetMenu(!showAssetMenu())}
+							class="flex items-center gap-1.5 text-xs font-black text-white hover:text-indigo-400"
+						>
+							{activeAsset().symbol}/USDT <IconChevronDown />
+						</button>
+						<Show when={showAssetMenu()}>
+							<div
+								class="fixed inset-0 z-40"
+								onClick={() => {
+									setShowAssetMenu(false);
+									setAssetSearchQuery("");
+								}}
+								onKeyDown={(e) => {
+									if (e.key === "Escape") {
+										setShowAssetMenu(false);
+										setAssetSearchQuery("");
+									}
+								}}
+								tabIndex={-1}
+								role="button"
+							/>
+							<div class="absolute left-0 top-full mt-1 w-64 bg-[#151921] border border-white/10 shadow-2xl z-50 overflow-hidden flex flex-col">
+								<div class="p-2 border-b border-white/5 bg-white/2">
+									<input
+										type="text"
+										placeholder="Search pair..."
+										class="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-[10px] font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+										value={assetSearchQuery()}
+										onInput={(e) =>
+											setAssetSearchQuery(e.currentTarget.value)
+										}
+										onClick={(e) => e.stopPropagation()}
+										autofocus
+									/>
+								</div>
+								<div class="max-h-80 overflow-y-auto no-scrollbar py-1">
+									<div class="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 mb-1">
+										Spot Pairs
+									</div>
+									<For
+										each={SUPPORTED_ASSETS.filter(
+											(a) =>
+												a.name
+													.toLowerCase()
+													.includes(assetSearchQuery().toLowerCase()) ||
+												a.symbol
+													.toLowerCase()
+													.includes(assetSearchQuery().toLowerCase()),
+										)}
 									>
-										<span class="text-white group-hover:text-indigo-400 transition-colors">
-											{activeAsset().symbol}
-										</span>
-										<span class="text-slate-500 font-medium">/</span>
-										<span class="text-slate-500 font-medium">USDT</span>
-										<IconChevronDown />
-									</button>
-									<Show when={showAssetMenu()}>
-										<div
-											class="fixed inset-0 z-40"
-											onClick={() => {
-												setShowAssetMenu(false);
-												setAssetSearchQuery("");
-											}}
-											onKeyDown={(e) => {
-												if (e.key === "Escape") {
+										{(asset) => (
+											<button
+												type="button"
+												class={`w-full text-left px-3 py-2.5 text-[11px] font-bold hover:bg-white/5 flex items-center justify-between transition-colors border-l-2 ${activeAsset().symbol === asset.symbol ? "border-indigo-500 bg-white/5 text-white" : "border-transparent text-slate-400"}`}
+												onClick={() => {
+													setActiveAsset(asset);
 													setShowAssetMenu(false);
 													setAssetSearchQuery("");
-												}
-											}}
-											tabIndex={-1}
-											role="button"
-										/>
-										<div class="absolute left-0 top-full mt-1 w-64 bg-[#151921] border border-white/10 shadow-2xl z-50 overflow-hidden flex flex-col">
-											<div class="p-2 border-b border-white/5 bg-white/2">
-												<input
-													type="text"
-													placeholder="Search pair..."
-													class="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-[10px] font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
-													value={assetSearchQuery()}
-													onInput={(e) =>
-														setAssetSearchQuery(e.currentTarget.value)
-													}
-													onClick={(e) => e.stopPropagation()}
-													autofocus
-												/>
-											</div>
-											<div class="max-h-80 overflow-y-auto no-scrollbar py-1">
-												<div class="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 mb-1">
-													Spot Pairs
+												}}
+											>
+												<div class="flex items-center gap-2">
+													<span
+														class={
+															activeAsset().symbol === asset.symbol
+																? "text-white"
+																: "text-slate-200"
+														}
+													>
+														{asset.symbol}
+													</span>
+													<span class="text-slate-500">/USDT</span>
 												</div>
-												<For
-													each={SUPPORTED_ASSETS.filter(
-														(a) =>
-															a.name
-																.toLowerCase()
-																.includes(assetSearchQuery().toLowerCase()) ||
-															a.symbol
-																.toLowerCase()
-																.includes(assetSearchQuery().toLowerCase()),
-													)}
-												>
-													{(asset) => (
-														<button
-															type="button"
-															class={`w-full text-left px-3 py-2.5 text-[11px] font-bold hover:bg-white/5 flex items-center justify-between transition-colors border-l-2 ${activeAsset().symbol === asset.symbol ? "border-indigo-500 bg-white/5 text-white" : "border-transparent text-slate-400"}`}
-															onClick={() => {
-																setActiveAsset(asset);
-																setShowAssetMenu(false);
-																setAssetSearchQuery("");
-															}}
-														>
-															<div class="flex items-center gap-2">
-																<span
-																	class={
-																		activeAsset().symbol === asset.symbol
-																			? "text-white"
-																			: "text-slate-200"
-																	}
-																>
-																	{asset.symbol}
-																</span>
-																<span class="text-slate-500">/USDT</span>
-															</div>
-															<span class="font-mono text-[9px] opacity-40 shrink-0 uppercase">
-																{asset.name}
-															</span>
-														</button>
-													)}
-												</For>
-												<Show
-													when={
-														SUPPORTED_ASSETS.filter(
-															(a) =>
-																a.name
-																	.toLowerCase()
-																	.includes(assetSearchQuery().toLowerCase()) ||
-																a.symbol
-																	.toLowerCase()
-																	.includes(assetSearchQuery().toLowerCase()),
-														).length === 0
-													}
-												>
-													<div class="px-3 py-4 text-center text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-														No Results
-													</div>
-												</Show>
-											</div>
-										</div>
-									</Show>
-								</div>
-
-								{/* Connection Status */}
-								<div class="flex items-center px-2 py-0.5 bg-white/5 border border-white/10 ml-2">
-									{wsConnected() ? <IconPulse /> : <IconWifiOff />}
-									<span class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] hidden sm:inline">
-										{wsConnected() ? "Live Ops" : "Dormant"}
-									</span>
+												<span class="font-mono text-[9px] opacity-40 shrink-0 uppercase">
+													{asset.name}
+												</span>
+											</button>
+										)}
+									</For>
 								</div>
 							</div>
-
-							{/* Price Display */}
-							<div
-								class={`text-xl font-mono font-black tracking-tighter tabular-nums leading-none mt-1 transition-colors duration-200 ${priceColor()}`}
-							>
-								{formatCryptoPrice(currentPrice(), activeCurrency().code)}
-							</div>
+						</Show>
+						<div class="text-[14px] font-mono font-bold text-emerald-500 ml-2">
+							{formatCryptoPrice(currentPrice(), activeCurrency().code)}
 						</div>
+					</div>
+
+					{/* Time Intervals */}
+					<div class="flex items-center gap-1 mr-4">
+						<button type="button" class="p-1 px-2 text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
+							<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<title>Time</title>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+							Time
+						</button>
+						<For each={intervals}>
+							{(opt) => (
+								<button
+									type="button"
+									class={`px-2 py-1 text-[11px] font-bold tracking-tight transition-all ${interval() === opt.value ? "text-indigo-500" : "text-slate-500 hover:text-slate-300"}`}
+									onClick={() => setInterval(opt.value)}
+								>
+									{opt.label.toUpperCase()}
+								</button>
+							)}
+						</For>
+					</div>
+
+					{/* Indicators Dropdown */}
+					<div class="relative">
+						<button
+							type="button"
+							onClick={() => setShowIndicatorMenu(!showIndicatorMenu())}
+							class="p-1.5 text-slate-400 hover:text-white"
+						>
+							<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<title>Indicators</title>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16" />
+							</svg>
+						</button>
+						<Show when={showIndicatorMenu()}>
+							<div
+								class="fixed inset-0 z-40"
+								onClick={() => setShowIndicatorMenu(false)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" || e.key === " ") setShowIndicatorMenu(false);
+								}}
+								tabIndex={-1}
+								role="button"
+							/>
+							<div class="absolute left-0 top-full mt-1 w-56 bg-[#1a1e27] border border-white/10 shadow-2xl z-50 py-1 max-h-[70vh] overflow-y-auto no-scrollbar">
+								<For each={indicatorConfig}>
+									{(ind) => (
+										<button
+											type="button"
+											onClick={() =>
+												setIndicators((prev) => ({
+													...prev,
+													[ind.key]: !prev[ind.key],
+												}))
+											}
+											class={`w-full text-left px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 hover:bg-white/5 ${indicators()[ind.key] ? ind.textColor : "text-slate-500"}`}
+										>
+											<div
+												class={`w-2 h-2 shrink-0 ${ind.color} ${indicators()[ind.key] ? "opacity-100" : "opacity-20"}`}
+											/>
+											<span class="grow">{ind.label}</span>
+											<Show when={indicators()[ind.key]}>
+												<div class="w-1 h-1 bg-indigo-500 rounded-full" />
+											</Show>
+										</button>
+									)}
+								</For>
+							</div>
+						</Show>
 					</div>
 				</div>
 
-				{/* Interval Selection - Darker tabs */}
-				<div class="flex bg-white/5 border border-white/10 p-1 self-start lg:self-auto overflow-x-auto no-scrollbar max-w-full">
-					<For each={intervals}>
-						{(opt) => (
-							<button
-								type="button"
-								class={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-all ${interval() === opt.value ? "bg-indigo-600 text-white" : "text-slate-500 hover:text-slate-300 hover:bg-white/5"}`}
-								onClick={() => setInterval(opt.value)}
-							>
-								{opt.label}
-							</button>
-						)}
-					</For>
-				</div>
-			</div>
-
-			{/* Secondary Bar: Indicators - Refactored to Dropdown */}
-			<div class="relative z-40 px-4 py-2 border-b border-white/5 bg-white/1 backdrop-blur-sm flex items-center justify-start">
-				<div class="relative">
-					<button
-						type="button"
-						onClick={() => setShowIndicatorMenu(!showIndicatorMenu())}
-						class="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-white hover:bg-white/10 transition-all"
-					>
-						Select Indicators
-						<IconChevronDown />
-					</button>
-
-					<Show when={showIndicatorMenu()}>
-						<div
-							class="fixed inset-0 z-40"
-							onClick={() => setShowIndicatorMenu(false)}
-							onKeyDown={(e) => {
-								if (e.key === "Escape") setShowIndicatorMenu(false);
-							}}
-							tabIndex={-1}
-							role="button"
-						/>
-						<div class="absolute left-0 top-full mt-1 w-56 bg-[#151921] border border-white/10 shadow-2xl z-50 py-1 max-h-80 overflow-y-auto no-scrollbar">
-							<For each={indicatorConfig}>
-								{(ind) => (
-									<button
-										type="button"
-										onClick={() =>
-											setIndicators((prev) => ({
-												...prev,
-												[ind.key]: !prev[ind.key],
-											}))
-										}
-										class={`w-full text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 hover:bg-white/5 ${indicators()[ind.key] ? ind.textColor : "text-slate-500"}`}
-									>
-										<div
-											class={`w-2 h-2 shrink-0 ${ind.color} ${indicators()[ind.key] ? "opacity-100" : "opacity-20"}`}
-										/>
-										<span class="grow">{ind.label}</span>
-										<Show when={indicators()[ind.key]}>
-											<div class="w-1 h-1 bg-indigo-500 rounded-full" />
-										</Show>
-									</button>
-								)}
-							</For>
+				<div class="flex items-center gap-2">
+					{/* View Tabs */}
+					<div class="flex bg-white/5 rounded p-0.5 mr-2">
+						<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-white bg-white/10 rounded-sm">Original</button>
+						<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:text-slate-300">TradingView</button>
+						<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:text-slate-300">Depth</button>
+					</div>
+					<div class="flex items-center gap-2 px-2 border-l border-white/5">
+						<div class="flex items-center">
+							{wsConnected() ? <IconPulse /> : <IconWifiOff />}
 						</div>
-					</Show>
+					</div>
 				</div>
 			</div>
 
@@ -1843,12 +1899,11 @@ export default function BTCChart() {
 						{(t) => (
 							<>
 								{/* Asset Info & OHLC */}
-								<div class="bg-black/20 p-1.5 rounded w-fit flex flex-wrap items-center gap-x-2 text-[11px] leading-tight font-bold whitespace-nowrap">
+								<div class="bg-black/20 p-1.5 py-1 rounded w-fit flex flex-wrap items-center gap-x-2 text-[11px] leading-tight font-bold whitespace-nowrap">
 									<span class="text-slate-200">
-										{activeAsset().symbol}/USDT · {interval().toUpperCase()} ·
-										Bitget
+										{activeAsset().symbol}/USDT · {interval().toUpperCase()} · Bitget
 									</span>
-									<div class="flex items-center gap-1 ml-1 scale-95 origin-left">
+									<div class="flex items-center gap-1.5 ml-1 scale-90 origin-left">
 										<span class="text-slate-500 font-medium">O</span>
 										<span class={t().changeColor}>{t().open}</span>
 										<span class="text-slate-500 font-medium ml-1">H</span>
@@ -1857,17 +1912,41 @@ export default function BTCChart() {
 										<span class={t().changeColor}>{t().low}</span>
 										<span class="text-slate-500 font-medium ml-1">C</span>
 										<span class={t().changeColor}>{t().close}</span>
+										<span class={`${t().changeColor} ml-1`}>{t().changeVal}</span>
+										<span class={t().changeColor}>({t().changePct})</span>
 									</div>
 								</div>
 
 								{/* Indicators */}
 								<Show when={Object.values(indicators()).some((v) => v)}>
-									<div class="bg-black/20 p-1.5 rounded w-fit flex flex-col gap-px">
+									<div class="bg-black/20 p-1.5 rounded w-fit flex flex-wrap gap-x-3 gap-y-px">
+										<Show when={indicators().ma7 && t().ma7 && t().ma7 !== "—"}>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-[#31C1FB]">MA 7</span>
+												<span class="text-[#31C1FB]">{t().ma7}</span>
+											</div>
+										</Show>
+										<Show
+											when={indicators().ma25 && t().ma25 && t().ma25 !== "—"}
+										>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-[#F0AD00]">MA 25</span>
+												<span class="text-[#F0AD00]">{t().ma25}</span>
+											</div>
+										</Show>
+										<Show
+											when={indicators().ma99 && t().ma99 && t().ma99 !== "—"}
+										>
+											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
+												<span class="text-[#FF3FD5]">MA 99</span>
+												<span class="text-[#FF3FD5]">{t().ma99}</span>
+											</div>
+										</Show>
 										<Show
 											when={indicators().ma20 && t().ma20 && t().ma20 !== "—"}
 										>
 											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-red-500">MA 20 close 0</span>
+												<span class="text-red-500">MA 20</span>
 												<span class="text-red-500">{t().ma20}</span>
 											</div>
 										</Show>
@@ -1974,6 +2053,23 @@ export default function BTCChart() {
 					</Show>
 				</div>
 
+				{/* Scale Controls - Bitget Style */}
+				<div class="absolute bottom-12 right-2 z-30 flex flex-col gap-1">
+					<button
+						type="button"
+						onClick={() => setIsLogScale(!isLogScale())}
+						class={`px-1.5 py-0.5 text-[9px] font-bold border ${isLogScale() ? "bg-indigo-500 border-indigo-500 text-white" : "bg-black/40 border-white/10 text-slate-400 hover:text-white"}`}
+					>
+						log
+					</button>
+					<button
+						type="button"
+						onClick={() => setIsAutoScale(!isAutoScale())}
+						class={`px-1.5 py-0.5 text-[9px] font-bold border ${isAutoScale() ? "bg-indigo-500 border-indigo-500 text-white" : "bg-black/40 border-white/10 text-slate-400 hover:text-white"}`}
+					>
+						auto
+					</button>
+				</div>
 			</div>
 		</div>
 	);
