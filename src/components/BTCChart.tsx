@@ -245,8 +245,11 @@ export default function BTCChart() {
 		volume: true,
 	});
 
-	const [isLogScale, setIsLogScale] = createSignal(false);
-	const [isAutoScale, setIsAutoScale] = createSignal(true);
+	const [indicatorHeights, setIndicatorHeights] = createSignal<Record<string, number>>({
+		oscillators: 100,
+		atr: 100,
+	});
+	const [draggingArea, setDraggingArea] = createSignal<string | null>(null); // 'top' | 'middle'
 
 	// Persistence: Fetch initial indicators
 	onMount(async () => {
@@ -260,6 +263,12 @@ export default function BTCChart() {
 				const currency = CURRENCIES.find((c) => c.code === data.currency);
 				if (currency) setActiveCurrency(currency);
 			}
+			if (data.indicatorHeights) {
+				setIndicatorHeights(data.indicatorHeights);
+			} else if (data.indicatorHeight) {
+				// Fallback for old settings
+				setIndicatorHeights({ oscillators: data.indicatorHeight / 2, atr: data.indicatorHeight / 2 });
+			}
 		} catch (e) {
 			console.error("Failed to load indicators from DB", e);
 		}
@@ -270,6 +279,7 @@ export default function BTCChart() {
 	createEffect(() => {
 		const currentIndicators = indicators();
 		const currentCurrency = activeCurrency();
+		const currentIndHeights = indicatorHeights();
 		if (isFirstIndicatorsEffect) {
 			isFirstIndicatorsEffect = false;
 			return;
@@ -280,6 +290,7 @@ export default function BTCChart() {
 			body: JSON.stringify({
 				indicators: currentIndicators,
 				currency: currentCurrency.code,
+				indicatorHeights: currentIndHeights,
 			}),
 		}).catch((err) => console.error("Failed to save settings", err));
 	});
@@ -1054,20 +1065,61 @@ export default function BTCChart() {
 		fngSeries?.applyOptions({ visible: !!currentInd.fng });
 		atrSeries?.applyOptions({ visible: !!currentInd.atr });
 		volumeSeries?.applyOptions({ visible: !!currentInd.volume });
+		const totalHeight = chartContainer?.clientHeight || 450;
+		const heights = indicatorHeights();
+		
+		const oscillatorsActive = !!(currentInd.rsi || currentInd.fng);
+		const atrActive = !!currentInd.atr;
 
-		if (currentInd.rsi || currentInd.fng || currentInd.atr) {
-			chart
-				.priceScale("right")
-				.applyOptions({ scaleMargins: { top: 0.1, bottom: 0.3 } });
+		const activeOscillators = [];
+		if (oscillatorsActive) activeOscillators.push("oscillators");
+		if (atrActive) activeOscillators.push("atrScale");
+
+		const oscH = oscillatorsActive ? heights.oscillators : 0;
+		const atrH = atrActive ? heights.atr : 0;
+		
+		const totalIndHeight = oscH + atrH;
+		const marginRatio = totalIndHeight > 0 ? (totalIndHeight + 40) / totalHeight : 0.1;
+
+		chart.priceScale("right").applyOptions({
+			scaleMargins: { top: 0.1, bottom: marginRatio },
+		});
+
+		const areaStart = 1 - (totalIndHeight / totalHeight);
+
+		if (activeOscillators.length === 1) {
+			const margins = { top: areaStart, bottom: 0.05 };
+			chart.priceScale(activeOscillators[0]).applyOptions({
+				visible: true,
+				scaleMargins: margins,
+			});
+			// Hide others
+			const other = activeOscillators[0] === "oscillators" ? "atrScale" : "oscillators";
+			chart.priceScale(other).applyOptions({ visible: false });
+		} else if (activeOscillators.length === 2) {
+			// Stack them: oscillators on top, ATR on bottom
+			const oscRatio = oscH / totalHeight;
+			const atrRatio = atrH / totalHeight;
+
+			// ATR bottom: from (1 - atrRatio) to 1
+			chart.priceScale("atrScale").applyOptions({
+				visible: true,
+				scaleMargins: { 
+					top: 1 - atrRatio, 
+					bottom: 0.05 
+				},
+			});
+			// Oscillators above ATR: from (1 - atrRatio - oscRatio) to (1 - atrRatio)
 			chart.priceScale("oscillators").applyOptions({
 				visible: true,
-				scaleMargins: { top: 0.75, bottom: 0.05 },
+				scaleMargins: { 
+					top: 1 - atrRatio - oscRatio, 
+					bottom: atrRatio + 0.02 // small gap
+				},
 			});
 		} else {
-			chart
-				.priceScale("right")
-				.applyOptions({ scaleMargins: { top: 0.1, bottom: 0.1 } });
 			chart.priceScale("oscillators").applyOptions({ visible: false });
+			chart.priceScale("atrScale").applyOptions({ visible: false });
 		}
 
 		refreshAllMarkers(currentData);
@@ -1420,6 +1472,7 @@ export default function BTCChart() {
 
 		atrSeries = chart.addSeries(LineSeries, {
 			...oscillatorOptions,
+			priceScaleId: "atrScale",
 			color: "#94a3b8", // slate-400
 			visible: false,
 		});
@@ -1442,6 +1495,12 @@ export default function BTCChart() {
 		});
 
 		chart.priceScale("oscillators").applyOptions({
+			scaleMargins: { top: 0.8, bottom: 0 },
+			visible: false,
+			borderVisible: false,
+		});
+
+		chart.priceScale("atrScale").applyOptions({
 			scaleMargins: { top: 0.8, bottom: 0 },
 			visible: false,
 			borderVisible: false,
@@ -1644,6 +1703,78 @@ export default function BTCChart() {
 		handleResize();
 		window.addEventListener("resize", handleResize);
 
+		const handleMouseMove = (e: MouseEvent) => {
+			const area = draggingArea();
+			if (!area || !chartContainer) return;
+
+			const rect = chartContainer.getBoundingClientRect();
+			const relativeY = e.clientY - rect.top;
+			const totalHeight = rect.height;
+			const heights = indicatorHeights();
+
+			const activeInds = untrack(() => Object.assign({}, indicators())); // Not needed for logic, just naming
+			const oscillatorsActive = !!(activeInds.rsi || activeInds.fng);
+			const atrActive = !!activeInds.atr;
+
+			if (area === "top") {
+				// Top-most active indicator handle
+				const newTotalHeight = Math.max(50, Math.min(totalHeight * 0.7, totalHeight - relativeY));
+				if (oscillatorsActive && atrActive) {
+					// Adjust total indicator height, then distribute proportionally
+					const currentTotal = heights.oscillators + heights.atr;
+					if (currentTotal === 0) return; // Avoid division by zero
+					const ratioOsc = heights.oscillators / currentTotal;
+					const ratioAtr = heights.atr / currentTotal;
+					setIndicatorHeights({
+						oscillators: Math.max(30, newTotalHeight * ratioOsc),
+						atr: Math.max(30, newTotalHeight * ratioAtr)
+					});
+				} else if (oscillatorsActive) {
+					setIndicatorHeights({ ...heights, oscillators: newTotalHeight });
+				} else if (atrActive) {
+					setIndicatorHeights({ ...heights, atr: newTotalHeight });
+				}
+			} else if (area === "middle") {
+				// Splitter between oscillators and ATR
+				// relativeY is the mouse position from the top of the chart container
+				// The top of the ATR pane is at (totalHeight - heights.atr)
+				// The top of the Oscillators pane is at (totalHeight - heights.atr - heights.oscillators)
+				
+				// We want to adjust the split, so the sum of heights.oscillators + heights.atr remains constant
+				// The mouse Y position should define the boundary between the two panes.
+				// The bottom of the oscillators pane (and top of ATR pane) should be at relativeY.
+				
+				const currentTotalIndHeight = heights.oscillators + heights.atr;
+				const newOscillatorsHeight = Math.max(30, totalHeight - relativeY - 20); // 20 is approx padding/margin
+				const newAtrHeight = Math.max(30, currentTotalIndHeight - newOscillatorsHeight);
+
+				if (newOscillatorsHeight + newAtrHeight > currentTotalIndHeight + 10 || newOscillatorsHeight + newAtrHeight < currentTotalIndHeight - 10) {
+					// If the total height changes too much, it means the mouse is outside the expected range.
+					// Re-calculate based on mouse position relative to the bottom of the chart.
+					const newAtrHeightFromBottom = Math.max(30, totalHeight - relativeY);
+					const newOscHeightFromBottom = Math.max(30, currentTotalIndHeight - newAtrHeightFromBottom);
+					setIndicatorHeights({
+						oscillators: newOscHeightFromBottom,
+						atr: newAtrHeightFromBottom
+					});
+				} else {
+					setIndicatorHeights({
+						oscillators: newOscillatorsHeight,
+						atr: newAtrHeight
+					});
+				}
+			}
+
+			syncAllIndicators();
+		};
+
+		const handleMouseUp = () => {
+			setDraggingArea(null);
+		};
+
+		window.addEventListener("mousemove", handleMouseMove);
+		window.addEventListener("mouseup", handleMouseUp);
+
 		onCleanup(() => {
 			if (ws) ws.close();
 			if (chart) {
@@ -1652,6 +1783,8 @@ export default function BTCChart() {
 				candlestickSeries = undefined;
 			}
 			window.removeEventListener("resize", handleResize);
+			window.removeEventListener("mousemove", handleMouseMove);
+			window.removeEventListener("mouseup", handleMouseUp);
 		});
 	});
 
@@ -1661,16 +1794,6 @@ export default function BTCChart() {
 		indicators();
 		// Sync without tracking data updates
 		syncAllIndicators();
-	});
-
-	// --- Scale Effect ---
-	createEffect(() => {
-		const log = isLogScale();
-		const auto = isAutoScale();
-		chart?.priceScale("right").applyOptions({
-			mode: log ? 1 : 0, // 1 = Logarithmic, 0 = Normal
-			autoScale: auto,
-		});
 	});
 
 	// --- React to Interval OR Currency Change ---
@@ -1893,6 +2016,49 @@ export default function BTCChart() {
 
 				<div ref={chartContainer} class="w-full h-full opacity-90" />
 
+				{/* Indicator Resize Handles */}
+				<Show when={Object.values(indicators()).some((v) => v) && (indicators().rsi || indicators().fng || indicators().atr)}>
+					{/* Top Handle - Price/Indicator border */}
+					<div
+						role="separator"
+						tabIndex={0}
+						aria-label="Resize indicator area"
+						aria-valuenow={indicatorHeights().oscillators + indicatorHeights().atr}
+						class="absolute left-0 right-0 z-40 h-2 cursor-row-resize group/handle transition-colors outline-none focus:bg-indigo-500/20"
+						style={{
+							bottom: `${(indicators().rsi || indicators().fng ? indicatorHeights().oscillators : 0) + (indicators().atr ? indicatorHeights().atr : 0)}px`,
+							"background-color": draggingArea() === "top" ? "rgba(99, 102, 241, 0.4)" : "transparent",
+						}}
+						onMouseDown={(e) => {
+							e.preventDefault();
+							setDraggingArea("top");
+						}}
+					>
+						<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-white/5 group-hover/handle:bg-indigo-500/50" />
+					</div>
+
+					{/* Middle Handle - Between Oscillators and ATR */}
+					<Show when={(indicators().rsi || indicators().fng) && indicators().atr}>
+						<div
+							role="separator"
+							tabIndex={0}
+							aria-label="Resize between indicators"
+							aria-valuenow={indicatorHeights().atr}
+							class="absolute left-0 right-0 z-40 h-2 cursor-row-resize group/handle transition-colors outline-none focus:bg-indigo-500/20"
+							style={{
+								bottom: `${indicatorHeights().atr}px`,
+								"background-color": draggingArea() === "middle" ? "rgba(99, 102, 241, 0.4)" : "transparent",
+							}}
+							onMouseDown={(e) => {
+								e.preventDefault();
+								setDraggingArea("middle");
+							}}
+						>
+							<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-white/5 group-hover/handle:bg-indigo-500/50" />
+						</div>
+					</Show>
+				</Show>
+
 				{/* Bitget-style Legend Overlay */}
 				<div class="absolute top-1 left-2 z-30 pointer-events-none flex flex-col gap-1 select-none transition-all duration-200 overflow-hidden max-w-[calc(100%-20px)]">
 					<Show when={legendData()}>
@@ -2053,23 +2219,6 @@ export default function BTCChart() {
 					</Show>
 				</div>
 
-				{/* Scale Controls - Bitget Style */}
-				<div class="absolute bottom-12 right-2 z-30 flex flex-col gap-1">
-					<button
-						type="button"
-						onClick={() => setIsLogScale(!isLogScale())}
-						class={`px-1.5 py-0.5 text-[9px] font-bold border ${isLogScale() ? "bg-indigo-500 border-indigo-500 text-white" : "bg-black/40 border-white/10 text-slate-400 hover:text-white"}`}
-					>
-						log
-					</button>
-					<button
-						type="button"
-						onClick={() => setIsAutoScale(!isAutoScale())}
-						class={`px-1.5 py-0.5 text-[9px] font-bold border ${isAutoScale() ? "bg-indigo-500 border-indigo-500 text-white" : "bg-black/40 border-white/10 text-slate-400 hover:text-white"}`}
-					>
-						auto
-					</button>
-				</div>
 			</div>
 		</div>
 	);
