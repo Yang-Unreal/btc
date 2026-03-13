@@ -280,6 +280,7 @@ export default function BTCChart() {
 	const [legendData, setLegendData] = createSignal<TooltipData | null>(null);
 
 	const intervals: { label: string; value: Interval }[] = [
+		{ label: "1m", value: "1m" },
 		{ label: "15m", value: "15m" },
 		{ label: "30m", value: "30m" },
 		{ label: "1H", value: "1h" },
