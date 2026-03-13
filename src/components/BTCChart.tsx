@@ -138,39 +138,39 @@ const IconChevronDown = () => (
 	</svg>
 );
 
-const IconTrendUp = (props: { class?: string }) => (
-	<svg
-		class={props.class}
-		fill="none"
-		viewBox="0 0 24 24"
-		stroke="currentColor"
-		stroke-width="2"
-	>
-		<title>Trend Up</title>
-		<path
-			stroke-linecap="round"
-			stroke-linejoin="round"
-			d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-		/>
-	</svg>
-);
+// const IconTrendUp = (props: { class?: string }) => (
+// 	<svg
+// 		class={props.class}
+// 		fill="none"
+// 		viewBox="0 0 24 24"
+// 		stroke="currentColor"
+// 		stroke-width="2"
+// 	>
+// 		<title>Trend Up</title>
+// 		<path
+// 			stroke-linecap="round"
+// 			stroke-linejoin="round"
+// 			d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+// 		/>
+// 	</svg>
+// );
 
-const IconTrendDown = (props: { class?: string }) => (
-	<svg
-		class={props.class}
-		fill="none"
-		viewBox="0 0 24 24"
-		stroke="currentColor"
-		stroke-width="2"
-	>
-		<title>Trend Down</title>
-		<path
-			stroke-linecap="round"
-			stroke-linejoin="round"
-			d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"
-		/>
-	</svg>
-);
+// const IconTrendDown = (props: { class?: string }) => (
+// 	<svg
+// 		class={props.class}
+// 		fill="none"
+// 		viewBox="0 0 24 24"
+// 		stroke="currentColor"
+// 		stroke-width="2"
+// 	>
+// 		<title>Trend Down</title>
+// 		<path
+// 			stroke-linecap="round"
+// 			stroke-linejoin="round"
+// 			d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"
+// 		/>
+// 	</svg>
+// );
 
 export default function BTCChart() {
 	let chartContainer: HTMLDivElement | undefined;
@@ -209,7 +209,7 @@ export default function BTCChart() {
 		SUPPORTED_ASSETS[0],
 	);
 
-	const [isMobile, setIsMobile] = createSignal(false);
+	// const [isMobile, setIsMobile] = createSignal(false);
 
 	// Dropdown States
 
@@ -217,7 +217,7 @@ export default function BTCChart() {
 	const [assetSearchQuery, setAssetSearchQuery] = createSignal("");
 	const [showIndicatorMenu, setShowIndicatorMenu] = createSignal(false);
 
-	const [tooltip, setTooltip] = createSignal<TooltipData | null>(null);
+	// const [tooltip, setTooltip] = createSignal<TooltipData | null>(null);
 	const [currentPrice, setCurrentPrice] = createSignal<number>(0);
 	const [priceColor, setPriceColor] = createSignal("text-gray-900");
 
@@ -900,7 +900,7 @@ export default function BTCChart() {
 	};
 
 	const updateLegendToLatest = (data: BTCData[]) => {
-		if (tooltip() || data.length === 0) return;
+		if (data.length === 0) return;
 		const lastCandle = data[data.length - 1];
 		const currentInd = indicators();
 
@@ -1404,7 +1404,6 @@ export default function BTCChart() {
 				param.point.y < 0 ||
 				param.point.y > chartContainer.clientHeight
 			) {
-				setTooltip(null);
 				updateLegendToLatest(btcData());
 				lastTooltipTime = null;
 				cachedTooltipData = null;
@@ -1418,7 +1417,7 @@ export default function BTCChart() {
 				const snapY = candle
 					? candlestickSeries.priceToCoordinate(candle.close)
 					: param.point.y;
-				setTooltip({
+				setLegendData({
 					...cachedTooltipData,
 					x: param.point.x,
 					y: param.point.y,
@@ -1431,7 +1430,6 @@ export default function BTCChart() {
 				| BTCData
 				| undefined;
 			if (!candle) {
-				setTooltip(null);
 				return;
 			}
 			const dateStr = new Date(Number(param.time) * 1000).toLocaleString(
@@ -1543,12 +1541,6 @@ export default function BTCChart() {
 				),
 			};
 
-			setTooltip({
-				...cachedTooltipData,
-				x: param.point.x,
-				y: param.point.y,
-				snapY: snapY ?? param.point.y,
-			} as TooltipData);
 			setLegendData({
 				...cachedTooltipData,
 				x: param.point.x,
@@ -1576,7 +1568,7 @@ export default function BTCChart() {
 			if (chart && chartContainer) {
 				chart.applyOptions({ width: chartContainer.clientWidth });
 			}
-			setIsMobile(window.innerWidth < 768);
+			// setIsMobile(window.innerWidth < 768);
 		};
 
 		handleResize();
@@ -1981,287 +1973,6 @@ export default function BTCChart() {
 					</Show>
 				</div>
 
-				{/* Institutional Floating Tooltip */}
-				<Show when={tooltip()} keyed>
-					{(t) => (
-						<>
-							{/* Reticle Dot */}
-							<div
-								class="hidden md:block absolute w-2 h-2 bg-white border border-black shadow-[0_0_10px_rgba(255,255,255,0.5)] pointer-events-none z-10"
-								style={{
-									top: "0",
-									left: "0",
-									transform: `translate(${t.x - 4}px, ${t.snapY - 4}px)`,
-								}}
-							/>
-							{/* Data Panel */}
-							<div
-								class={`absolute z-30 pointer-events-none bg-[#151921]/95 backdrop-blur-md border border-white/10 shadow-2xl transition-all duration-75 ease-out flex flex-col ${isMobile() ? "top-2 left-2 right-2 border-t-2 border-t-indigo-500" : "w-64"}`}
-								style={
-									!isMobile()
-										? {
-												top: "0",
-												left: "0",
-												transform: `translate(${Math.min(Math.max(12, t.x + 20), (chartContainer?.clientWidth ?? 800) - 270)}px, ${Math.max(12, t.snapY - 340)}px)`,
-											}
-										: {}
-								}
-							>
-								{/* Tooltip Header */}
-								<div class="px-3 py-2 border-b border-white/5 flex justify-between items-center bg-white/2">
-									<span class="text-[10px] font-mono font-black text-white p-0">
-										{t.time}
-									</span>
-									<div class="flex items-center gap-1.5">
-										<Show when={t.changeColor.includes("emerald")}>
-											<IconTrendUp class="w-2.5 h-2.5 text-emerald-400" />
-										</Show>
-										<Show when={t.changeColor.includes("rose")}>
-											<IconTrendDown class="w-2.5 h-2.5 text-rose-400" />
-										</Show>
-										<span
-											class={`text-[9px] font-black uppercase tracking-widest ${t.changeColor}`}
-										>
-											{t.changeColor.includes("emerald")
-												? "Delta Pos"
-												: "Delta Neg"}
-										</span>
-									</div>
-								</div>
-
-								{/* Tooltip Body */}
-								<div class="p-4 space-y-5">
-									<div class="grid grid-cols-2 gap-x-6 gap-y-4">
-										<div class="space-y-3">
-											<div class="flex flex-col">
-												<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-													Open
-												</span>
-												<span class="text-[11px] font-mono font-bold text-slate-300">
-													{t.open}
-												</span>
-											</div>
-											<div class="flex flex-col">
-												<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-													Low
-												</span>
-												<span class="text-[11px] font-mono font-bold text-slate-300">
-													{t.low}
-												</span>
-											</div>
-										</div>
-										<div class="space-y-3">
-											<div class="flex flex-col">
-												<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-													High
-												</span>
-												<span class="text-[11px] font-mono font-bold text-slate-300">
-													{t.high}
-												</span>
-											</div>
-											<div class="flex flex-col border-l border-indigo-500/20 pl-3">
-												<span class="text-[8px] font-bold text-indigo-400 uppercase tracking-widest mb-1">
-													Terminal
-												</span>
-												<div class="flex items-center gap-2">
-													<Show when={t.changeColor.includes("emerald")}>
-														<IconTrendUp class="w-2.5 h-2.5 text-emerald-400" />
-													</Show>
-													<Show when={t.changeColor.includes("rose")}>
-														<IconTrendDown class="w-2.5 h-2.5 text-rose-400" />
-													</Show>
-													<span
-														class={`text-xs font-mono font-black ${t.changeColor}`}
-													>
-														{t.close}
-													</span>
-												</div>
-											</div>
-										</div>
-										<div class="col-span-2 pt-2 border-t border-white/5 flex justify-between items-center">
-											<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
-												Vol Total
-											</span>
-											<span class="text-[10px] font-mono font-bold text-slate-400">
-												{t.volume}
-											</span>
-										</div>
-									</div>
-
-									{/* Indicators Section */}
-									<Show
-										when={
-											t.ema20 ||
-											t.ema60 ||
-											t.ema120 ||
-											t.ma20 ||
-											t.ma60 ||
-											t.ma120 ||
-											t.donchianHigh ||
-											t.rsi ||
-											t.fng ||
-											t.tdLabel
-										}
-									>
-										<div class="space-y-3 pt-3 border-t border-white/5">
-											{/* Technical Overlay */}
-											<div class="grid grid-cols-2 gap-2">
-												<Show
-													when={
-														t.ema20 ||
-														t.ema60 ||
-														t.ema120 ||
-														t.ma20 ||
-														t.ma60 ||
-														t.ma120 ||
-														t.donchianHigh
-													}
-												>
-													<div class="flex flex-col gap-2">
-														<span class="text-[7px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 pb-1 mb-1">
-															Active Signals
-														</span>
-														<div class="grid grid-cols-1 gap-y-1.5">
-															<Show when={t.ma20}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		MA 20
-																	</span>
-																	<span class="text-[9px] font-mono text-red-500">
-																		{t.ma20}
-																	</span>
-																</div>
-															</Show>
-															<Show when={t.ma60}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		MA 60
-																	</span>
-																	<span class="text-[9px] font-mono text-green-500">
-																		{t.ma60}
-																	</span>
-																</div>
-															</Show>
-															<Show when={t.ma120}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		MA 120
-																	</span>
-																	<span class="text-[9px] font-mono text-blue-600">
-																		{t.ma120}
-																	</span>
-																</div>
-															</Show>
-															<Show when={t.donchianHigh}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		20D HIGH
-																	</span>
-																	<span class="text-[9px] font-mono text-rose-400">
-																		{t.donchianHigh}
-																	</span>
-																</div>
-															</Show>
-															<Show when={t.prevHigh}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		PREV HIGH
-																	</span>
-																	<span class="text-[9px] font-mono text-orange-400">
-																		{t.prevHigh}
-																	</span>
-																</div>
-															</Show>
-															<Show when={t.ema20}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		EMA 20
-																	</span>
-																	<span class="text-[9px] font-mono text-yellow-400">
-																		{t.ema20}
-																	</span>
-																</div>
-															</Show>
-															<Show when={t.ema60}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		EMA 60
-																	</span>
-																	<span class="text-[9px] font-mono text-purple-400">
-																		{t.ema60}
-																	</span>
-																</div>
-															</Show>
-															<Show when={t.ema120}>
-																<div class="flex justify-between items-center gap-4">
-																	<span class="text-[8px] font-bold text-slate-400">
-																		EMA 120
-																	</span>
-																	<span class="text-[9px] font-mono text-orange-400">
-																		{t.ema120}
-																	</span>
-																</div>
-															</Show>
-														</div>
-													</div>
-												</Show>
-												<div class="flex flex-col gap-2">
-													<Show when={t.rsi}>
-														<div class="flex flex-col gap-0.5">
-															<span class="text-[7px] font-bold text-slate-500 uppercase">
-																RSI 14
-															</span>
-															<span class="text-[9px] font-mono text-indigo-400">
-																{t.rsi}
-															</span>
-														</div>
-													</Show>
-													<Show when={t.fng}>
-														<div class="flex flex-col gap-0.5">
-															<span class="text-[7px] font-bold text-slate-500 uppercase">
-																Fear Greed
-															</span>
-															<span
-																class={`text-[9px] font-mono ${t.fngClass}`}
-															>
-																{t.fng}
-															</span>
-														</div>
-													</Show>
-												</div>
-											</div>
-
-											{/* Signals */}
-											<Show when={t.tdLabel}>
-												<div class="bg-indigo-500/5 border border-indigo-500/10 p-2">
-													<div class="flex items-center gap-2 mb-1">
-														<span class="w-1.5 h-1.5 bg-indigo-500 animate-pulse"></span>
-														<span class="text-[9px] font-black text-white uppercase tracking-tighter">
-															{t.tdLabel}
-														</span>
-													</div>
-													<p class="text-[8px] text-slate-400 leading-tight uppercase font-bold tracking-tight">
-														{t.tdDescription}
-													</p>
-												</div>
-											</Show>
-										</div>
-									</Show>
-								</div>
-
-								{/* Tooltip Footer */}
-								<div class="px-3 py-1.5 border-t border-white/5 bg-white/2 flex justify-between items-center">
-									<span class="text-[7px] font-black text-slate-600 uppercase tracking-widest">
-										Mod Ter Alpha V3
-									</span>
-									<span class="text-[7px] font-mono text-indigo-500/50">
-										Secured Feed
-									</span>
-								</div>
-							</div>
-						</>
-					)}
-				</Show>
 			</div>
 		</div>
 	);
