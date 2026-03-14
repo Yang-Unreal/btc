@@ -217,7 +217,7 @@ export default function BTCChart() {
 		SUPPORTED_ASSETS[0],
 	);
 
-	// const [isMobile, setIsMobile] = createSignal(false);
+	const [isMobile, setIsMobile] = createSignal(false);
 
 	// Dropdown States
 
@@ -1697,7 +1697,7 @@ export default function BTCChart() {
 			if (chart && chartContainer) {
 				chart.applyOptions({ width: chartContainer.clientWidth });
 			}
-			// setIsMobile(window.innerWidth < 768);
+			setIsMobile(window.innerWidth < 640);
 		};
 
 		handleResize();
@@ -1813,113 +1813,198 @@ export default function BTCChart() {
 
 	return (
 		<div class="directive-card overflow-hidden">
-			{/* Bitget-style Unified Toolbar */}
-			<div class="relative z-50 flex flex-wrap items-center justify-between p-1 bg-[#151921] border-b border-white/5">
-				<div class="flex items-center gap-px">
-					{/* Symbol Info */}
-					<div class="relative flex items-center gap-2 px-3 py-1.5 border-r border-white/5 mr-2">
-						<button
-							type="button"
-							onClick={() => setShowAssetMenu(!showAssetMenu())}
-							class="flex items-center gap-1.5 text-xs font-black text-white hover:text-indigo-400"
-						>
-							{activeAsset().symbol}/USDT <IconChevronDown />
-						</button>
-						<Show when={showAssetMenu()}>
-							<div
-								class="fixed inset-0 z-40"
-								onClick={() => {
-									setShowAssetMenu(false);
-									setAssetSearchQuery("");
-								}}
-								onKeyDown={(e) => {
-									if (e.key === "Escape") {
+			{/* Toolbar */}
+			<div class="relative z-50 bg-[#151921] border-b border-white/5">
+				{/* Row 1: Symbol, Price, Indicators, Connection, View Tabs */}
+				<div class="flex items-center justify-between p-1">
+					<div class="flex items-center gap-px">
+						{/* Symbol Info */}
+						<div class="relative flex items-center gap-2 px-3 py-1.5 border-r border-white/5 mr-2">
+							<button
+								type="button"
+								onClick={() => setShowAssetMenu(!showAssetMenu())}
+								class="flex items-center gap-1.5 text-xs font-black text-white hover:text-indigo-400"
+							>
+								{activeAsset().symbol}/USDT <IconChevronDown />
+							</button>
+							<Show when={showAssetMenu()}>
+								<div
+									class="fixed inset-0 z-40"
+									onClick={() => {
 										setShowAssetMenu(false);
 										setAssetSearchQuery("");
-									}
-								}}
-								tabIndex={-1}
-								role="button"
-							/>
-							<div class="absolute left-0 top-full mt-1 w-64 bg-[#151921] border border-white/10 shadow-2xl z-50 overflow-hidden flex flex-col">
-								<div class="p-2 border-b border-white/5 bg-white/2">
-									<input
-										type="text"
-										placeholder="Search pair..."
-										class="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-[10px] font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
-										value={assetSearchQuery()}
-										onInput={(e) =>
-											setAssetSearchQuery(e.currentTarget.value)
+									}}
+									onKeyDown={(e) => {
+										if (e.key === "Escape") {
+											setShowAssetMenu(false);
+											setAssetSearchQuery("");
 										}
-										onClick={(e) => e.stopPropagation()}
-										autofocus
-									/>
-								</div>
-								<div class="max-h-80 overflow-y-auto no-scrollbar py-1">
-									<div class="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 mb-1">
-										Spot Pairs
+									}}
+									tabIndex={-1}
+									role="button"
+								/>
+								<div class="absolute left-0 top-full mt-1 w-64 bg-[#151921] border border-white/10 shadow-2xl z-50 overflow-hidden flex flex-col">
+									<div class="p-2 border-b border-white/5 bg-white/2">
+										<input
+											type="text"
+											placeholder="Search pair..."
+											class="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-[10px] font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+											value={assetSearchQuery()}
+											onInput={(e) =>
+												setAssetSearchQuery(e.currentTarget.value)
+											}
+											onClick={(e) => e.stopPropagation()}
+											autofocus
+										/>
 									</div>
-									<For
-										each={SUPPORTED_ASSETS.filter(
-											(a) =>
-												a.name
-													.toLowerCase()
-													.includes(assetSearchQuery().toLowerCase()) ||
-												a.symbol
-													.toLowerCase()
-													.includes(assetSearchQuery().toLowerCase()),
-										)}
-									>
-										{(asset) => (
+									<div class="max-h-80 overflow-y-auto no-scrollbar py-1">
+										<div class="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 mb-1">
+											Spot Pairs
+										</div>
+										<For
+											each={SUPPORTED_ASSETS.filter(
+												(a) =>
+													a.name
+														.toLowerCase()
+														.includes(assetSearchQuery().toLowerCase()) ||
+													a.symbol
+														.toLowerCase()
+														.includes(assetSearchQuery().toLowerCase()),
+											)}
+										>
+											{(asset) => (
+												<button
+													type="button"
+													class={`w-full text-left px-3 py-2.5 text-[11px] font-bold hover:bg-white/5 flex items-center justify-between transition-colors border-l-2 ${activeAsset().symbol === asset.symbol ? "border-indigo-500 bg-white/5 text-white" : "border-transparent text-slate-400"}`}
+													onClick={() => {
+														setActiveAsset(asset);
+														setShowAssetMenu(false);
+														setAssetSearchQuery("");
+													}}
+												>
+													<div class="flex items-center gap-2">
+														<span
+															class={
+																activeAsset().symbol === asset.symbol
+																	? "text-white"
+																	: "text-slate-200"
+															}
+														>
+															{asset.symbol}
+														</span>
+														<span class="text-slate-500">/USDT</span>
+													</div>
+													<span class="font-mono text-[9px] opacity-40 shrink-0 uppercase">
+														{asset.name}
+													</span>
+												</button>
+											)}
+										</For>
+									</div>
+								</div>
+							</Show>
+							<div class={`font-mono font-bold text-emerald-500 ml-2 ${isMobile() ? "text-[12px]" : "text-[14px]"}`}>
+								{formatCryptoPrice(currentPrice(), activeCurrency().code)}
+							</div>
+						</div>
+
+						{/* Time Intervals - inline on desktop only */}
+						<Show when={!isMobile()}>
+							<div class="flex items-center gap-1 mr-4">
+								<button type="button" class="p-1 px-2 text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
+									<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<title>Time</title>
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+									Time
+								</button>
+								<For each={intervals}>
+									{(opt) => (
+										<button
+											type="button"
+											class={`px-2 py-1 text-[11px] font-bold tracking-tight transition-all ${interval() === opt.value ? "text-indigo-500" : "text-slate-500 hover:text-slate-300"}`}
+											onClick={() => setInterval(opt.value)}
+										>
+											{opt.label.toUpperCase()}
+										</button>
+									)}
+								</For>
+							</div>
+						</Show>
+
+						{/* Indicators Dropdown */}
+						<div class="relative">
+							<button
+								type="button"
+								onClick={() => setShowIndicatorMenu(!showIndicatorMenu())}
+								class="p-1.5 text-slate-400 hover:text-white"
+							>
+								<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<title>Indicators</title>
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16" />
+								</svg>
+							</button>
+							<Show when={showIndicatorMenu()}>
+								<div
+									class="fixed inset-0 z-40"
+									onClick={() => setShowIndicatorMenu(false)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") setShowIndicatorMenu(false);
+									}}
+									tabIndex={-1}
+									role="button"
+								/>
+								<div class={`absolute top-full mt-1 w-56 bg-[#1a1e27] border border-white/10 shadow-2xl z-50 py-1 max-h-[70vh] overflow-y-auto no-scrollbar ${isMobile() ? "right-0" : "left-0"}`}>
+									<For each={indicatorConfig}>
+										{(ind) => (
 											<button
 												type="button"
-												class={`w-full text-left px-3 py-2.5 text-[11px] font-bold hover:bg-white/5 flex items-center justify-between transition-colors border-l-2 ${activeAsset().symbol === asset.symbol ? "border-indigo-500 bg-white/5 text-white" : "border-transparent text-slate-400"}`}
-												onClick={() => {
-													setActiveAsset(asset);
-													setShowAssetMenu(false);
-													setAssetSearchQuery("");
-												}}
+												onClick={() =>
+													setIndicators((prev) => ({
+														...prev,
+														[ind.key]: !prev[ind.key],
+													}))
+												}
+												class={`w-full text-left px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 hover:bg-white/5 ${indicators()[ind.key] ? ind.textColor : "text-slate-500"}`}
 											>
-												<div class="flex items-center gap-2">
-													<span
-														class={
-															activeAsset().symbol === asset.symbol
-																? "text-white"
-																: "text-slate-200"
-														}
-													>
-														{asset.symbol}
-													</span>
-													<span class="text-slate-500">/USDT</span>
-												</div>
-												<span class="font-mono text-[9px] opacity-40 shrink-0 uppercase">
-													{asset.name}
-												</span>
+												<div
+													class={`w-2 h-2 shrink-0 ${ind.color} ${indicators()[ind.key] ? "opacity-100" : "opacity-20"}`}
+												/>
+												<span class="grow">{ind.label}</span>
+												<Show when={indicators()[ind.key]}>
+													<div class="w-1 h-1 bg-indigo-500 rounded-full" />
+												</Show>
 											</button>
 										)}
 									</For>
 								</div>
-							</div>
-						</Show>
-						<div class="text-[14px] font-mono font-bold text-emerald-500 ml-2">
-							{formatCryptoPrice(currentPrice(), activeCurrency().code)}
+							</Show>
 						</div>
 					</div>
 
-					{/* Time Intervals */}
-					<div class="flex items-center gap-1 mr-4">
-						<button type="button" class="p-1 px-2 text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
-							<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<title>Time</title>
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-							</svg>
-							Time
-						</button>
+					<div class="flex items-center gap-2">
+						{/* View Tabs - hidden on mobile */}
+						<div class="hidden sm:flex bg-white/5 rounded p-0.5 mr-2">
+							<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-white bg-white/10 rounded-sm">Original</button>
+							<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:text-slate-300">TradingView</button>
+							<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:text-slate-300">Depth</button>
+						</div>
+						<div class="flex items-center gap-2 px-2 border-l border-white/5">
+							<div class="flex items-center">
+								{wsConnected() ? <IconPulse /> : <IconWifiOff />}
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* Row 2: Scrollable intervals on mobile */}
+				<Show when={isMobile()}>
+					<div class="flex items-center overflow-x-auto no-scrollbar border-t border-white/5 px-1 py-0.5">
 						<For each={intervals}>
 							{(opt) => (
 								<button
 									type="button"
-									class={`px-2 py-1 text-[11px] font-bold tracking-tight transition-all ${interval() === opt.value ? "text-indigo-500" : "text-slate-500 hover:text-slate-300"}`}
+									class={`px-2.5 py-1 text-[11px] font-bold tracking-tight transition-all whitespace-nowrap shrink-0 ${interval() === opt.value ? "text-indigo-500" : "text-slate-500 hover:text-slate-300"}`}
 									onClick={() => setInterval(opt.value)}
 								>
 									{opt.label.toUpperCase()}
@@ -1927,70 +2012,7 @@ export default function BTCChart() {
 							)}
 						</For>
 					</div>
-
-					{/* Indicators Dropdown */}
-					<div class="relative">
-						<button
-							type="button"
-							onClick={() => setShowIndicatorMenu(!showIndicatorMenu())}
-							class="p-1.5 text-slate-400 hover:text-white"
-						>
-							<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<title>Indicators</title>
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16" />
-							</svg>
-						</button>
-						<Show when={showIndicatorMenu()}>
-							<div
-								class="fixed inset-0 z-40"
-								onClick={() => setShowIndicatorMenu(false)}
-								onKeyDown={(e) => {
-									if (e.key === "Enter" || e.key === " ") setShowIndicatorMenu(false);
-								}}
-								tabIndex={-1}
-								role="button"
-							/>
-							<div class="absolute left-0 top-full mt-1 w-56 bg-[#1a1e27] border border-white/10 shadow-2xl z-50 py-1 max-h-[70vh] overflow-y-auto no-scrollbar">
-								<For each={indicatorConfig}>
-									{(ind) => (
-										<button
-											type="button"
-											onClick={() =>
-												setIndicators((prev) => ({
-													...prev,
-													[ind.key]: !prev[ind.key],
-												}))
-											}
-											class={`w-full text-left px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 hover:bg-white/5 ${indicators()[ind.key] ? ind.textColor : "text-slate-500"}`}
-										>
-											<div
-												class={`w-2 h-2 shrink-0 ${ind.color} ${indicators()[ind.key] ? "opacity-100" : "opacity-20"}`}
-											/>
-											<span class="grow">{ind.label}</span>
-											<Show when={indicators()[ind.key]}>
-												<div class="w-1 h-1 bg-indigo-500 rounded-full" />
-											</Show>
-										</button>
-									)}
-								</For>
-							</div>
-						</Show>
-					</div>
-				</div>
-
-				<div class="flex items-center gap-2">
-					{/* View Tabs */}
-					<div class="flex bg-white/5 rounded p-0.5 mr-2">
-						<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-white bg-white/10 rounded-sm">Original</button>
-						<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:text-slate-300">TradingView</button>
-						<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:text-slate-300">Depth</button>
-					</div>
-					<div class="flex items-center gap-2 px-2 border-l border-white/5">
-						<div class="flex items-center">
-							{wsConnected() ? <IconPulse /> : <IconWifiOff />}
-						</div>
-					</div>
-				</div>
+				</Show>
 			</div>
 
 			{/* Chart Area */}
@@ -2065,11 +2087,11 @@ export default function BTCChart() {
 						{(t) => (
 							<>
 								{/* Asset Info & OHLC */}
-								<div class="bg-black/20 p-1.5 py-1 rounded w-fit flex flex-wrap items-center gap-x-2 text-[11px] leading-tight font-bold whitespace-nowrap">
+								<div class={`bg-black/20 p-1.5 py-1 rounded w-fit flex flex-wrap items-center gap-x-2 leading-tight font-bold whitespace-nowrap ${isMobile() ? "text-[9px]" : "text-[11px]"}`}>
 									<span class="text-slate-200">
-										{activeAsset().symbol}/USDT · {interval().toUpperCase()} · Bitget
+										{activeAsset().symbol}/USDT · {interval().toUpperCase()}{!isMobile() && " · Bitget"}
 									</span>
-									<div class="flex items-center gap-1.5 ml-1 scale-90 origin-left">
+									<div class={`flex items-center gap-1.5 ml-1 origin-left ${isMobile() ? "scale-[0.85]" : "scale-90"}`}>
 										<span class="text-slate-500 font-medium">O</span>
 										<span class={t().changeColor}>{t().open}</span>
 										<span class="text-slate-500 font-medium ml-1">H</span>
@@ -2078,8 +2100,10 @@ export default function BTCChart() {
 										<span class={t().changeColor}>{t().low}</span>
 										<span class="text-slate-500 font-medium ml-1">C</span>
 										<span class={t().changeColor}>{t().close}</span>
-										<span class={`${t().changeColor} ml-1`}>{t().changeVal}</span>
-										<span class={t().changeColor}>({t().changePct})</span>
+										<Show when={!isMobile()}>
+											<span class={`${t().changeColor} ml-1`}>{t().changeVal}</span>
+											<span class={t().changeColor}>({t().changePct})</span>
+										</Show>
 									</div>
 								</div>
 
