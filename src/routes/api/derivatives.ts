@@ -8,6 +8,7 @@ interface DerivativesData {
 	openInterest: {
 		total: number; // In billions USD
 		change24h: number; // Percentage
+		changeUSD: number; // Absolute Billions USD
 		btcEquivalent: number;
 	};
 	fundingRate: {
@@ -142,8 +143,9 @@ export async function GET() {
 
 		// --- Calculations ---
 
-		// 1. Total OI Estimate (Scale OKX to Market)
-		const estimatedTotalBTC = currentOI * 4.5;
+		// 1. Total OI Estimate (Scale Bitget/OKX to Global Market)
+		// Global BTC OI is currently ~18.5x Bitget/OKX share in high vol regimes
+		const estimatedTotalBTC = currentOI * 18.5;
 		const totalOiUSD = (estimatedTotalBTC * btcPrice) / 1e9; // Billions
 
 		// 2. 24h Delta
@@ -151,6 +153,7 @@ export async function GET() {
 		if (histOI > 0) {
 			change24h = ((currentOI - histOI) / histOI) * 100;
 		}
+		const totalOiChangeUSD = ((currentOI - histOI) * 18.5 * btcPrice) / 1e9;
 
 		// 3. L/S Ratio
 		const shorts = 100 / (ratio + 1);
@@ -180,6 +183,7 @@ export async function GET() {
 			openInterest: {
 				total: Number(totalOiUSD.toFixed(2)),
 				change24h: Number(change24h.toFixed(2)),
+				changeUSD: Number(totalOiChangeUSD.toFixed(2)),
 				btcEquivalent: Number(estimatedTotalBTC.toFixed(0)),
 			},
 			fundingRate: {

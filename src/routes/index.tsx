@@ -2,11 +2,15 @@ import { Title } from "@solidjs/meta";
 import AssetTable from "~/components/AssetTable";
 import BTCChart from "~/components/BTCChart";
 import LiquidityEngine from "~/components/LiquidityEngine";
+import MacroPyramidCalculator from "~/components/MacroPyramidCalculator";
 
 export default function Home() {
 	return (
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 bg-[#09090b]">
 			<Title>Titan Terminal | Crypto Analytics</Title>
+
+			{/* Floating UI Toolkit */}
+			<MacroPyramidCalculator />
 
 			{/* Main Grid Layout */}
 			<div class="space-y-16">
