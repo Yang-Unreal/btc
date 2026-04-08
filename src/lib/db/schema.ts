@@ -6,7 +6,6 @@ export const favorites = pgTable("favorites", {
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-
 export const openInterestHistory = pgTable("open_interest_history", {
 	id: uuid("id").primaryKey().defaultRandom(),
 	timestamp: timestamp("timestamp").defaultNow().notNull(),
@@ -17,6 +16,7 @@ export const userSettings = pgTable("user_settings", {
 	id: text("id").primaryKey().default("default"),
 	currency: text("currency").notNull().default("USD"),
 	interval: text("interval").notNull().default("1h"),
+	favoriteIntervals: text("favorite_intervals"), // Store as JSON string: ["4h", "1h"]
 	indicators: text("indicators"), // Store as JSON string since pg-core json might vary
 	indicatorHeights: text("indicator_heights"), // Store as JSON string for oscillators/atr heights
 	notificationsEnabled: text("notifications_enabled").notNull().default("true"), // "true" or "false"

@@ -21,6 +21,9 @@ export async function GET() {
 		return json({
 			currency: settings[0].currency,
 			interval: settings[0].interval,
+			favoriteIntervals: settings[0].favoriteIntervals
+				? JSON.parse(settings[0].favoriteIntervals)
+				: ["4h"],
 			notificationsEnabled: settings[0].notificationsEnabled === "true",
 			fourHAlertEnabled: settings[0].fourHAlertEnabled === "true",
 			indicators: settings[0].indicators
@@ -42,6 +45,7 @@ export async function POST({ request }: { request: Request }) {
 		const {
 			currency,
 			interval,
+			favoriteIntervals,
 			indicators,
 			indicatorHeights,
 			notificationsEnabled,
@@ -59,6 +63,9 @@ export async function POST({ request }: { request: Request }) {
 			)
 		) {
 			updateData.interval = interval;
+		}
+		if (favoriteIntervals && Array.isArray(favoriteIntervals)) {
+			updateData.favoriteIntervals = JSON.stringify(favoriteIntervals);
 		}
 		if (indicators) {
 			updateData.indicators = JSON.stringify(indicators);
