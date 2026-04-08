@@ -81,9 +81,8 @@ export async function GET({ request }: APIEvent) {
 		if (toParam) {
 			// Pagination mode: fetch one page (~200 candles) ending at toParam
 			const endTimeMs = parseInt(toParam);
-			// Determine page size by going back interval * 200 from endTime
 			const intervalMs = intervalToMs(hlInterval);
-			const startTimeMs = endTimeMs - intervalMs * 200;
+			const startTimeMs = endTimeMs - intervalMs * 1000;
 
 			const pageData = await fetchHLCandles(symbol, hlInterval, startTimeMs, endTimeMs);
 			// Exclude the candle at exactly endTime (it's the boundary from the previous fetch)
@@ -93,29 +92,29 @@ export async function GET({ request }: APIEvent) {
 			return json(filtered);
 		}
 
-		// Initial load: fetch ~1000 candles ending now
+		// Initial load: fetch ~3000 candles ending now
 		const now = Date.now();
 		const intervalMs = intervalToMs(hlInterval);
-		const startTimeMs = now - intervalMs * 1000;
+		const startTimeMs = now - intervalMs * 3000;
 
 		const mappedData = await fetchHLCandles(symbol, hlInterval, startTimeMs, now);
 
-		// If fewer than 1000, try to supplement with older data
-		if (mappedData.length > 0 && mappedData.length < 1000) {
+		// If fewer than 2000, try to supplement with older data
+		if (mappedData.length > 0 && mappedData.length < 2000) {
 			const earliestMs = mappedData[0][0] * 1000;
-			const needed = 1000 - mappedData.length;
-			const pagesNeeded = Math.ceil(needed / 200);
+			const needed = 3000 - mappedData.length;
+			const pagesNeeded = Math.ceil(needed / 1000);
 
 			let olderData: number[][] = [];
 			let cursor = earliestMs;
 
 			for (let page = 0; page < pagesNeeded; page++) {
-				const pageStartMs = cursor - intervalMs * 200;
+				const pageStartMs = cursor - intervalMs * 1000;
 				const pageData = await fetchHLCandles(symbol, hlInterval, pageStartMs, cursor);
 				if (pageData.length === 0) break;
 				olderData = [...pageData, ...olderData];
 				cursor = pageData[0][0] * 1000;
-				if (pageData.length < 50) break; // stop if not returning enough data
+				if (pageData.length < 100) break; // stop if not returning enough data
 			}
 
 			if (olderData.length > 0) {

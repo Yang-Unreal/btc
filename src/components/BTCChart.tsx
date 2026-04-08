@@ -625,7 +625,7 @@ export default function BTCChart() {
 			const mappedData: BTCData[] = [];
 
 			for (const item of data) {
-				const ts = Math.floor(item[0] / 1000);
+				const ts = Math.floor(item[0]);
 				if (!seen.has(ts)) {
 					seen.add(ts);
 					mappedData.push({
