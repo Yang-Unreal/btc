@@ -2142,12 +2142,7 @@ export default function BTCChart() {
 					</div>
 
 					<div class="flex items-center gap-2">
-						{/* View Tabs */}
-						<div class="flex bg-white/5 rounded p-0.5 mr-2">
-							<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-white bg-white/10 rounded-sm">Original</button>
-							<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:text-slate-300">TradingView</button>
-							<button type="button" class="px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:text-slate-300">Depth</button>
-						</div>
+
 						<div class="flex items-center gap-2 px-2 border-l border-white/5">
 							<div class="flex items-center">
 								{wsConnected() ? <IconPulse /> : <IconWifiOff />}
