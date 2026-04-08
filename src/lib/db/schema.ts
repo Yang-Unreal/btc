@@ -15,7 +15,9 @@ export const openInterestHistory = pgTable("open_interest_history", {
 export const userSettings = pgTable("user_settings", {
 	id: text("id").primaryKey().default("default"),
 	currency: text("currency").notNull().default("USD"),
+	interval: text("interval").notNull().default("4h"),
 	indicators: text("indicators"), // Store as JSON string since pg-core json might vary
+	indicatorHeights: text("indicator_heights"), // Store as JSON string for oscillators/atr heights
 	notificationsEnabled: text("notifications_enabled").notNull().default("true"), // "true" or "false"
 	fourHAlertEnabled: text("four_h_alert_enabled").notNull().default("false"), // "true" or "false"
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),

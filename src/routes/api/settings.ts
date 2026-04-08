@@ -5,14 +5,14 @@ import { type NewUserSettings, userSettings } from "../../lib/db/schema";
 
 export async function GET() {
 	try {
-		// For single user, get settings with id 'default'
 		let settings = await db
 			.select()
 			.from(userSettings)
 			.where(eq(userSettings.id, "default"));
 		if (settings.length === 0) {
-			// Create default settings
-			await db.insert(userSettings).values({ id: "default", currency: "USD" });
+			await db
+				.insert(userSettings)
+				.values({ id: "default", currency: "USD", interval: "4h" });
 			settings = await db
 				.select()
 				.from(userSettings)
@@ -20,10 +20,14 @@ export async function GET() {
 		}
 		return json({
 			currency: settings[0].currency,
+			interval: settings[0].interval,
 			notificationsEnabled: settings[0].notificationsEnabled === "true",
 			fourHAlertEnabled: settings[0].fourHAlertEnabled === "true",
 			indicators: settings[0].indicators
 				? JSON.parse(settings[0].indicators)
+				: null,
+			indicatorHeights: settings[0].indicatorHeights
+				? JSON.parse(settings[0].indicatorHeights)
 				: null,
 		});
 	} catch (e) {
@@ -35,15 +39,32 @@ export async function GET() {
 export async function POST({ request }: { request: Request }) {
 	try {
 		const body = await request.json();
-		const { currency, indicators, notificationsEnabled, fourHAlertEnabled } =
-			body;
+		const {
+			currency,
+			interval,
+			indicators,
+			indicatorHeights,
+			notificationsEnabled,
+			fourHAlertEnabled,
+		} = body;
 
 		const updateData: Partial<NewUserSettings> = { updatedAt: new Date() };
 		if (currency && ["USD", "EUR"].includes(currency)) {
 			updateData.currency = currency;
 		}
+		if (
+			interval &&
+			["1m", "5m", "15m", "30m", "1h", "4h", "12h", "1d", "1w"].includes(
+				interval,
+			)
+		) {
+			updateData.interval = interval;
+		}
 		if (indicators) {
 			updateData.indicators = JSON.stringify(indicators);
+		}
+		if (indicatorHeights) {
+			updateData.indicatorHeights = JSON.stringify(indicatorHeights);
 		}
 		if (typeof notificationsEnabled === "boolean") {
 			updateData.notificationsEnabled = notificationsEnabled ? "true" : "false";
@@ -56,7 +77,6 @@ export async function POST({ request }: { request: Request }) {
 			return json({ error: "No valid data to update" }, { status: 400 });
 		}
 
-		// Update or insert
 		await db
 			.insert(userSettings)
 			.values({ id: "default", ...updateData })

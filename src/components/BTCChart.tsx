@@ -1,3 +1,4 @@
+import { createQuery } from "@tanstack/solid-query";
 import {
 	type CandlestickData,
 	CandlestickSeries,
@@ -22,7 +23,6 @@ import {
 	Show,
 	untrack,
 } from "solid-js";
-import { createQuery } from "@tanstack/solid-query";
 import { CURRENCIES, SUPPORTED_ASSETS } from "../lib/constants";
 import { formatCryptoPrice } from "../lib/format";
 import {
@@ -208,7 +208,7 @@ export default function BTCChart() {
 	const [wsConnected, setWsConnected] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
 
-	const [interval, setInterval] = createSignal<Interval>("1h");
+	const [interval, setInterval] = createSignal<Interval>("4h");
 
 	// NEW: Currency State
 	const [activeCurrency, setActiveCurrency] = createSignal<CurrencyConfig>(
@@ -243,13 +243,16 @@ export default function BTCChart() {
 		volume: true,
 	});
 
-	const [indicatorHeights, setIndicatorHeights] = createSignal<Record<string, number>>({
+	const [indicatorHeights, setIndicatorHeights] = createSignal<
+		Record<string, number>
+	>({
 		oscillators: 100,
 		atr: 100,
 	});
 	const [draggingArea, setDraggingArea] = createSignal<string | null>(null); // 'top' | 'middle'
 
 	// Persistence: Fetch initial indicators
+	const [settingsLoaded, setSettingsLoaded] = createSignal(false);
 	onMount(async () => {
 		try {
 			const res = await fetch("/api/settings");
@@ -261,34 +264,40 @@ export default function BTCChart() {
 				const currency = CURRENCIES.find((c) => c.code === data.currency);
 				if (currency) setActiveCurrency(currency);
 			}
+			if (data.interval) {
+				const validInterval = intervals.find((i) => i.value === data.interval);
+				if (validInterval) setInterval(validInterval.value as Interval);
+			}
 			if (data.indicatorHeights) {
 				setIndicatorHeights(data.indicatorHeights);
 			} else if (data.indicatorHeight) {
-				// Fallback for old settings
-				setIndicatorHeights({ oscillators: data.indicatorHeight / 2, atr: data.indicatorHeight / 2 });
+				setIndicatorHeights({
+					oscillators: data.indicatorHeight / 2,
+					atr: data.indicatorHeight / 2,
+				});
 			}
+			setSettingsLoaded(true);
 		} catch (e) {
 			console.error("Failed to load indicators from DB", e);
+			setSettingsLoaded(true);
 		}
 	});
 
-	// Persistence: Save indicators when changed
-	let isFirstIndicatorsEffect = true;
+	// Persistence: Save settings when changed (only after loading is complete)
 	createEffect(() => {
+		if (!settingsLoaded()) return;
 		const currentIndicators = indicators();
 		const currentCurrency = activeCurrency();
 		const currentIndHeights = indicatorHeights();
-		if (isFirstIndicatorsEffect) {
-			isFirstIndicatorsEffect = false;
-			return;
-		}
-		// Debounce or at least run in background
+		const currentInterval = interval();
+
 		fetch("/api/settings", {
 			method: "POST",
 			body: JSON.stringify({
 				indicators: currentIndicators,
 				currency: currentCurrency.code,
 				indicatorHeights: currentIndHeights,
+				interval: currentInterval,
 			}),
 		}).catch((err) => console.error("Failed to save settings", err));
 	});
@@ -772,7 +781,10 @@ export default function BTCChart() {
 		}
 
 		// Full reconnect (new asset or WS not yet open)
-		if (wsPingInterval !== undefined) { window.clearInterval(wsPingInterval); wsPingInterval = undefined; }
+		if (wsPingInterval !== undefined) {
+			window.clearInterval(wsPingInterval);
+			wsPingInterval = undefined;
+		}
 		if (ws) ws.close();
 		ws = new WebSocket("wss://api.hyperliquid.xyz/ws");
 		wsCurrentAssetSymbol = coin;
@@ -781,24 +793,32 @@ export default function BTCChart() {
 		ws.onopen = () => {
 			setWsConnected(true);
 			// Subscribe to candle updates for the current interval
-			ws?.send(JSON.stringify({
-				method: "subscribe",
-				subscription: { type: "candle", coin, interval: newInterval },
-			}));
+			ws?.send(
+				JSON.stringify({
+					method: "subscribe",
+					subscription: { type: "candle", coin, interval: newInterval },
+				}),
+			);
 			// Subscribe to trades for real-time last-price updates
-			ws?.send(JSON.stringify({
-				method: "subscribe",
-				subscription: { type: "trades", coin },
-			}));
+			ws?.send(
+				JSON.stringify({
+					method: "subscribe",
+					subscription: { type: "trades", coin },
+				}),
+			);
 			// HL requires a ping every 30s to keep the connection alive
 			wsPingInterval = window.setInterval(() => {
-				if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ method: "ping" }));
+				if (ws?.readyState === WebSocket.OPEN)
+					ws.send(JSON.stringify({ method: "ping" }));
 			}, 30_000);
 		};
 
 		ws.onclose = () => {
 			setWsConnected(false);
-			if (wsPingInterval !== undefined) { window.clearInterval(wsPingInterval); wsPingInterval = undefined; }
+			if (wsPingInterval !== undefined) {
+				window.clearInterval(wsPingInterval);
+				wsPingInterval = undefined;
+			}
 		};
 		ws.onerror = () => setWsConnected(false);
 
@@ -807,10 +827,19 @@ export default function BTCChart() {
 				const msg = JSON.parse(event.data);
 
 				// Ignore pong / subscription ack
-				if (!msg || msg.channel === "subscriptionResponse" || msg.channel === "pong") return;
+				if (
+					!msg ||
+					msg.channel === "subscriptionResponse" ||
+					msg.channel === "pong"
+				)
+					return;
 
 				// 1. Real-time trades → extract last price for top-left display
-				if (msg.channel === "trades" && Array.isArray(msg.data) && msg.data.length > 0) {
+				if (
+					msg.channel === "trades" &&
+					Array.isArray(msg.data) &&
+					msg.data.length > 0
+				) {
 					const lastTrade = msg.data[msg.data.length - 1];
 					// Only update if the trade is for our current coin
 					if (lastTrade?.coin === coin && lastTrade?.px) {
@@ -820,11 +849,7 @@ export default function BTCChart() {
 				}
 
 				// 2. Candle updates → push to chart
-				if (
-					msg.channel === "candle" &&
-					msg.data &&
-					candlestickSeries
-				) {
+				if (msg.channel === "candle" && msg.data && candlestickSeries) {
 					// HL sends a single candle object (not an array) for live updates.
 					// On subscription it sends an isSnapshot:true array — ignore that,
 					// our REST history is authoritative.
@@ -832,9 +857,10 @@ export default function BTCChart() {
 					if (candles[0]?.isSnapshot) return;
 
 					const currentHistory = untrack(() => btcData());
-					const lastKnownTs = currentHistory.length > 0
-						? (currentHistory[currentHistory.length - 1].time as number)
-						: 0;
+					const lastKnownTs =
+						currentHistory.length > 0
+							? (currentHistory[currentHistory.length - 1].time as number)
+							: 0;
 
 					for (const candle of candles) {
 						// Verify the candle is for our current subscription
@@ -1075,7 +1101,7 @@ export default function BTCChart() {
 		volumeSeries?.applyOptions({ visible: !!currentInd.volume });
 		const totalHeight = chartContainer?.clientHeight || 450;
 		const heights = indicatorHeights();
-		
+
 		const oscillatorsActive = !!(currentInd.rsi || currentInd.fng);
 		const atrActive = !!currentInd.atr;
 
@@ -1085,15 +1111,16 @@ export default function BTCChart() {
 
 		const oscH = oscillatorsActive ? heights.oscillators : 0;
 		const atrH = atrActive ? heights.atr : 0;
-		
+
 		const totalIndHeight = oscH + atrH;
-		const marginRatio = totalIndHeight > 0 ? (totalIndHeight + 40) / totalHeight : 0.1;
+		const marginRatio =
+			totalIndHeight > 0 ? (totalIndHeight + 40) / totalHeight : 0.1;
 
 		chart.priceScale("right").applyOptions({
 			scaleMargins: { top: 0.1, bottom: marginRatio },
 		});
 
-		const areaStart = 1 - (totalIndHeight / totalHeight);
+		const areaStart = 1 - totalIndHeight / totalHeight;
 
 		if (activeOscillators.length === 1) {
 			const margins = { top: areaStart, bottom: 0.05 };
@@ -1102,7 +1129,8 @@ export default function BTCChart() {
 				scaleMargins: margins,
 			});
 			// Hide others
-			const other = activeOscillators[0] === "oscillators" ? "atrScale" : "oscillators";
+			const other =
+				activeOscillators[0] === "oscillators" ? "atrScale" : "oscillators";
 			chart.priceScale(other).applyOptions({ visible: false });
 		} else if (activeOscillators.length === 2) {
 			// Stack them: oscillators on top, ATR on bottom
@@ -1112,17 +1140,17 @@ export default function BTCChart() {
 			// ATR bottom: from (1 - atrRatio) to 1
 			chart.priceScale("atrScale").applyOptions({
 				visible: true,
-				scaleMargins: { 
-					top: 1 - atrRatio, 
-					bottom: 0.05 
+				scaleMargins: {
+					top: 1 - atrRatio,
+					bottom: 0.05,
 				},
 			});
 			// Oscillators above ATR: from (1 - atrRatio - oscRatio) to (1 - atrRatio)
 			chart.priceScale("oscillators").applyOptions({
 				visible: true,
-				scaleMargins: { 
-					top: 1 - atrRatio - oscRatio, 
-					bottom: atrRatio + 0.02 // small gap
+				scaleMargins: {
+					top: 1 - atrRatio - oscRatio,
+					bottom: atrRatio + 0.02, // small gap
 				},
 			});
 		} else {
@@ -1280,7 +1308,12 @@ export default function BTCChart() {
 
 	// --- History Query ---
 	const historyQuery = createQuery(() => ({
-		queryKey: ["history", interval(), activeCurrency().code, activeAsset().symbol],
+		queryKey: [
+			"history",
+			interval(),
+			activeCurrency().code,
+			activeAsset().symbol,
+		],
 		queryFn: async () => {
 			return await fetchHistoricalData(
 				interval(),
@@ -1308,7 +1341,7 @@ export default function BTCChart() {
 		const historyData = historyQuery.data;
 		const isFetching = historyQuery.isFetching;
 		const fetchError = historyQuery.error;
-		
+
 		untrack(() => {
 			if (!historyData) {
 				if (isFetching) {
@@ -1320,14 +1353,16 @@ export default function BTCChart() {
 			if (!candlestickSeries) return;
 
 			setIsLoading(false);
-			setError(fetchError ? "A serious error occurred while loading data" : null);
+			setError(
+				fetchError ? "A serious error occurred while loading data" : null,
+			);
 
 			const history = [...historyData]; // clone to avoid mutating solid-query cache
 
 			if (history.length > 0) {
 				const cp = currentPrice();
 				const targetSymbol = activeAsset().symbol;
-				
+
 				if (cp === 0 || lastLoadedSymbol !== targetSymbol) {
 					setCurrentPrice(history[history.length - 1].close);
 					lastLoadedSymbol = targetSymbol;
@@ -1369,7 +1404,6 @@ export default function BTCChart() {
 
 	// --- Load Data ---
 	// Removed loadData in favor of createQuery reactive updates
-
 
 	onMount(() => {
 		if (!chartContainer) return;
@@ -1637,8 +1671,13 @@ export default function BTCChart() {
 				high: formatTooltipPrice(candle.high),
 				low: formatTooltipPrice(candle.low),
 				close: formatTooltipPrice(candle.close),
-				changeVal: (candle.close - candle.open >= 0 ? "+" : "") + formatTooltipPrice(candle.close - candle.open),
-				changePct: ((candle.close - candle.open) / candle.open * 100 >= 0 ? "+" : "") + ((candle.close - candle.open) / candle.open * 100).toFixed(2) + "%",
+				changeVal:
+					(candle.close - candle.open >= 0 ? "+" : "") +
+					formatTooltipPrice(candle.close - candle.open),
+				changePct:
+					(((candle.close - candle.open) / candle.open) * 100 >= 0 ? "+" : "") +
+					(((candle.close - candle.open) / candle.open) * 100).toFixed(2) +
+					"%",
 				volume: formattedVolume,
 				currencySymbol: activeCurrency().symbol,
 				changeColor:
@@ -1717,7 +1756,10 @@ export default function BTCChart() {
 
 			if (area === "top") {
 				// Top-most active indicator handle
-				const newTotalHeight = Math.max(50, Math.min(totalHeight * 0.7, totalHeight - relativeY));
+				const newTotalHeight = Math.max(
+					50,
+					Math.min(totalHeight * 0.7, totalHeight - relativeY),
+				);
 				if (oscillatorsActive && atrActive) {
 					// Adjust total indicator height, then distribute proportionally
 					const currentTotal = heights.oscillators + heights.atr;
@@ -1726,7 +1768,7 @@ export default function BTCChart() {
 					const ratioAtr = heights.atr / currentTotal;
 					setIndicatorHeights({
 						oscillators: Math.max(30, newTotalHeight * ratioOsc),
-						atr: Math.max(30, newTotalHeight * ratioAtr)
+						atr: Math.max(30, newTotalHeight * ratioAtr),
 					});
 				} else if (oscillatorsActive) {
 					setIndicatorHeights({ ...heights, oscillators: newTotalHeight });
@@ -1738,28 +1780,37 @@ export default function BTCChart() {
 				// relativeY is the mouse position from the top of the chart container
 				// The top of the ATR pane is at (totalHeight - heights.atr)
 				// The top of the Oscillators pane is at (totalHeight - heights.atr - heights.oscillators)
-				
+
 				// We want to adjust the split, so the sum of heights.oscillators + heights.atr remains constant
 				// The mouse Y position should define the boundary between the two panes.
 				// The bottom of the oscillators pane (and top of ATR pane) should be at relativeY.
-				
+
 				const currentTotalIndHeight = heights.oscillators + heights.atr;
 				const newOscillatorsHeight = Math.max(30, totalHeight - relativeY - 20); // 20 is approx padding/margin
-				const newAtrHeight = Math.max(30, currentTotalIndHeight - newOscillatorsHeight);
+				const newAtrHeight = Math.max(
+					30,
+					currentTotalIndHeight - newOscillatorsHeight,
+				);
 
-				if (newOscillatorsHeight + newAtrHeight > currentTotalIndHeight + 10 || newOscillatorsHeight + newAtrHeight < currentTotalIndHeight - 10) {
+				if (
+					newOscillatorsHeight + newAtrHeight > currentTotalIndHeight + 10 ||
+					newOscillatorsHeight + newAtrHeight < currentTotalIndHeight - 10
+				) {
 					// If the total height changes too much, it means the mouse is outside the expected range.
 					// Re-calculate based on mouse position relative to the bottom of the chart.
 					const newAtrHeightFromBottom = Math.max(30, totalHeight - relativeY);
-					const newOscHeightFromBottom = Math.max(30, currentTotalIndHeight - newAtrHeightFromBottom);
+					const newOscHeightFromBottom = Math.max(
+						30,
+						currentTotalIndHeight - newAtrHeightFromBottom,
+					);
 					setIndicatorHeights({
 						oscillators: newOscHeightFromBottom,
-						atr: newAtrHeightFromBottom
+						atr: newAtrHeightFromBottom,
 					});
 				} else {
 					setIndicatorHeights({
 						oscillators: newOscillatorsHeight,
-						atr: newAtrHeight
+						atr: newAtrHeight,
 					});
 				}
 			}
@@ -1794,8 +1845,6 @@ export default function BTCChart() {
 		// Sync without tracking data updates
 		syncAllIndicators();
 	});
-
-
 
 	return (
 		<div class="directive-card overflow-hidden">
@@ -1872,7 +1921,13 @@ export default function BTCChart() {
 														}}
 													>
 														<div class="flex items-center gap-2">
-															<span class={activeAsset().symbol === asset.symbol ? "text-white" : "text-slate-200"}>
+															<span
+																class={
+																	activeAsset().symbol === asset.symbol
+																		? "text-white"
+																		: "text-slate-200"
+																}
+															>
 																{asset.symbol}
 															</span>
 															<span class="text-slate-500">/USDC</span>
@@ -1925,9 +1980,19 @@ export default function BTCChart() {
 								onClick={() => setShowIndicatorMenu(!showIndicatorMenu())}
 								class="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-md text-[11px] font-black text-slate-300 uppercase tracking-wider hover:bg-white/8 transition-colors w-full justify-center"
 							>
-								<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<svg
+									class="w-3.5 h-3.5"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
 									<title>Indicators</title>
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16" />
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16"
+									/>
 								</svg>
 								Select Indicators
 								<IconChevronDown />
@@ -1937,7 +2002,8 @@ export default function BTCChart() {
 									class="fixed inset-0 z-40"
 									onClick={() => setShowIndicatorMenu(false)}
 									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") setShowIndicatorMenu(false);
+										if (e.key === "Enter" || e.key === " ")
+											setShowIndicatorMenu(false);
 									}}
 									tabIndex={-1}
 									role="button"
@@ -1960,9 +2026,19 @@ export default function BTCChart() {
 												/>
 												<span class="grow">{ind.label}</span>
 												<Show when={indicators()[ind.key]}>
-													<svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<svg
+														class="w-3.5 h-3.5 text-indigo-400"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke="currentColor"
+													>
 														<title>Active</title>
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="3"
+															d="M5 13l4 4L19 7"
+														/>
 													</svg>
 												</Show>
 											</button>
@@ -2071,10 +2147,23 @@ export default function BTCChart() {
 
 						{/* Time Intervals */}
 						<div class="flex items-center gap-1 mr-4">
-							<button type="button" class="p-1 px-2 text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
-								<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<button
+								type="button"
+								class="p-1 px-2 text-[10px] text-slate-400 hover:text-white flex items-center gap-1"
+							>
+								<svg
+									class="w-3 h-3"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
 									<title>Time</title>
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
 								</svg>
 								Time
 							</button>
@@ -2098,9 +2187,19 @@ export default function BTCChart() {
 								onClick={() => setShowIndicatorMenu(!showIndicatorMenu())}
 								class="p-1.5 text-slate-400 hover:text-white"
 							>
-								<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<svg
+									class="w-4 h-4"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
 									<title>Indicators</title>
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16" />
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16"
+									/>
 								</svg>
 							</button>
 							<Show when={showIndicatorMenu()}>
@@ -2108,7 +2207,8 @@ export default function BTCChart() {
 									class="fixed inset-0 z-40"
 									onClick={() => setShowIndicatorMenu(false)}
 									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") setShowIndicatorMenu(false);
+										if (e.key === "Enter" || e.key === " ")
+											setShowIndicatorMenu(false);
 									}}
 									tabIndex={-1}
 									role="button"
@@ -2142,7 +2242,6 @@ export default function BTCChart() {
 					</div>
 
 					<div class="flex items-center gap-2">
-
 						<div class="flex items-center gap-2 px-2 border-l border-white/5">
 							<div class="flex items-center">
 								{wsConnected() ? <IconPulse /> : <IconWifiOff />}
@@ -2176,17 +2275,27 @@ export default function BTCChart() {
 				<div ref={chartContainer} class="w-full h-full opacity-90" />
 
 				{/* Indicator Resize Handles */}
-				<Show when={Object.values(indicators()).some((v) => v) && (indicators().rsi || indicators().fng || indicators().atr)}>
+				<Show
+					when={
+						Object.values(indicators()).some((v) => v) &&
+						(indicators().rsi || indicators().fng || indicators().atr)
+					}
+				>
 					{/* Top Handle - Price/Indicator border */}
 					<div
 						role="separator"
 						tabIndex={0}
 						aria-label="Resize indicator area"
-						aria-valuenow={indicatorHeights().oscillators + indicatorHeights().atr}
+						aria-valuenow={
+							indicatorHeights().oscillators + indicatorHeights().atr
+						}
 						class="absolute left-0 right-0 z-40 h-2 cursor-row-resize group/handle transition-colors outline-none focus:bg-indigo-500/20"
 						style={{
 							bottom: `${(indicators().rsi || indicators().fng ? indicatorHeights().oscillators : 0) + (indicators().atr ? indicatorHeights().atr : 0)}px`,
-							"background-color": draggingArea() === "top" ? "rgba(99, 102, 241, 0.4)" : "transparent",
+							"background-color":
+								draggingArea() === "top"
+									? "rgba(99, 102, 241, 0.4)"
+									: "transparent",
 						}}
 						onMouseDown={(e) => {
 							e.preventDefault();
@@ -2197,7 +2306,9 @@ export default function BTCChart() {
 					</div>
 
 					{/* Middle Handle - Between Oscillators and ATR */}
-					<Show when={(indicators().rsi || indicators().fng) && indicators().atr}>
+					<Show
+						when={(indicators().rsi || indicators().fng) && indicators().atr}
+					>
 						<div
 							role="separator"
 							tabIndex={0}
@@ -2206,7 +2317,10 @@ export default function BTCChart() {
 							class="absolute left-0 right-0 z-40 h-2 cursor-row-resize group/handle transition-colors outline-none focus:bg-indigo-500/20"
 							style={{
 								bottom: `${indicatorHeights().atr}px`,
-								"background-color": draggingArea() === "middle" ? "rgba(99, 102, 241, 0.4)" : "transparent",
+								"background-color":
+									draggingArea() === "middle"
+										? "rgba(99, 102, 241, 0.4)"
+										: "transparent",
 							}}
 							onMouseDown={(e) => {
 								e.preventDefault();
@@ -2228,18 +2342,29 @@ export default function BTCChart() {
 									{/* Mobile: Bitget-style stacked layout */}
 									<div class="text-[10px] font-bold leading-relaxed">
 										<div class="text-slate-300">
-											{activeAsset().symbol}/USDC perpetual last price · Hyperliquid · {interval().toUpperCase()}
+											{activeAsset().symbol}/USDC perpetual last price ·
+											Hyperliquid · {interval().toUpperCase()}
 										</div>
 										{/* C uses live currentPrice() — never jumps on interval switch */}
 										{(() => {
 											const livePrice = currentPrice();
 											const openVal = legendData()?.openRaw ?? 0;
 											const liveChange = livePrice - openVal;
-											const liveChangePct = openVal > 0 ? (liveChange / openVal) * 100 : 0;
-											const liveColor = liveChange >= 0 ? "text-emerald-500" : "text-rose-500";
-											const livePriceStr = formatCryptoPrice(livePrice, activeCurrency().code);
-											const liveChangeStr = (liveChange >= 0 ? "+" : "") + formatCryptoPrice(liveChange, activeCurrency().code);
-											const liveChangePctStr = (liveChangePct >= 0 ? "+" : "") + liveChangePct.toFixed(2) + "%";
+											const liveChangePct =
+												openVal > 0 ? (liveChange / openVal) * 100 : 0;
+											const liveColor =
+												liveChange >= 0 ? "text-emerald-500" : "text-rose-500";
+											const livePriceStr = formatCryptoPrice(
+												livePrice,
+												activeCurrency().code,
+											);
+											const liveChangeStr =
+												(liveChange >= 0 ? "+" : "") +
+												formatCryptoPrice(liveChange, activeCurrency().code);
+											const liveChangePctStr =
+												(liveChangePct >= 0 ? "+" : "") +
+												liveChangePct.toFixed(2) +
+												"%";
 											return (
 												<div class="flex items-center gap-1">
 													<span class={liveColor}>{livePriceStr}</span>
@@ -2254,7 +2379,8 @@ export default function BTCChart() {
 									{/* Desktop: compact horizontal layout */}
 									<div class="bg-black/20 p-1.5 py-1 rounded w-fit flex flex-wrap items-center gap-x-2 text-[11px] leading-tight font-bold whitespace-nowrap">
 										<span class="text-slate-200">
-											{activeAsset().symbol}/USDC · {interval().toUpperCase()} · Hyperliquid
+											{activeAsset().symbol}/USDC · {interval().toUpperCase()} ·
+											Hyperliquid
 										</span>
 										{/* O/H/L: per-candle values (legitimately differ across intervals). */}
 										{/* C: pinned to real-time currentPrice() — never jumps on interval switch. */}
@@ -2262,11 +2388,21 @@ export default function BTCChart() {
 											const livePrice = currentPrice();
 											const openVal = legendData()?.openRaw ?? 0;
 											const liveChange = livePrice - openVal;
-											const liveChangePct = openVal > 0 ? (liveChange / openVal) * 100 : 0;
-											const liveColor = liveChange >= 0 ? "text-emerald-500" : "text-rose-500";
-											const livePriceStr = formatCryptoPrice(livePrice, activeCurrency().code);
-											const liveChangeStr = (liveChange >= 0 ? "+" : "") + formatCryptoPrice(liveChange, activeCurrency().code);
-											const liveChangePctStr = (liveChangePct >= 0 ? "+" : "") + liveChangePct.toFixed(2) + "%";
+											const liveChangePct =
+												openVal > 0 ? (liveChange / openVal) * 100 : 0;
+											const liveColor =
+												liveChange >= 0 ? "text-emerald-500" : "text-rose-500";
+											const livePriceStr = formatCryptoPrice(
+												livePrice,
+												activeCurrency().code,
+											);
+											const liveChangeStr =
+												(liveChange >= 0 ? "+" : "") +
+												formatCryptoPrice(liveChange, activeCurrency().code);
+											const liveChangePctStr =
+												(liveChangePct >= 0 ? "+" : "") +
+												liveChangePct.toFixed(2) +
+												"%";
 											return (
 												<div class="flex items-center gap-1.5 ml-1 scale-90 origin-left">
 													<span class="text-slate-500 font-medium">O</span>
@@ -2277,7 +2413,9 @@ export default function BTCChart() {
 													<span class={t().changeColor}>{t().low}</span>
 													<span class="text-slate-500 font-medium ml-1">C</span>
 													<span class={liveColor}>{livePriceStr}</span>
-													<span class={`${liveColor} ml-1`}>{liveChangeStr}</span>
+													<span class={`${liveColor} ml-1`}>
+														{liveChangeStr}
+													</span>
 													<span class={liveColor}>({liveChangePctStr})</span>
 												</div>
 											);
@@ -2287,7 +2425,9 @@ export default function BTCChart() {
 
 								{/* Indicators - stacked vertically on mobile, flex-wrap on desktop */}
 								<Show when={Object.values(indicators()).some((v) => v)}>
-									<div class={`bg-black/20 p-1.5 rounded w-fit ${isMobile() ? "flex flex-col gap-0.5" : "flex flex-wrap gap-x-3 gap-y-px"}`}>
+									<div
+										class={`bg-black/20 p-1.5 rounded w-fit ${isMobile() ? "flex flex-col gap-0.5" : "flex flex-wrap gap-x-3 gap-y-px"}`}
+									>
 										<Show
 											when={indicators().ma20 && t().ma20 && t().ma20 !== "—"}
 										>
@@ -2398,7 +2538,6 @@ export default function BTCChart() {
 						)}
 					</Show>
 				</div>
-
 			</div>
 		</div>
 	);
