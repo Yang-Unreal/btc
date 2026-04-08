@@ -151,3 +151,23 @@ export const BITGET_INTERVAL_MAP: Record<Interval, string> = {
 	"1w": "1week",
 	"1M": "1month",
 };
+
+/**
+ * Hyperliquid interval map. HL natively supports all common intervals
+ * so there are no lossy fallbacks.
+ */
+export const HL_INTERVAL_MAP: Record<Interval, string> = {
+	"1m": "1m",
+	"3m": "3m",
+	"5m": "5m",
+	"15m": "15m",
+	"30m": "30m",
+	"1h": "1h",
+	"2h": "2h",
+	"4h": "4h",
+	"12h": "12h",
+	"1d": "1d",
+	"3d": "3d",
+	"1w": "1w",
+	"1M": "1M",
+};

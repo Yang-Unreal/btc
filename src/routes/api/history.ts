@@ -1,53 +1,64 @@
 import { json } from "@solidjs/router";
 import type { APIEvent } from "@solidjs/start/server";
 import { apiCache, CACHE_DURATIONS } from "../../lib/cache";
-
-import { BITGET_INTERVAL_MAP } from "../../lib/constants";
+import { HL_INTERVAL_MAP } from "../../lib/constants";
 import type { Interval } from "../../lib/types";
 
-// Bitget OHLC item: [time, open, high, low, close, volume, quoteVol, ...]
-type BitgetOHLCItem = [
-	string, // time
-	string, // open
-	string, // high
-	string, // low
-	string, // close
-	string, // volume
-	string, // quoteVol
-];
+const HL_API = "https://api.hyperliquid.xyz/info";
 
-function mapBitgetItem(item: BitgetOHLCItem): number[] {
+// Hyperliquid candle object
+interface HLCandle {
+	t: number; // open time (ms)
+	T: number; // close time (ms)
+	s: string; // symbol
+	i: string; // interval
+	o: string; // open
+	c: string; // close
+	h: string; // high
+	l: string; // low
+	v: string; // volume (base)
+	n: number; // number of trades
+}
+
+function mapHLCandle(c: HLCandle): number[] {
 	return [
-		parseInt(item[0]),
-		parseFloat(item[1]),
-		parseFloat(item[2]),
-		parseFloat(item[3]),
-		parseFloat(item[4]),
-		parseFloat(item[5]),
+		Math.floor(c.t / 1000), // convert ms → seconds (UTC timestamp)
+		parseFloat(c.o),
+		parseFloat(c.h),
+		parseFloat(c.l),
+		parseFloat(c.c),
+		parseFloat(c.v),
 	];
 }
 
 /**
- * Fetch a single page from Bitget history-candles endpoint (max 200 per page).
- * Returns data sorted ascending by time.
+ * Fetch candles from Hyperliquid.
+ * startTime and endTime are in milliseconds.
+ * Returns data sorted ascending by time (seconds).
  */
-async function fetchHistoryPage(
-	bitgetSymbol: string,
-	bitgetInterval: string,
+async function fetchHLCandles(
+	coin: string,
+	hlInterval: string,
+	startTimeMs: number,
 	endTimeMs: number,
 ): Promise<number[][]> {
-	const url = `https://api.bitget.com/api/v2/spot/market/history-candles?symbol=${bitgetSymbol}&granularity=${bitgetInterval}&limit=200&endTime=${endTimeMs}`;
-	const response = await fetch(url);
+	const response = await fetch(HL_API, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			type: "candleSnapshot",
+			req: { coin, interval: hlInterval, startTime: startTimeMs, endTime: endTimeMs },
+		}),
+	});
+
 	if (!response.ok) return [];
 
-	const data = await response.json();
-	if (data.code !== "00000" || !Array.isArray(data.data)) return [];
+	const data: HLCandle[] = await response.json();
+	if (!Array.isArray(data)) return [];
 
-	const mapped = data.data.map(mapBitgetItem);
-	// Filter out any candles at or after endTime
-	const filtered = mapped.filter((d: number[]) => d[0] < endTimeMs);
-	filtered.sort((a: number[], b: number[]) => a[0] - b[0]);
-	return filtered;
+	const mapped = data.map(mapHLCandle);
+	mapped.sort((a, b) => a[0] - b[0]);
+	return mapped;
 }
 
 export async function GET({ request }: APIEvent) {
@@ -57,10 +68,9 @@ export async function GET({ request }: APIEvent) {
 	const symbol = url.searchParams.get("symbol") || "BTC";
 	const toParam = url.searchParams.get("to");
 
-	const bitgetSymbol = `${symbol}USDT`;
-	const bitgetInterval = BITGET_INTERVAL_MAP[interval as Interval] || "1h";
+	const hlInterval = HL_INTERVAL_MAP[interval as Interval] || "1h";
 
-	const cacheKey = `history_bitget_${symbol}_${currency}_${interval}_${toParam || "latest"}`;
+	const cacheKey = `history_hl_${symbol}_${currency}_${interval}_${toParam || "latest"}`;
 	const cachedData = apiCache.get(cacheKey);
 
 	if (cachedData) {
@@ -69,81 +79,64 @@ export async function GET({ request }: APIEvent) {
 
 	try {
 		if (toParam) {
-			// --- Pagination mode: fetch 1 page (200 candles) for instant response ---
-			// The client infinite scroll will trigger more loads as needed
+			// Pagination mode: fetch one page (~200 candles) ending at toParam
 			const endTimeMs = parseInt(toParam);
-			const pageData = await fetchHistoryPage(
-				bitgetSymbol,
-				bitgetInterval,
-				endTimeMs,
-			);
+			// Determine page size by going back interval * 200 from endTime
+			const intervalMs = intervalToMs(hlInterval);
+			const startTimeMs = endTimeMs - intervalMs * 200;
 
-			apiCache.set(cacheKey, pageData, CACHE_DURATIONS.HISTORICAL_DATA);
-			return json(pageData);
+			const pageData = await fetchHLCandles(symbol, hlInterval, startTimeMs, endTimeMs);
+			// Exclude the candle at exactly endTime (it's the boundary from the previous fetch)
+			const filtered = pageData.filter((d) => d[0] < Math.floor(endTimeMs / 1000));
+
+			apiCache.set(cacheKey, filtered, CACHE_DURATIONS.HISTORICAL_DATA);
+			return json(filtered);
 		}
 
-		// --- Initial load: use /candles for latest data (up to 1000) ---
-		const bitgetUrl = `https://api.bitget.com/api/v2/spot/market/candles?symbol=${bitgetSymbol}&granularity=${bitgetInterval}&limit=1000`;
-		const response = await fetch(bitgetUrl);
+		// Initial load: fetch ~1000 candles ending now
+		const now = Date.now();
+		const intervalMs = intervalToMs(hlInterval);
+		const startTimeMs = now - intervalMs * 1000;
 
-		if (!response.ok) {
-			return json([]);
-		}
+		const mappedData = await fetchHLCandles(symbol, hlInterval, startTimeMs, now);
 
-		const data = await response.json();
-
-		if (data.code !== "00000") {
-			console.warn("Bitget API Warning:", data.msg);
-			return json([]);
-		}
-
-		const result = data.data;
-
-		if (!Array.isArray(result)) {
-			return json([]);
-		}
-
-		let mappedData = result.map(mapBitgetItem);
-		mappedData.sort((a: number[], b: number[]) => a[0] - b[0]);
-
-		// If /candles returned fewer than 1000, supplement with history-candles
+		// If fewer than 1000, try to supplement with older data
 		if (mappedData.length > 0 && mappedData.length < 1000) {
-			const earliestTime = mappedData[0][0];
+			const earliestMs = mappedData[0][0] * 1000;
 			const needed = 1000 - mappedData.length;
 			const pagesNeeded = Math.ceil(needed / 200);
 
 			let olderData: number[][] = [];
-			let cursor = earliestTime;
+			let cursor = earliestMs;
 
 			for (let page = 0; page < pagesNeeded; page++) {
-				const pageData = await fetchHistoryPage(
-					bitgetSymbol,
-					bitgetInterval,
-					cursor,
-				);
+				const pageStartMs = cursor - intervalMs * 200;
+				const pageData = await fetchHLCandles(symbol, hlInterval, pageStartMs, cursor);
 				if (pageData.length === 0) break;
 				olderData = [...pageData, ...olderData];
-				cursor = pageData[0][0];
-				if (pageData.length < 200) break;
+				cursor = pageData[0][0] * 1000;
+				if (pageData.length < 50) break; // stop if not returning enough data
 			}
 
 			if (olderData.length > 0) {
-				mappedData = [...olderData, ...mappedData];
-				// Deduplicate
+				const combined = [...olderData, ...mappedData];
+				// Deduplicate by timestamp
 				const seen = new Set<number>();
-				mappedData = mappedData.filter((d: number[]) => {
+				const deduped = combined.filter((d) => {
 					if (seen.has(d[0])) return false;
 					seen.add(d[0]);
 					return true;
 				});
-				mappedData.sort((a: number[], b: number[]) => a[0] - b[0]);
+				deduped.sort((a, b) => a[0] - b[0]);
+				apiCache.set(cacheKey, deduped, CACHE_DURATIONS.HISTORICAL_DATA);
+				return json(deduped);
 			}
 		}
 
 		apiCache.set(cacheKey, mappedData, CACHE_DURATIONS.HISTORICAL_DATA);
 		return json(mappedData);
 	} catch (error) {
-		console.error("Data Proxy Error:", error);
+		console.error("Hyperliquid History API Error:", error);
 		const stale = apiCache.getStale(cacheKey);
 		if (stale) {
 			console.log(`[History] Using stale cache for ${cacheKey}`);
@@ -151,4 +144,25 @@ export async function GET({ request }: APIEvent) {
 		}
 		return json({ error: "Internal Server Error" }, { status: 500 });
 	}
+}
+
+/** Convert a Hyperliquid interval string to approximate milliseconds for pagination. */
+function intervalToMs(hlInterval: string): number {
+	const map: Record<string, number> = {
+		"1m": 60_000,
+		"3m": 180_000,
+		"5m": 300_000,
+		"15m": 900_000,
+		"30m": 1_800_000,
+		"1h": 3_600_000,
+		"2h": 7_200_000,
+		"4h": 14_400_000,
+		"8h": 28_800_000,
+		"12h": 43_200_000,
+		"1d": 86_400_000,
+		"3d": 259_200_000,
+		"1w": 604_800_000,
+		"1M": 2_592_000_000,
+	};
+	return map[hlInterval] ?? 3_600_000;
 }

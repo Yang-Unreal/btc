@@ -198,9 +198,10 @@ export default function BTCChart() {
 	let atrSeries: ISeriesApi<"Line"> | undefined;
 
 	let ws: WebSocket | undefined;
+	let wsPingInterval: number | undefined;
 	let lastLoadedSymbol = "";
 	let wsCurrentAssetSymbol = ""; // track what symbol the WS is currently serving
-	let wsCurrentChannel = ""; // track the current candle channel subscription
+	let wsCurrentInterval = ""; // track the current HL interval subscription
 
 	const [isLoading, setIsLoading] = createSignal(true);
 	const [isLoadingMore, setIsLoadingMore] = createSignal(false);
@@ -734,153 +735,122 @@ export default function BTCChart() {
 		}
 	};
 
-	const mapIntervalToBitgetWS = (interval: Interval): string => {
-		// Bitget WS channels: candle1m, candle5m, candle15m, candle30m, candle1H, candle4H, candle12H, candle1D, candle1W
-		const map: Record<string, string> = {
-			"1m": "candle1m",
-			"3m": "candle5m", // Fallback
-			"5m": "candle5m",
-			"15m": "candle15m",
-			"30m": "candle30m",
-			"1h": "candle1H",
-			"2h": "candle1H",
-			"4h": "candle4H",
-			"12h": "candle12H",
-			"1d": "candle1D",
-			"3d": "candle1D",
-			"1w": "candle1W",
-			"1M": "candle1M", // Check support if needed, assuming 1M exists or fallback
-		};
-		return map[interval] || "candle1H";
-	};
-
-	// --- Modified WebSocket Connection (Bitget) ---
+	// --- Hyperliquid WebSocket Connection ---
 	const connectWebSocket = (
 		activeInterval: Interval,
 		assetConfig: AssetConfig,
 	) => {
-		const wsSymbol = `${assetConfig.symbol}USDT`; // Bitget uses USDT pairs
-		const newChannel = mapIntervalToBitgetWS(activeInterval);
+		const coin = assetConfig.symbol; // HL uses plain coin symbol e.g. "BTC"
+		const newInterval = activeInterval; // HL interval strings match our Interval type exactly
 
-		// --- Key fix: if WS is alive and serving the same asset, only swap
-		// the candle channel subscription instead of killing everything.
-		// This keeps the ticker feed uninterrupted, preventing price jumps.
+		// --- Interval swap: if WS is open and serving the same asset, only swap
+		// the candle subscription — keep the trades channel alive for price continuity.
 		if (
 			ws &&
 			ws.readyState === WebSocket.OPEN &&
-			wsCurrentAssetSymbol === wsSymbol
+			wsCurrentAssetSymbol === coin
 		) {
-			if (wsCurrentChannel !== newChannel) {
-				// Unsubscribe old candle channel
+			if (wsCurrentInterval !== newInterval) {
+				// Unsubscribe old candle interval
 				ws.send(
 					JSON.stringify({
-						op: "unsubscribe",
-						args: [
-							{
-								instType: "SPOT",
-								channel: wsCurrentChannel,
-								instId: wsSymbol,
-							},
-						],
+						method: "unsubscribe",
+						subscription: { type: "candle", coin, interval: wsCurrentInterval },
 					}),
 				);
-				// Subscribe new candle channel
+				// Subscribe new candle interval
 				ws.send(
 					JSON.stringify({
-						op: "subscribe",
-						args: [
-							{
-								instType: "SPOT",
-								channel: newChannel,
-								instId: wsSymbol,
-							},
-						],
+						method: "subscribe",
+						subscription: { type: "candle", coin, interval: newInterval },
 					}),
 				);
-				wsCurrentChannel = newChannel;
+				wsCurrentInterval = newInterval;
 			}
-			// Ticker stays alive — no price jump!
+			// Trades channel is untouched — no price jump!
 			return;
 		}
 
 		// Full reconnect (new asset or WS not yet open)
+		if (wsPingInterval !== undefined) { window.clearInterval(wsPingInterval); wsPingInterval = undefined; }
 		if (ws) ws.close();
-		ws = new WebSocket("wss://ws.bitget.com/v2/ws/public");
-		wsCurrentAssetSymbol = wsSymbol;
-		wsCurrentChannel = newChannel;
+		ws = new WebSocket("wss://api.hyperliquid.xyz/ws");
+		wsCurrentAssetSymbol = coin;
+		wsCurrentInterval = newInterval;
 
 		ws.onopen = () => {
 			setWsConnected(true);
-			ws?.send(
-				JSON.stringify({
-					op: "subscribe",
-					args: [
-						{
-							instType: "SPOT",
-							channel: newChannel,
-							instId: wsSymbol,
-						},
-						{
-							instType: "SPOT",
-							channel: "ticker",
-							instId: wsSymbol,
-						},
-					],
-				}),
-			);
+			// Subscribe to candle updates for the current interval
+			ws?.send(JSON.stringify({
+				method: "subscribe",
+				subscription: { type: "candle", coin, interval: newInterval },
+			}));
+			// Subscribe to trades for real-time last-price updates
+			ws?.send(JSON.stringify({
+				method: "subscribe",
+				subscription: { type: "trades", coin },
+			}));
+			// HL requires a ping every 30s to keep the connection alive
+			wsPingInterval = window.setInterval(() => {
+				if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ method: "ping" }));
+			}, 30_000);
 		};
 
-		ws.onclose = () => setWsConnected(false);
+		ws.onclose = () => {
+			setWsConnected(false);
+			if (wsPingInterval !== undefined) { window.clearInterval(wsPingInterval); wsPingInterval = undefined; }
+		};
 		ws.onerror = () => setWsConnected(false);
 
 		ws.onmessage = (event) => {
-			if (event.data === "pong") return;
 			try {
-				const data = JSON.parse(event.data);
-				// Verify pair
-				if (data.arg.instId !== wsSymbol) return;
+				const msg = JSON.parse(event.data);
 
-				// 1. Handle Real-time Ticker for top-left label price
-				if (data.arg.channel === "ticker" && data.data && data.data.length > 0) {
-					const ticker = data.data[0];
-					const bestPrice = ticker.lastPr || ticker.last || ticker.close;
-					if (bestPrice) {
-						setCurrentPrice(parseFloat(bestPrice));
+				// Ignore pong / subscription ack
+				if (!msg || msg.channel === "subscriptionResponse" || msg.channel === "pong") return;
+
+				// 1. Real-time trades → extract last price for top-left display
+				if (msg.channel === "trades" && Array.isArray(msg.data) && msg.data.length > 0) {
+					const lastTrade = msg.data[msg.data.length - 1];
+					// Only update if the trade is for our current coin
+					if (lastTrade?.coin === coin && lastTrade?.px) {
+						setCurrentPrice(parseFloat(lastTrade.px));
 					}
 					return;
 				}
 
-				// 2. Handle Candlestick updates for the chart
+				// 2. Candle updates → push to chart
 				if (
-					(data.action === "snapshot" || data.action === "update") &&
-					data.arg.channel.startsWith("candle") &&
-					data.data &&
-					data.data.length > 0 &&
+					msg.channel === "candle" &&
+					msg.data &&
 					candlestickSeries
 				) {
-					// IMPORTANT: Ignore 'snapshot' action completely!
-					// Our REST API provides much more accurate and up-to-date history.
-					// High-timeframe WS snapshots are often cached by the exchange (sometimes days old for 1W)
-					// Processing them will brutally deform the currently perfectly-rendered chart.
-					if (data.action === "snapshot") return;
+					// HL sends a single candle object (not an array) for live updates.
+					// On subscription it sends an isSnapshot:true array — ignore that,
+					// our REST history is authoritative.
+					const candles = Array.isArray(msg.data) ? msg.data : [msg.data];
+					if (candles[0]?.isSnapshot) return;
 
 					const currentHistory = untrack(() => btcData());
-					const lastKnownTs = currentHistory.length > 0 ? (currentHistory[currentHistory.length - 1].time as number) : 0;
+					const lastKnownTs = currentHistory.length > 0
+						? (currentHistory[currentHistory.length - 1].time as number)
+						: 0;
 
-					for (let i = 0; i < data.data.length; i++) {
-						const candle = data.data[i];
-						// candle: [ts(ms string), open, high, low, close, vol, ...]
-						const ts = Math.floor(parseInt(candle[0], 10) / 1000) as UTCTimestamp;
+					for (const candle of candles) {
+						// Verify the candle is for our current subscription
+						if (candle.s !== coin) continue;
 
+						// HL candle: { t: openTimeMs, T: closeTimeMs, s, i, o, c, h, l, v, n }
+						const ts = Math.floor(candle.t / 1000) as UTCTimestamp;
 						if (ts < lastKnownTs) continue;
 
 						const newData: BTCData = {
 							time: ts,
-							open: parseFloat(candle[1]),
-							high: parseFloat(candle[2]),
-							low: parseFloat(candle[3]),
-							close: parseFloat(candle[4]),
-							volume: parseFloat(candle[5]),
+							open: parseFloat(candle.o),
+							high: parseFloat(candle.h),
+							low: parseFloat(candle.l),
+							close: parseFloat(candle.c),
+							volume: parseFloat(candle.v),
 						};
 
 						candlestickSeries.update(newData);
@@ -2263,7 +2233,7 @@ export default function BTCChart() {
 									{/* Mobile: Bitget-style stacked layout */}
 									<div class="text-[10px] font-bold leading-relaxed">
 										<div class="text-slate-300">
-											{activeAsset().symbol}/USDT perpetual last price · {interval().toUpperCase()}
+											{activeAsset().symbol}/USDT perpetual last price · Hyperliquid · {interval().toUpperCase()}
 										</div>
 										{/* C uses live currentPrice() — never jumps on interval switch */}
 										{(() => {
@@ -2289,7 +2259,7 @@ export default function BTCChart() {
 									{/* Desktop: compact horizontal layout */}
 									<div class="bg-black/20 p-1.5 py-1 rounded w-fit flex flex-wrap items-center gap-x-2 text-[11px] leading-tight font-bold whitespace-nowrap">
 										<span class="text-slate-200">
-											{activeAsset().symbol}/USDT · {interval().toUpperCase()} · Bitget
+											{activeAsset().symbol}/USDT · {interval().toUpperCase()} · Hyperliquid
 										</span>
 										{/* O/H/L: per-candle values (legitimately differ across intervals). */}
 										{/* C: pinned to real-time currentPrice() — never jumps on interval switch. */}
