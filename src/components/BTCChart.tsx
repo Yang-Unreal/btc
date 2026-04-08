@@ -251,9 +251,14 @@ export default function BTCChart() {
 	});
 	const [draggingArea, setDraggingArea] = createSignal<string | null>(null); // 'top' | 'middle'
 
-	// Persistence: Fetch initial indicators
+	// Track initial settings load to prevent layout shift
 	const [settingsLoaded, setSettingsLoaded] = createSignal(false);
+
+	// Persistence: Fetch initial indicators
 	onMount(async () => {
+		// Always set loading to false initially to show skeleton
+		setSettingsLoaded(false);
+
 		try {
 			const res = await fetch("/api/settings");
 			const data = await res.json();
