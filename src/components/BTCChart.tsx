@@ -1076,6 +1076,8 @@ export default function BTCChart() {
 						)
 						?.toString()
 				: undefined,
+			// Raw open value used by JSX to compute live change vs currentPrice()
+			openRaw: lastCandle.open,
 			x: 0,
 			y: 0,
 			snapY: 0,
@@ -1411,7 +1413,9 @@ export default function BTCChart() {
 			width: chartContainer.clientWidth,
 			height: chartContainer.clientHeight,
 			crosshair: {
-				mode: 1,
+				// Mode 0 = Normal: crosshair follows cursor exactly and is always visible
+				// (Mode 1 = Magnet snaps to candle bodies which can feel laggy)
+				mode: 0,
 				vertLine: {
 					width: 1,
 					color: "#6366f1",
