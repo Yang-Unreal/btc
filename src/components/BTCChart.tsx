@@ -58,9 +58,6 @@ interface TooltipData {
 	ma20?: string;
 	ma60?: string;
 	ma120?: string;
-	ma7?: string;
-	ma25?: string;
-	ma99?: string;
 	donchianHigh?: string;
 	prevHigh?: string;
 	rsi?: string;
@@ -191,9 +188,6 @@ export default function BTCChart() {
 	let ma20Series: ISeriesApi<"Line"> | undefined;
 	let ma60Series: ISeriesApi<"Line"> | undefined;
 	let ma120Series: ISeriesApi<"Line"> | undefined;
-	let ma7Series: ISeriesApi<"Line"> | undefined;
-	let ma25Series: ISeriesApi<"Line"> | undefined;
-	let ma99Series: ISeriesApi<"Line"> | undefined;
 	let donchianHighSeries: ISeriesApi<"Line"> | undefined;
 	let prevHighSeries: ISeriesApi<"Line"> | undefined;
 	let rsiSeries: ISeriesApi<"Line"> | undefined;
@@ -229,9 +223,6 @@ export default function BTCChart() {
 	const [currentPrice, setCurrentPrice] = createSignal<number>(0);
 
 	const [indicators, setIndicators] = createSignal<Record<string, boolean>>({
-		ma7: true,
-		ma25: true,
-		ma99: true,
 		ma20: false,
 		ma60: false,
 		ma120: false,
@@ -324,27 +315,6 @@ export default function BTCChart() {
 			color: "bg-teal-500/50",
 			textColor: "text-teal-400",
 			borderColor: "border-teal-500/20",
-		},
-		{
-			key: "ma7",
-			label: "MA 7",
-			color: "bg-[#31C1FB]",
-			textColor: "text-[#31C1FB]",
-			borderColor: "border-[#31C1FB]",
-		},
-		{
-			key: "ma25",
-			label: "MA 25",
-			color: "bg-[#F0AD00]",
-			textColor: "text-[#F0AD00]",
-			borderColor: "border-[#F0AD00]",
-		},
-		{
-			key: "ma99",
-			label: "MA 99",
-			color: "bg-[#FF3FD5]",
-			textColor: "text-[#FF3FD5]",
-			borderColor: "border-[#FF3FD5]",
 		},
 		{
 			key: "ma20",
@@ -900,9 +870,6 @@ export default function BTCChart() {
 		if (currentInd.ma20) updateSeries(ma20Series, calculateSMA, 20);
 		if (currentInd.ma60) updateSeries(ma60Series, calculateSMA, 60);
 		if (currentInd.ma120) updateSeries(ma120Series, calculateSMA, 120);
-		if (currentInd.ma7) updateSeries(ma7Series, calculateSMA, 7);
-		if (currentInd.ma25) updateSeries(ma25Series, calculateSMA, 25);
-		if (currentInd.ma99) updateSeries(ma99Series, calculateSMA, 99);
 
 		if (currentInd.donchianHigh && donchianHighSeries && slice.length >= 20) {
 			const highs = slice.map((d) => d.high);
@@ -979,9 +946,6 @@ export default function BTCChart() {
 		const ma20 = calculateSMA(closes, 20);
 		const ma60 = calculateSMA(closes, 60);
 		const ma120 = calculateSMA(closes, 120);
-		const ma7 = calculateSMA(closes, 7);
-		const ma25 = calculateSMA(closes, 25);
-		const ma99 = calculateSMA(closes, 99);
 		const donchianHigh = calculateDonchianHigh(highs, 20);
 		const lastPrevHigh = findLastSwingHigh(highs, 10, 2);
 
@@ -1008,9 +972,6 @@ export default function BTCChart() {
 			ma20: formatValue(ma20[ma20.length - 1]),
 			ma60: formatValue(ma60[ma60.length - 1]),
 			ma120: formatValue(ma120[ma120.length - 1]),
-			ma7: formatValue(ma7[ma7.length - 1]),
-			ma25: formatValue(ma25[ma25.length - 1]),
-			ma99: formatValue(ma99[ma99.length - 1]),
 			donchianHigh: formatValue(donchianHigh[donchianHigh.length - 1]),
 			prevHigh: formatValue(lastPrevHigh ?? undefined),
 			rsi: !Number.isNaN(lastRSI) ? lastRSI.toFixed(1) : undefined,
@@ -1056,9 +1017,6 @@ export default function BTCChart() {
 		ma20Series?.applyOptions({ visible: !!currentInd.ma20 });
 		ma60Series?.applyOptions({ visible: !!currentInd.ma60 });
 		ma120Series?.applyOptions({ visible: !!currentInd.ma120 });
-		ma7Series?.applyOptions({ visible: !!currentInd.ma7 });
-		ma25Series?.applyOptions({ visible: !!currentInd.ma25 });
-		ma99Series?.applyOptions({ visible: !!currentInd.ma99 });
 		donchianHighSeries?.applyOptions({ visible: !!currentInd.donchianHigh });
 		prevHighSeries?.applyOptions({ visible: !!currentInd.prevHigh });
 		rsiSeries?.applyOptions({ visible: !!currentInd.rsi });
@@ -1188,9 +1146,6 @@ export default function BTCChart() {
 		processMA(currentInd.ma20, ma20Series, 20);
 		processMA(currentInd.ma60, ma60Series, 60);
 		processMA(currentInd.ma120, ma120Series, 120);
-		processMA(currentInd.ma7, ma7Series, 7);
-		processMA(currentInd.ma25, ma25Series, 25);
-		processMA(currentInd.ma99, ma99Series, 99);
 
 		if (
 			currentInd.donchianHigh &&
@@ -1446,9 +1401,6 @@ export default function BTCChart() {
 		ma20Series = createLineSeries("#EF4444"); // red-500
 		ma60Series = createLineSeries("#22C55E"); // green-500
 		ma120Series = createLineSeries("#2563EB"); // blue-600
-		ma7Series = createLineSeries("#31C1FB"); // Bitget blue
-		ma25Series = createLineSeries("#F0AD00"); // Bitget yellow
-		ma99Series = createLineSeries("#FF3FD5"); // Bitget pink/purple
 		donchianHighSeries = createLineSeries("#f43f5e"); // rose-500
 		prevHighSeries = createLineSeries("#f97316"); // orange-500
 
@@ -1617,15 +1569,6 @@ export default function BTCChart() {
 			const ma120Val = ma120Series
 				? (param.seriesData.get(ma120Series) as LineData)
 				: undefined;
-			const ma7Val = ma7Series
-				? (param.seriesData.get(ma7Series) as LineData)
-				: undefined;
-			const ma25Val = ma25Series
-				? (param.seriesData.get(ma25Series) as LineData)
-				: undefined;
-			const ma99Val = ma99Series
-				? (param.seriesData.get(ma99Series) as LineData)
-				: undefined;
 
 			lastTooltipTime = param.time as number;
 			cachedTooltipData = {
@@ -1646,9 +1589,6 @@ export default function BTCChart() {
 				ma20: formatTooltipPrice(ma20Val?.value),
 				ma60: formatTooltipPrice(ma60Val?.value),
 				ma120: formatTooltipPrice(ma120Val?.value),
-				ma7: formatTooltipPrice(ma7Val?.value),
-				ma25: formatTooltipPrice(ma25Val?.value),
-				ma99: formatTooltipPrice(ma99Val?.value),
 				donchianHigh: formatTooltipPrice(donchianHighVal?.value),
 				prevHigh: formatTooltipPrice(prevHighVal?.value),
 				rsi:
@@ -2280,28 +2220,6 @@ export default function BTCChart() {
 								{/* Indicators - stacked vertically on mobile, flex-wrap on desktop */}
 								<Show when={Object.values(indicators()).some((v) => v)}>
 									<div class={`bg-black/20 p-1.5 rounded w-fit ${isMobile() ? "flex flex-col gap-0.5" : "flex flex-wrap gap-x-3 gap-y-px"}`}>
-										<Show when={indicators().ma7 && t().ma7 && t().ma7 !== "—"}>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-[#31C1FB]">MA 7</span>
-												<span class="text-[#31C1FB]">{t().ma7}</span>
-											</div>
-										</Show>
-										<Show
-											when={indicators().ma25 && t().ma25 && t().ma25 !== "—"}
-										>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-[#F0AD00]">MA 25</span>
-												<span class="text-[#F0AD00]">{t().ma25}</span>
-											</div>
-										</Show>
-										<Show
-											when={indicators().ma99 && t().ma99 && t().ma99 !== "—"}
-										>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-[#FF3FD5]">MA 99</span>
-												<span class="text-[#FF3FD5]">{t().ma99}</span>
-											</div>
-										</Show>
 										<Show
 											when={indicators().ma20 && t().ma20 && t().ma20 !== "—"}
 										>
