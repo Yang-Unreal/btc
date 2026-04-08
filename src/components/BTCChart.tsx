@@ -1813,7 +1813,7 @@ export default function BTCChart() {
 									class="flex items-center gap-1.5 text-sm font-black text-white"
 								>
 									<span class="text-white">{activeAsset().symbol}</span>
-									<span class="text-slate-500 font-bold">/ USDT</span>
+									<span class="text-slate-500 font-bold">/ USDC</span>
 									<IconChevronDown />
 								</button>
 								<Show when={showAssetMenu()}>
@@ -1875,7 +1875,7 @@ export default function BTCChart() {
 															<span class={activeAsset().symbol === asset.symbol ? "text-white" : "text-slate-200"}>
 																{asset.symbol}
 															</span>
-															<span class="text-slate-500">/USDT</span>
+															<span class="text-slate-500">/USDC</span>
 														</div>
 														<span class="font-mono text-[9px] opacity-40 shrink-0 uppercase">
 															{asset.name}
@@ -1986,7 +1986,7 @@ export default function BTCChart() {
 								onClick={() => setShowAssetMenu(!showAssetMenu())}
 								class="flex items-center gap-1.5 text-xs font-black text-white hover:text-indigo-400"
 							>
-								{activeAsset().symbol}/USDT <IconChevronDown />
+								{activeAsset().symbol}/USDC <IconChevronDown />
 							</button>
 							<Show when={showAssetMenu()}>
 								<div
@@ -2053,7 +2053,7 @@ export default function BTCChart() {
 														>
 															{asset.symbol}
 														</span>
-														<span class="text-slate-500">/USDT</span>
+														<span class="text-slate-500">/USDC</span>
 													</div>
 													<span class="font-mono text-[9px] opacity-40 shrink-0 uppercase">
 														{asset.name}
@@ -2233,7 +2233,7 @@ export default function BTCChart() {
 									{/* Mobile: Bitget-style stacked layout */}
 									<div class="text-[10px] font-bold leading-relaxed">
 										<div class="text-slate-300">
-											{activeAsset().symbol}/USDT perpetual last price · Hyperliquid · {interval().toUpperCase()}
+											{activeAsset().symbol}/USDC perpetual last price · Hyperliquid · {interval().toUpperCase()}
 										</div>
 										{/* C uses live currentPrice() — never jumps on interval switch */}
 										{(() => {
@@ -2259,7 +2259,7 @@ export default function BTCChart() {
 									{/* Desktop: compact horizontal layout */}
 									<div class="bg-black/20 p-1.5 py-1 rounded w-fit flex flex-wrap items-center gap-x-2 text-[11px] leading-tight font-bold whitespace-nowrap">
 										<span class="text-slate-200">
-											{activeAsset().symbol}/USDT · {interval().toUpperCase()} · Hyperliquid
+											{activeAsset().symbol}/USDC · {interval().toUpperCase()} · Hyperliquid
 										</span>
 										{/* O/H/L: per-candle values (legitimately differ across intervals). */}
 										{/* C: pinned to real-time currentPrice() — never jumps on interval switch. */}
