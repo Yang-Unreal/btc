@@ -2,14 +2,25 @@ import { MetaProvider, Title } from "@solidjs/meta";
 import { Router } from "@solidjs/router";
 import { FileRoutes } from "@solidjs/start/router";
 import { Suspense } from "solid-js";
+import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import "./app.css";
 import Layout from "./components/Layout";
+
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			refetchOnWindowFocus: false,
+			staleTime: 60 * 1000,
+		},
+	},
+});
 
 export default function App() {
 	return (
 		<Router
 			root={(props) => (
 				<MetaProvider>
+					<QueryClientProvider client={queryClient}>
 					<Title>Directive | System</Title>
 					<Layout>
 						{/* 
@@ -19,6 +30,7 @@ export default function App() {
                         */}
 						<Suspense>{props.children}</Suspense>
 					</Layout>
+					</QueryClientProvider>
 				</MetaProvider>
 			)}
 		>

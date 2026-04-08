@@ -1,6 +1,7 @@
 import { Title } from "@solidjs/meta";
+import { clientOnly } from "@solidjs/start";
 import AssetTable from "~/components/AssetTable";
-import BTCChart from "~/components/BTCChart";
+const BTCChart = clientOnly(() => import("~/components/BTCChart"));
 import LiquidityEngine from "~/components/LiquidityEngine";
 import MacroPyramidCalculator from "~/components/MacroPyramidCalculator";
 

@@ -22,6 +22,7 @@ import {
 	Show,
 	untrack,
 } from "solid-js";
+import { createQuery } from "@tanstack/solid-query";
 import { CURRENCIES, SUPPORTED_ASSETS } from "../lib/constants";
 import { formatCryptoPrice } from "../lib/format";
 import {
@@ -72,6 +73,8 @@ interface TooltipData {
 	currencySymbol: string;
 	changeVal?: string;
 	changePct?: string;
+	/** Raw numeric open price — used to compute live change vs currentPrice() */
+	openRaw?: number;
 }
 
 // ... [Existing Interfaces for FNGData, TDState, etc. remain unchanged] ...
@@ -195,6 +198,9 @@ export default function BTCChart() {
 	let atrSeries: ISeriesApi<"Line"> | undefined;
 
 	let ws: WebSocket | undefined;
+	let lastLoadedSymbol = "";
+	let wsCurrentAssetSymbol = ""; // track what symbol the WS is currently serving
+	let wsCurrentChannel = ""; // track the current candle channel subscription
 
 	const [isLoading, setIsLoading] = createSignal(true);
 	const [isLoadingMore, setIsLoadingMore] = createSignal(false);
@@ -753,11 +759,55 @@ export default function BTCChart() {
 		activeInterval: Interval,
 		assetConfig: AssetConfig,
 	) => {
+		const wsSymbol = `${assetConfig.symbol}USDT`; // Bitget uses USDT pairs
+		const newChannel = mapIntervalToBitgetWS(activeInterval);
+
+		// --- Key fix: if WS is alive and serving the same asset, only swap
+		// the candle channel subscription instead of killing everything.
+		// This keeps the ticker feed uninterrupted, preventing price jumps.
+		if (
+			ws &&
+			ws.readyState === WebSocket.OPEN &&
+			wsCurrentAssetSymbol === wsSymbol
+		) {
+			if (wsCurrentChannel !== newChannel) {
+				// Unsubscribe old candle channel
+				ws.send(
+					JSON.stringify({
+						op: "unsubscribe",
+						args: [
+							{
+								instType: "SPOT",
+								channel: wsCurrentChannel,
+								instId: wsSymbol,
+							},
+						],
+					}),
+				);
+				// Subscribe new candle channel
+				ws.send(
+					JSON.stringify({
+						op: "subscribe",
+						args: [
+							{
+								instType: "SPOT",
+								channel: newChannel,
+								instId: wsSymbol,
+							},
+						],
+					}),
+				);
+				wsCurrentChannel = newChannel;
+			}
+			// Ticker stays alive — no price jump!
+			return;
+		}
+
+		// Full reconnect (new asset or WS not yet open)
 		if (ws) ws.close();
 		ws = new WebSocket("wss://ws.bitget.com/v2/ws/public");
-
-		const wsSymbol = `${assetConfig.symbol}USDT`; // Bitget uses USDT pairs
-		const wsChannel = mapIntervalToBitgetWS(activeInterval);
+		wsCurrentAssetSymbol = wsSymbol;
+		wsCurrentChannel = newChannel;
 
 		ws.onopen = () => {
 			setWsConnected(true);
@@ -767,7 +817,12 @@ export default function BTCChart() {
 					args: [
 						{
 							instType: "SPOT",
-							channel: wsChannel,
+							channel: newChannel,
+							instId: wsSymbol,
+						},
+						{
+							instType: "SPOT",
+							channel: "ticker",
 							instId: wsSymbol,
 						},
 					],
@@ -782,55 +837,78 @@ export default function BTCChart() {
 			if (event.data === "pong") return;
 			try {
 				const data = JSON.parse(event.data);
-				// Bitget format: { action: "snapshot"|"update", arg: {...}, data: [[ts, o, h, l, c, v, ...]] }
+				// Verify pair
+				if (data.arg.instId !== wsSymbol) return;
+
+				// 1. Handle Real-time Ticker for top-left label price
+				if (data.arg.channel === "ticker" && data.data && data.data.length > 0) {
+					const ticker = data.data[0];
+					const bestPrice = ticker.lastPr || ticker.last || ticker.close;
+					if (bestPrice) {
+						setCurrentPrice(parseFloat(bestPrice));
+					}
+					return;
+				}
+
+				// 2. Handle Candlestick updates for the chart
 				if (
 					(data.action === "snapshot" || data.action === "update") &&
+					data.arg.channel.startsWith("candle") &&
 					data.data &&
 					data.data.length > 0 &&
 					candlestickSeries
 				) {
-					// Verify pair
-					if (data.arg.instId !== wsSymbol) return;
+					// IMPORTANT: Ignore 'snapshot' action completely!
+					// Our REST API provides much more accurate and up-to-date history.
+					// High-timeframe WS snapshots are often cached by the exchange (sometimes days old for 1W)
+					// Processing them will brutally deform the currently perfectly-rendered chart.
+					if (data.action === "snapshot") return;
 
-					const candle = data.data[0];
-					// candle: [ts(ms string), open, high, low, close, vol, ...]
-					const ts = Math.floor(parseInt(candle[0], 10) / 1000) as UTCTimestamp;
+					const currentHistory = untrack(() => btcData());
+					const lastKnownTs = currentHistory.length > 0 ? (currentHistory[currentHistory.length - 1].time as number) : 0;
 
-					const newData: BTCData = {
-						time: ts,
-						open: parseFloat(candle[1]),
-						high: parseFloat(candle[2]),
-						low: parseFloat(candle[3]),
-						close: parseFloat(candle[4]),
-						volume: parseFloat(candle[5]),
-					};
+					for (let i = 0; i < data.data.length; i++) {
+						const candle = data.data[i];
+						// candle: [ts(ms string), open, high, low, close, vol, ...]
+						const ts = Math.floor(parseInt(candle[0], 10) / 1000) as UTCTimestamp;
 
-					setCurrentPrice(newData.close);
+						if (ts < lastKnownTs) continue;
 
-					candlestickSeries.update(newData);
-					if (volumeSeries && newData.volume) {
-						volumeSeries.update({
-							time: newData.time,
-							value: newData.volume,
-							color:
-								newData.close >= newData.open
-									? "rgba(16, 185, 129, 0.5)"
-									: "rgba(239, 68, 68, 0.5)",
-						});
-					}
-					let currentData: BTCData[] = [];
-					setBtcData((prev) => {
-						const last = prev[prev.length - 1];
-						if (last && last.time === newData.time) {
-							const copy = [...prev];
-							copy[copy.length - 1] = newData;
-							currentData = copy;
-							return copy;
+						const newData: BTCData = {
+							time: ts,
+							open: parseFloat(candle[1]),
+							high: parseFloat(candle[2]),
+							low: parseFloat(candle[3]),
+							close: parseFloat(candle[4]),
+							volume: parseFloat(candle[5]),
+						};
+
+						candlestickSeries.update(newData);
+						if (volumeSeries && newData.volume) {
+							volumeSeries.update({
+								time: newData.time,
+								value: newData.volume,
+								color:
+									newData.close >= newData.open
+										? "rgba(16, 185, 129, 0.5)"
+										: "rgba(239, 68, 68, 0.5)",
+							});
 						}
-						currentData = [...prev, newData];
-						return currentData;
-					});
-					updateIndicatorRealtime(currentData);
+
+						let latestBtcData: BTCData[] = [];
+						setBtcData((prev) => {
+							const last = prev[prev.length - 1];
+							if (last && last.time === newData.time) {
+								const copy = [...prev];
+								copy[copy.length - 1] = newData;
+								latestBtcData = copy;
+								return copy;
+							}
+							latestBtcData = [...prev, newData];
+							return latestBtcData;
+						});
+						updateIndicatorRealtime(latestBtcData);
+					}
 				}
 			} catch (err) {
 				console.error("WebSocket message error:", err);
@@ -1228,59 +1306,69 @@ export default function BTCChart() {
 		}
 	};
 
-	// --- Load Data ---
-	const loadData = async (
-		activeInterval: Interval,
-		currencyConfig: CurrencyConfig,
-		assetConfig: AssetConfig,
-	) => {
-		if (!candlestickSeries) return;
-		setIsLoading(true);
-		setError(null);
-
-		setBtcData([]);
-		candlestickSeries.setData([]);
-		if (volumeSeries) volumeSeries.setData([]);
-		setTdMap(new Map());
-
-		// Reset indicators
-		if (markersPrimitive) {
-			try {
-				markersPrimitive.setMarkers([]);
-			} catch {
-				/* ignore */
-			}
-		}
-		[
-			ema20Series,
-			ema60Series,
-			ema120Series,
-			ma20Series,
-			ma60Series,
-			ma120Series,
-			donchianHighSeries,
-			prevHighSeries,
-			rsiSeries,
-			fngSeries,
-			atrSeries,
-		].forEach((s) => {
-			if (s) {
-				try {
-					s.setData([]);
-				} catch (e) {
-					console.warn("Failed to clear series data:", e);
-				}
-			}
-		});
-
-		try {
-			const history = await fetchHistoricalData(
-				activeInterval,
-				currencyConfig.code,
-				assetConfig.symbol,
+	// --- History Query ---
+	const historyQuery = createQuery(() => ({
+		queryKey: ["history", interval(), activeCurrency().code, activeAsset().symbol],
+		queryFn: async () => {
+			return await fetchHistoricalData(
+				interval(),
+				activeCurrency().code,
+				activeAsset().symbol,
 			);
+		},
+		staleTime: 60 * 1000 * 5, // Cache for 5 minutes for instant interval switching
+		enabled: typeof window !== "undefined", // Disable SSR fetch for relative URLs
+	}));
+
+	createEffect(() => {
+		if (candlestickSeries) {
+			candlestickSeries.applyOptions({
+				priceFormat: {
+					type: "custom",
+					formatter: (price: number) =>
+						formatCryptoPrice(price, activeCurrency().code),
+				},
+			});
+		}
+	});
+
+	createEffect(() => {
+		const historyData = historyQuery.data;
+		const isFetching = historyQuery.isFetching;
+		const fetchError = historyQuery.error;
+		
+		untrack(() => {
+			if (!historyData) {
+				if (isFetching) {
+					setIsLoading(true);
+				}
+				return;
+			}
+
+			if (!candlestickSeries) return;
+
+			setIsLoading(false);
+			setError(fetchError ? "A serious error occurred while loading data" : null);
+
+			const history = [...historyData]; // clone to avoid mutating solid-query cache
 
 			if (history.length > 0) {
+				const cp = currentPrice();
+				const targetSymbol = activeAsset().symbol;
+				
+				if (cp === 0 || lastLoadedSymbol !== targetSymbol) {
+					setCurrentPrice(history[history.length - 1].close);
+					lastLoadedSymbol = targetSymbol;
+				}
+
+				// Clear current indicators that are reactive to chart series
+				try {
+					markersPrimitive?.setMarkers([]);
+					setTdMap(new Map());
+				} catch {
+					/* ignore */
+				}
+
 				candlestickSeries.setData(history);
 				if (volumeSeries) {
 					const volumeData = history.map((d) => ({
@@ -1294,7 +1382,6 @@ export default function BTCChart() {
 					volumeSeries.setData(volumeData);
 				}
 				setBtcData(history);
-				setCurrentPrice(history[history.length - 1].close);
 
 				chart?.timeScale().fitContent();
 				// Use requestAnimationFrame to ensure chart has processed the main data before indicators
@@ -1302,16 +1389,15 @@ export default function BTCChart() {
 					syncAllIndicators();
 					updateLegendToLatest(history);
 				});
-			}
 
-			connectWebSocket(activeInterval, assetConfig);
-		} catch (err) {
-			console.error("Critical error in loadData:", err);
-			setError("A serious error occurred while loading data");
-		} finally {
-			setIsLoading(false);
-		}
-	};
+				connectWebSocket(interval(), activeAsset());
+			}
+		});
+	});
+
+	// --- Load Data ---
+	// Removed loadData in favor of createQuery reactive updates
+
 
 	onMount(() => {
 		if (!chartContainer) return;
@@ -1630,8 +1716,7 @@ export default function BTCChart() {
 			}
 		});
 
-		// Initial Load
-		loadData(interval(), activeCurrency(), activeAsset());
+		// Data fetches are gracefully handled by createQuery on interval changes
 
 		const handleResize = () => {
 			if (chart && chartContainer) {
@@ -1736,20 +1821,7 @@ export default function BTCChart() {
 		syncAllIndicators();
 	});
 
-	// --- React to Interval OR Currency Change ---
-	createEffect(() => {
-		// Dependencies: interval(), activeCurrency(), activeAsset()
-		if (candlestickSeries) {
-			candlestickSeries.applyOptions({
-				priceFormat: {
-					type: "custom",
-					formatter: (price: number) =>
-						formatCryptoPrice(price, activeCurrency().code),
-				},
-			});
-			loadData(interval(), activeCurrency(), activeAsset());
-		}
-	});
+
 
 	return (
 		<div class="directive-card overflow-hidden">
@@ -2189,11 +2261,24 @@ export default function BTCChart() {
 										<div class="text-slate-300">
 											{activeAsset().symbol}/USDT perpetual last price · {interval().toUpperCase()}
 										</div>
-										<div class="flex items-center gap-1">
-											<span class={t().changeColor}>{t().close}</span>
-											<span class={t().changeColor}>{t().changeVal}</span>
-											<span class={t().changeColor}>({t().changePct})</span>
-										</div>
+										{/* C uses live currentPrice() — never jumps on interval switch */}
+										{(() => {
+											const livePrice = currentPrice();
+											const openVal = legendData()?.openRaw ?? 0;
+											const liveChange = livePrice - openVal;
+											const liveChangePct = openVal > 0 ? (liveChange / openVal) * 100 : 0;
+											const liveColor = liveChange >= 0 ? "text-emerald-500" : "text-rose-500";
+											const livePriceStr = formatCryptoPrice(livePrice, activeCurrency().code);
+											const liveChangeStr = (liveChange >= 0 ? "+" : "") + formatCryptoPrice(liveChange, activeCurrency().code);
+											const liveChangePctStr = (liveChangePct >= 0 ? "+" : "") + liveChangePct.toFixed(2) + "%";
+											return (
+												<div class="flex items-center gap-1">
+													<span class={liveColor}>{livePriceStr}</span>
+													<span class={liveColor}>{liveChangeStr}</span>
+													<span class={liveColor}>({liveChangePctStr})</span>
+												</div>
+											);
+										})()}
 									</div>
 								</Show>
 								<Show when={!isMobile()}>
@@ -2202,18 +2287,32 @@ export default function BTCChart() {
 										<span class="text-slate-200">
 											{activeAsset().symbol}/USDT · {interval().toUpperCase()} · Bitget
 										</span>
-										<div class="flex items-center gap-1.5 ml-1 scale-90 origin-left">
-											<span class="text-slate-500 font-medium">O</span>
-											<span class={t().changeColor}>{t().open}</span>
-											<span class="text-slate-500 font-medium ml-1">H</span>
-											<span class={t().changeColor}>{t().high}</span>
-											<span class="text-slate-500 font-medium ml-1">L</span>
-											<span class={t().changeColor}>{t().low}</span>
-											<span class="text-slate-500 font-medium ml-1">C</span>
-											<span class={t().changeColor}>{t().close}</span>
-											<span class={`${t().changeColor} ml-1`}>{t().changeVal}</span>
-											<span class={t().changeColor}>({t().changePct})</span>
-										</div>
+										{/* O/H/L: per-candle values (legitimately differ across intervals). */}
+										{/* C: pinned to real-time currentPrice() — never jumps on interval switch. */}
+										{(() => {
+											const livePrice = currentPrice();
+											const openVal = legendData()?.openRaw ?? 0;
+											const liveChange = livePrice - openVal;
+											const liveChangePct = openVal > 0 ? (liveChange / openVal) * 100 : 0;
+											const liveColor = liveChange >= 0 ? "text-emerald-500" : "text-rose-500";
+											const livePriceStr = formatCryptoPrice(livePrice, activeCurrency().code);
+											const liveChangeStr = (liveChange >= 0 ? "+" : "") + formatCryptoPrice(liveChange, activeCurrency().code);
+											const liveChangePctStr = (liveChangePct >= 0 ? "+" : "") + liveChangePct.toFixed(2) + "%";
+											return (
+												<div class="flex items-center gap-1.5 ml-1 scale-90 origin-left">
+													<span class="text-slate-500 font-medium">O</span>
+													<span class={t().changeColor}>{t().open}</span>
+													<span class="text-slate-500 font-medium ml-1">H</span>
+													<span class={t().changeColor}>{t().high}</span>
+													<span class="text-slate-500 font-medium ml-1">L</span>
+													<span class={t().changeColor}>{t().low}</span>
+													<span class="text-slate-500 font-medium ml-1">C</span>
+													<span class={liveColor}>{livePriceStr}</span>
+													<span class={`${liveColor} ml-1`}>{liveChangeStr}</span>
+													<span class={liveColor}>({liveChangePctStr})</span>
+												</div>
+											);
+										})()}
 									</div>
 								</Show>
 
