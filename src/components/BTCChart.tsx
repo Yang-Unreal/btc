@@ -2022,6 +2022,7 @@ export default function BTCChart() {
 												fill="currentColor"
 												viewBox="0 0 20 20"
 											>
+												<title>Remove from favorites</title>
 												<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
 											</svg>
 										</span>
@@ -2042,6 +2043,7 @@ export default function BTCChart() {
 									viewBox="0 0 24 24"
 									stroke="currentColor"
 								>
+									<title>More options</title>
 									<path
 										stroke-linecap="round"
 										stroke-linejoin="round"
@@ -2055,6 +2057,7 @@ export default function BTCChart() {
 									viewBox="0 0 24 24"
 									stroke="currentColor"
 								>
+									<title>Expand dropdown</title>
 									<path
 										stroke-linecap="round"
 										stroke-linejoin="round"
@@ -2085,6 +2088,7 @@ export default function BTCChart() {
 													viewBox="0 0 24 24"
 													stroke="currentColor"
 												>
+													<title>Add to favorites</title>
 													<path
 														stroke-linecap="round"
 														stroke-linejoin="round"
@@ -2125,6 +2129,7 @@ export default function BTCChart() {
 													fill="currentColor"
 													viewBox="0 0 20 20"
 												>
+													<title>Add to favorites</title>
 													<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
 												</svg>
 												Add {interval().toUpperCase()} to favorites
@@ -2315,14 +2320,17 @@ export default function BTCChart() {
 								{(fav) => {
 									const opt = intervals.find((i) => i.value === fav);
 									return opt ? (
-										<button
-											type="button"
-											class={`group flex items-center gap-0.5 px-1.5 py-1 text-[11px] font-bold tracking-tight transition-all ${interval() === opt.value ? "text-indigo-500" : "text-slate-500 hover:text-slate-300"}`}
-											onClick={() => setInterval(opt.value)}
-										>
-											{opt.label.toUpperCase()}
-											<span
-												class="opacity-0 group-hover:opacity-60 cursor-pointer"
+										<div class="group flex items-center">
+											<button
+												type="button"
+												class={`px-1.5 py-1 text-[11px] font-bold tracking-tight transition-all ${interval() === opt.value ? "text-indigo-500" : "text-slate-500 hover:text-slate-300"}`}
+												onClick={() => setInterval(opt.value)}
+											>
+												{opt.label.toUpperCase()}
+											</button>
+											<button
+												type="button"
+												class="opacity-0 group-hover:opacity-60 cursor-pointer p-0.5"
 												onClick={(e) => {
 													e.stopPropagation();
 													const current = favoriteIntervals();
@@ -2330,16 +2338,27 @@ export default function BTCChart() {
 														current.filter((i) => i !== opt.value),
 													);
 												}}
+												onKeyDown={(e) => {
+													if (e.key === "Enter" || e.key === " ") {
+														e.stopPropagation();
+														const current = favoriteIntervals();
+														setFavoriteIntervals(
+															current.filter((i) => i !== opt.value),
+														);
+													}
+												}}
+												aria-label="Remove from favorites"
 											>
 												<svg
 													class="w-2.5 h-2.5"
 													fill="currentColor"
 													viewBox="0 0 20 20"
 												>
+													<title>Remove from favorites</title>
 													<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
 												</svg>
-											</span>
-										</button>
+											</button>
+										</div>
 									) : null;
 								}}
 							</For>
@@ -2358,6 +2377,7 @@ export default function BTCChart() {
 										viewBox="0 0 24 24"
 										stroke="currentColor"
 									>
+										<title>More options</title>
 										<path
 											stroke-linecap="round"
 											stroke-linejoin="round"
@@ -2371,6 +2391,7 @@ export default function BTCChart() {
 										viewBox="0 0 24 24"
 										stroke="currentColor"
 									>
+										<title>Expand dropdown</title>
 										<path
 											stroke-linecap="round"
 											stroke-linejoin="round"
@@ -2401,6 +2422,7 @@ export default function BTCChart() {
 														viewBox="0 0 24 24"
 														stroke="currentColor"
 													>
+														<title>Add to favorites</title>
 														<path
 															stroke-linecap="round"
 															stroke-linejoin="round"
@@ -2441,6 +2463,7 @@ export default function BTCChart() {
 														fill="currentColor"
 														viewBox="0 0 20 20"
 													>
+														<title>Add to favorites</title>
 														<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
 													</svg>
 													Add {interval().toUpperCase()}
