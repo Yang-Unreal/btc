@@ -2,7 +2,6 @@ import { Title } from "@solidjs/meta";
 import { clientOnly } from "@solidjs/start";
 import AssetTable from "~/components/AssetTable";
 const BTCChart = clientOnly(() => import("~/components/BTCChart"));
-import LiquidityEngine from "~/components/LiquidityEngine";
 import MacroPyramidCalculator from "~/components/MacroPyramidCalculator";
 
 export default function Home() {
@@ -33,18 +32,6 @@ export default function Home() {
 					</div>
 				</section>
 
-				{/* 3. Global Liquidity (Macro) */}
-				<section class="space-y-4">
-					<div class="flex items-center gap-3">
-						<div class="w-1 h-1 rounded-full bg-indigo-500"></div>
-						<h2 class="text-lg font-semibold text-white tracking-tight">
-							Global Liquidity Context
-						</h2>
-					</div>
-					<div class="directive-card p-1">
-						<LiquidityEngine />
-					</div>
-				</section>
 			</div>
 		</div>
 	);

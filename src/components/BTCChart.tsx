@@ -26,11 +26,14 @@ import {
 import { CURRENCIES, SUPPORTED_ASSETS } from "../lib/constants";
 import { formatCryptoPrice } from "../lib/format";
 import {
+	calculateADX,
 	calculateATR,
 	calculateDonchianHigh,
 	calculateEMA,
+	calculateMACD,
 	calculateRSI,
 	calculateSMA,
+	calculateVWAP,
 	findLastSwingHigh,
 } from "../lib/indicators";
 import type {
@@ -95,6 +98,41 @@ interface DivergenceState {
 	type: "bullish" | "bearish";
 	priceAction: string;
 	rsiAction: string;
+}
+
+interface SniperData {
+	bullPct: number;
+	bearPct: number;
+	biasText: string;
+	biasCol: string;
+	details: {
+		priceVwap: "ABOVE" | "BELOW";
+		rsi: number;
+		macdTrend: "BULL" | "BEAR";
+		adx: number;
+		emaCross: "BULL" | "BEAR";
+		atr: number;
+		volStatus: "HIGH" | "LOW";
+		trendStr: "STRONG" | "WEAK";
+		macdSig: number;
+		status: string;
+		sniperMode: string;
+		rsi5m?: number;
+	};
+	tradeSetup?: {
+		entry: number;
+		sl: number;
+		t1: number;
+		t2: number;
+		t3: number;
+		t4: number;
+		t5: number;
+		t1Hit: boolean;
+		t2Hit: boolean;
+		t3Hit: boolean;
+		t4Hit: boolean;
+		t5Hit: boolean;
+	};
 }
 
 interface ISeriesMarkersPrimitive {
@@ -196,6 +234,10 @@ export default function BTCChart() {
 	let rsiSeries: ISeriesApi<"Line"> | undefined;
 	let fngSeries: ISeriesApi<"Line"> | undefined;
 	let atrSeries: ISeriesApi<"Line"> | undefined;
+	let vwapSeries: ISeriesApi<"Line"> | undefined;
+	let ema9Series: ISeriesApi<"Line"> | undefined;
+	let ema21Series: ISeriesApi<"Line"> | undefined;
+	let sniperTPLineSeries: ISeriesApi<"Line">[] = [];
 
 	let ws: WebSocket | undefined;
 	let wsPingInterval: number | undefined;
@@ -241,6 +283,7 @@ export default function BTCChart() {
 		tdSeq: false,
 		atr: false,
 		volume: true,
+		sniper: false,
 	});
 
 	const [indicatorHeights, setIndicatorHeights] = createSignal<
@@ -335,6 +378,8 @@ export default function BTCChart() {
 	const [divMap, setDivMap] = createSignal<Map<number, DivergenceState>>(
 		new Map(),
 	);
+	const [sniperData, setSniperData] = createSignal<SniperData | null>(null);
+	const [btcData5m, setBtcData5m] = createSignal<BTCData[]>([]);
 	const [legendData, setLegendData] = createSignal<TooltipData | null>(null);
 
 	const intervals: { label: string; value: Interval }[] = [
@@ -428,6 +473,13 @@ export default function BTCChart() {
 			color: "bg-slate-400",
 			textColor: "text-slate-400",
 			borderColor: "border-slate-400",
+		},
+		{
+			key: "sniper",
+			label: "VIP Sniper",
+			color: "bg-cyan-400",
+			textColor: "text-cyan-400",
+			borderColor: "border-cyan-400",
 		},
 	];
 
@@ -627,12 +679,183 @@ export default function BTCChart() {
 		return markers;
 	};
 
+	const calculateSniperMarkers = (data: BTCData[]) => {
+		if (!indicators().sniper || data.length < 30) {
+			setSniperData(null);
+			return [];
+		}
+
+		const data5m = untrack(() => btcData5m());
+		const rsi5mArr = data5m.length >= 14 ? calculateRSI(data5m.map(d => d.close), 14) : [];
+		const rsi5m = rsi5mArr.length > 0 ? rsi5mArr[rsi5mArr.length - 1] : undefined;
+
+		const closes = data.map((d) => d.close);
+		const ema9 = calculateEMA(closes, 9);
+		const ema21 = calculateEMA(closes, 21);
+		const vwap = calculateVWAP(
+			data.map((d) => ({
+				time: d.time as number,
+				high: d.high,
+				low: d.low,
+				close: d.close,
+				volume: d.volume ?? 0,
+			})),
+		);
+		const atr = calculateATR(
+			data.map((d) => ({ high: d.high, low: d.low, close: d.close })),
+			14,
+		);
+		const rsi = calculateRSI(closes, 14);
+		const { macd, signal: macdSignal } = calculateMACD(closes);
+		const { adx } = calculateADX(
+			data.map((d) => ({ high: d.high, low: d.low, close: d.close })),
+			14,
+		);
+
+		const volAvg = calculateSMA(
+			data.map((d) => d.volume ?? 0),
+			20,
+		);
+
+		const markers: SeriesMarker<UTCTimestamp>[] = [];
+		let lastSignalState = 0;
+		let tradeSetup: SniperData["tradeSetup"] | undefined;
+
+		for (let i = 26; i < data.length; i++) {
+			const buyCond = ema9[i] > ema21[i] && ema9[i - 1] <= ema21[i - 1];
+			const sellCond = ema9[i] < ema21[i] && ema9[i - 1] >= ema21[i - 1];
+
+			const triggerBuy = buyCond && lastSignalState <= 0;
+			const triggerSell = sellCond && lastSignalState >= 0;
+
+			if (triggerBuy || triggerSell) {
+				lastSignalState = triggerBuy ? 1 : -1;
+				markers.push({
+					time: data[i].time,
+					position: triggerBuy ? "belowBar" : "aboveBar",
+					color: triggerBuy ? "#10B981" : "#EF4444",
+					shape: triggerBuy ? "arrowUp" : "arrowDown",
+					text: triggerBuy ? "BUY" : "SELL",
+					size: 1,
+				});
+
+				const entryP = data[i].close;
+				const risk = atr[i] * 1.5;
+				const slP = triggerBuy ? entryP - risk : entryP + risk;
+				tradeSetup = {
+					entry: entryP,
+					sl: slP,
+					t1: triggerBuy ? entryP + risk : entryP - risk,
+					t2: triggerBuy ? entryP + risk * 2 : entryP - risk * 2,
+					t3: triggerBuy ? entryP + risk * 3 : entryP - risk * 3,
+					t4: triggerBuy ? entryP + risk * 4 : entryP - risk * 4,
+					t5: triggerBuy ? entryP + risk * 5 : entryP - risk * 5,
+					t1Hit: false,
+					t2Hit: false,
+					t3Hit: false,
+					t4Hit: false,
+					t5Hit: false,
+				};
+			}
+
+			if (tradeSetup) {
+				if (lastSignalState === 1) {
+					if (data[i].high >= tradeSetup.t1) tradeSetup.t1Hit = true;
+					if (data[i].high >= tradeSetup.t2) tradeSetup.t2Hit = true;
+					if (data[i].high >= tradeSetup.t3) tradeSetup.t3Hit = true;
+					if (data[i].high >= tradeSetup.t4) tradeSetup.t4Hit = true;
+					if (data[i].high >= tradeSetup.t5) tradeSetup.t5Hit = true;
+				} else if (lastSignalState === -1) {
+					if (data[i].low <= tradeSetup.t1) tradeSetup.t1Hit = true;
+					if (data[i].low <= tradeSetup.t2) tradeSetup.t2Hit = true;
+					if (data[i].low <= tradeSetup.t3) tradeSetup.t3Hit = true;
+					if (data[i].low <= tradeSetup.t4) tradeSetup.t4Hit = true;
+					if (data[i].low <= tradeSetup.t5) tradeSetup.t5Hit = true;
+				}
+			}
+		}
+
+		const lastIdx = data.length - 1;
+		const getBullScore = (idx: number) => {
+			let score = 0;
+			if (data[idx].close > vwap[idx]) score++;
+			if (rsi[idx] > 50) score++;
+			if (macd[idx] > macdSignal[idx]) score++;
+			if (ema9[idx] > ema21[idx]) score++;
+			if (adx[idx] > 25 && data[idx].close > ema9[idx]) score++;
+			if (
+				(data[idx].volume ?? 0) > volAvg[idx] &&
+				data[idx].close > data[idx].open
+			)
+				score++;
+			return score;
+		};
+
+		const getBearScore = (idx: number) => {
+			let score = 0;
+			if (data[idx].close < vwap[idx]) score++;
+			if (rsi[idx] < 50) score++;
+			if (macd[idx] < macdSignal[idx]) score++;
+			if (ema9[idx] < ema21[idx]) score++;
+			if (adx[idx] > 25 && data[idx].close < ema9[idx]) score++;
+			if (
+				(data[idx].volume ?? 0) > volAvg[idx] &&
+				data[idx].close < data[idx].open
+			)
+				score++;
+			return score;
+		};
+
+		const buP = (getBullScore(lastIdx) / 6) * 100;
+		const beP = (getBearScore(lastIdx) / 6) * 100;
+
+		const diff = buP - beP;
+		let bText = "MILD BEAR";
+		let bCol = "text-gray-400";
+		if (diff >= 40) {
+			bText = "STRONG BULL";
+			bCol = "text-emerald-500";
+		} else if (diff <= -40) {
+			bText = "STRONG BEAR";
+			bCol = "text-rose-500";
+		} else if (diff > 0) {
+			bText = "MILD BULL";
+			bCol = "text-emerald-400";
+		}
+
+		setSniperData({
+			bullPct: buP,
+			bearPct: beP,
+			biasText: bText,
+			biasCol: bCol,
+			details: {
+				priceVwap: data[lastIdx].close > vwap[lastIdx] ? "ABOVE" : "BELOW",
+				rsi: rsi[lastIdx],
+				macdTrend: macd[lastIdx] > macdSignal[lastIdx] ? "BULL" : "BEAR",
+				adx: adx[lastIdx],
+				emaCross: ema9[lastIdx] > ema21[lastIdx] ? "BULL" : "BEAR",
+				atr: atr[lastIdx],
+				volStatus: (data[lastIdx].volume ?? 0) > volAvg[lastIdx] ? "HIGH" : "LOW",
+				trendStr: adx[lastIdx] > 25 ? "STRONG" : "WEAK",
+				macdMain: macd[lastIdx],
+				macdSig: macdSignal[lastIdx],
+				status: tradeSetup ? "TRADE" : "WAIT",
+				sniperMode: "KHANSAAB V.02",
+				rsi5m: rsi5m,
+			},
+			tradeSetup,
+		});
+
+		return markers;
+	};
+
 	const refreshAllMarkers = (data: BTCData[]) => {
 		if (!markersPrimitive) return;
 		const tdMarkers = calculateTDMarkers(data);
 		const divMarkers = calculateDivergenceMarkers(data);
+		const sniperMarkers = calculateSniperMarkers(data);
 
-		const allMarkers = [...tdMarkers, ...divMarkers].sort(
+		const allMarkers = [...tdMarkers, ...divMarkers, ...sniperMarkers].sort(
 			(a, b) => (a.time as number) - (b.time as number),
 		);
 		markersPrimitive.setMarkers(allMarkers);
@@ -734,8 +957,8 @@ export default function BTCChart() {
 					value: d.volume || 0,
 					color:
 						d.close >= d.open
-							? "rgba(16, 185, 129, 0.5)"
-							: "rgba(239, 68, 68, 0.5)",
+							? "rgba(0, 243, 171, 0.5)"
+							: "rgba(241, 45, 89, 0.5)",
 				}));
 				volumeSeries.setData(volumeData);
 			}
@@ -913,8 +1136,8 @@ export default function BTCChart() {
 								value: newData.volume,
 								color:
 									newData.close >= newData.open
-										? "rgba(16, 185, 129, 0.5)"
-										: "rgba(239, 68, 68, 0.5)",
+										? "rgba(0, 243, 171, 0.5)"
+										: "rgba(241, 45, 89, 0.5)",
 							});
 						}
 
@@ -1008,6 +1231,29 @@ export default function BTCChart() {
 			if (!Number.isNaN(lastATR)) {
 				atrSeries.update({ time: lastCandle.time, value: lastATR });
 			}
+		}
+
+		if (currentInd.sniper && allData.length >= 30) {
+			const vwapVals = calculateVWAP(
+				allData.slice(-100).map((d) => ({
+					time: d.time as number,
+					high: d.high,
+					low: d.low,
+					close: d.close,
+					volume: d.volume ?? 0,
+				})),
+			);
+			const e9Vals = calculateEMA(allData.slice(-100).map(d => d.close), 9);
+			const e21Vals = calculateEMA(allData.slice(-100).map(d => d.close), 21);
+			
+			vwapSeries?.update({ time: lastCandle.time, value: vwapVals[vwapVals.length - 1] });
+			ema9Series?.update({ time: lastCandle.time, value: e9Vals[e9Vals.length - 1] });
+			ema21Series?.update({ time: lastCandle.time, value: e21Vals[e21Vals.length - 1] });
+			
+			// Maintain visibility state correctly
+			vwapSeries?.applyOptions({ visible: false });
+			ema9Series?.applyOptions({ visible: !!currentInd.sniper });
+			ema21Series?.applyOptions({ visible: !!currentInd.sniper });
 		}
 
 		refreshAllMarkers(allData);
@@ -1126,6 +1372,10 @@ export default function BTCChart() {
 		fngSeries?.applyOptions({ visible: !!currentInd.fng });
 		atrSeries?.applyOptions({ visible: !!currentInd.atr });
 		volumeSeries?.applyOptions({ visible: !!currentInd.volume });
+		vwapSeries?.applyOptions({ visible: false });
+		ema9Series?.applyOptions({ visible: !!currentInd.sniper });
+		ema21Series?.applyOptions({ visible: !!currentInd.sniper });
+		sniperTPLineSeries.forEach((s) => s.applyOptions({ visible: !!currentInd.sniper }));
 		const totalHeight = chartContainer?.clientHeight || 450;
 		const heights = indicatorHeights();
 
@@ -1185,7 +1435,7 @@ export default function BTCChart() {
 			chart.priceScale("atrScale").applyOptions({ visible: false });
 		}
 
-		refreshAllMarkers(currentData);
+		untrack(() => refreshAllMarkers(currentData));
 
 		if (currentInd.fng) {
 			fetchFNGData().then(() => {
@@ -1331,6 +1581,67 @@ export default function BTCChart() {
 		} else if (atrSeries) {
 			atrSeries.setData([]);
 		}
+
+		if (currentInd.sniper && currentData.length >= 30) {
+			const vwapVals = calculateVWAP(
+				currentData.map((d) => ({
+					time: d.time as number,
+					high: d.high,
+					low: d.low,
+					close: d.close,
+					volume: d.volume ?? 0,
+				})),
+			);
+			const e9Vals = calculateEMA(closes, 9);
+			const e21Vals = calculateEMA(closes, 21);
+
+			const vwapData: LineData[] = [];
+			const e9Data: LineData[] = [];
+			const e21Data: LineData[] = [];
+
+			for (let i = 0; i < currentData.length; i++) {
+				if (!Number.isNaN(vwapVals[i]))
+					vwapData.push({ time: currentData[i].time, value: vwapVals[i] });
+				if (!Number.isNaN(e9Vals[i]))
+					e9Data.push({ time: currentData[i].time, value: e9Vals[i] });
+				if (!Number.isNaN(e21Vals[i]))
+					e21Data.push({ time: currentData[i].time, value: e21Vals[i] });
+			}
+
+			vwapSeries?.setData(vwapData);
+			ema9Series?.setData(e9Data);
+			ema21Series?.setData(e21Data);
+
+			// TP/SL Lines (read untracked to avoid infinite loop)
+			const setup = untrack(() => sniperData())?.tradeSetup;
+			if (setup) {
+				const lastTime = currentData[currentData.length - 1].time;
+				const firstTime = currentData[currentData.length - 20]?.time || currentData[0].time;
+
+				const plotLine = (s: ISeriesApi<"Line">, val: number, color: string, style: number) => {
+					s.applyOptions({ color, lineStyle: style });
+					s.setData([
+						{ time: firstTime, value: val },
+						{ time: lastTime, value: val },
+					]);
+				};
+
+				plotLine(sniperTPLineSeries[0], setup.entry, "#6366f1", 0);
+				plotLine(sniperTPLineSeries[1], setup.sl, "#ef4444", 0);
+				plotLine(sniperTPLineSeries[2], setup.t1, setup.t1Hit ? "#40E0D0" : "#22c55e", 2);
+				plotLine(sniperTPLineSeries[3], setup.t2, setup.t2Hit ? "#40E0D0" : "#22c55e", 2);
+				plotLine(sniperTPLineSeries[4], setup.t3, setup.t3Hit ? "#40E0D0" : "#22c55e", 2);
+				plotLine(sniperTPLineSeries[5], setup.t4, setup.t4Hit ? "#40E0D0" : "#065f46", 0);
+				plotLine(sniperTPLineSeries[6], setup.t5, setup.t5Hit ? "#40E0D0" : "#064e3b", 0);
+			} else {
+				sniperTPLineSeries.forEach(s => s.setData([]));
+			}
+		} else {
+			vwapSeries?.setData([]);
+			ema9Series?.setData([]);
+			ema21Series?.setData([]);
+			sniperTPLineSeries.forEach(s => s.setData([]));
+		}
 	};
 
 	// --- History Query ---
@@ -1410,8 +1721,8 @@ export default function BTCChart() {
 						value: d.volume || 0,
 						color:
 							d.close >= d.open
-								? "rgba(16, 185, 129, 0.5)"
-								: "rgba(239, 68, 68, 0.5)",
+								? "rgba(0, 243, 171, 0.5)"
+								: "rgba(241, 45, 89, 0.5)",
 					}));
 					volumeSeries.setData(volumeData);
 				}
@@ -1429,6 +1740,37 @@ export default function BTCChart() {
 		});
 	});
 
+	// --- Fetch 5m data for sniper dashboard ---
+	createEffect(() => {
+		const asset = activeAsset();
+		const currency = activeCurrency().code;
+		
+		// Internal fetch function for MTF data
+		const fetch5m = async () => {
+			try {
+				const res = await fetch(`/api/history?interval=5m&currency=${currency}&symbol=${asset.symbol}`);
+				const data = await res.json();
+				if (Array.isArray(data)) {
+					const mapped = data.map(item => ({
+						time: Math.floor(item[0]) as UTCTimestamp,
+						open: item[1],
+						high: item[2],
+						low: item[3],
+						close: item[4],
+						volume: item[5],
+					})).sort((a, b) => (a.time as number) - (b.time as number));
+					setBtcData5m(mapped);
+				}
+			} catch (e) {
+				console.error("Failed to fetch 5m MTF data", e);
+			}
+		};
+
+		fetch5m();
+		const intervalId = setInterval(fetch5m, 10000); // refresh every 10s
+		onCleanup(() => clearInterval(intervalId));
+	});
+
 	// --- Load Data ---
 	// Removed loadData in favor of createQuery reactive updates
 
@@ -1436,44 +1778,45 @@ export default function BTCChart() {
 		if (!chartContainer) return;
 
 		chart = createChart(chartContainer, {
-			layout: { background: { color: "transparent" }, textColor: "#64748b" },
+			layout: { 
+				background: { color: "#0b0a1a" }, 
+				textColor: "#a0a0b8" 
+			},
 			grid: {
-				vertLines: { color: "rgba(241, 245, 249, 0.08)" },
-				horzLines: { color: "rgba(241, 245, 249, 0.08)" },
+				vertLines: { color: "#1c1b33" },
+				horzLines: { color: "#1c1b33" },
 			},
 			width: chartContainer.clientWidth,
 			height: chartContainer.clientHeight,
 			crosshair: {
-				// Mode 0 = Normal: crosshair follows cursor exactly and is always visible
-				// (Mode 1 = Magnet snaps to candle bodies which can feel laggy)
 				mode: 0,
 				vertLine: {
 					width: 1,
-					color: "#6366f1",
+					color: "#882ff2",
 					style: 3,
-					labelBackgroundColor: "#6366f1",
+					labelBackgroundColor: "#882ff2",
 				},
-				horzLine: { color: "#6366f1", labelBackgroundColor: "#6366f1" },
+				horzLine: { color: "#882ff2", labelBackgroundColor: "#882ff2" },
 			},
 			timeScale: {
 				timeVisible: true,
 				secondsVisible: false,
-				borderColor: "#e2e8f0",
+				borderColor: "#25244a",
 			},
 			rightPriceScale: {
-				borderColor: "#e2e8f0",
-				scaleMargins: { top: 0.1, bottom: 0.2 }, // Added bottom margin for volume
+				borderColor: "#25244a",
+				scaleMargins: { top: 0.1, bottom: 0.2 },
 			},
 			handleScale: { axisPressedMouseMove: true },
 			handleScroll: { vertTouchDrag: false },
 		});
 
 		candlestickSeries = chart.addSeries(CandlestickSeries, {
-			upColor: "#10b981",
-			downColor: "#ef4444",
+			upColor: "#00f3ab",
+			downColor: "#f12d59",
 			borderVisible: false,
-			wickUpColor: "#10b981",
-			wickDownColor: "#ef4444",
+			wickUpColor: "#00f3ab",
+			wickDownColor: "#f12d59",
 			priceFormat: {
 				type: "custom",
 				formatter: (price: number) =>
@@ -1549,6 +1892,41 @@ export default function BTCChart() {
 			color: "#94a3b8", // slate-400
 			visible: false,
 		});
+
+		vwapSeries = chart.addSeries(LineSeries, {
+			color: "#4ade80",
+			lineWidth: 2,
+			visible: false,
+			priceLineVisible: false,
+			lastValueVisible: true,
+		});
+
+		ema9Series = chart.addSeries(LineSeries, {
+			color: "rgba(16, 185, 129, 0.8)",
+			lineWidth: 1,
+			visible: false,
+			priceLineVisible: false,
+			lastValueVisible: true,
+		});
+
+		ema21Series = chart.addSeries(LineSeries, {
+			color: "rgba(239, 68, 68, 0.8)",
+			lineWidth: 1,
+			visible: false,
+			priceLineVisible: false,
+			lastValueVisible: true,
+		});
+
+		for (let i = 0; i < 7; i++) {
+			sniperTPLineSeries.push(
+				chart.addSeries(LineSeries, {
+					lineWidth: 1,
+					visible: false,
+					priceLineVisible: false,
+					lastValueVisible: true,
+				}),
+			);
+		}
 
 		rsiSeries.createPriceLine({
 			price: 70,
@@ -1872,7 +2250,7 @@ export default function BTCChart() {
 		<div class="directive-card overflow-hidden">
 			{/* ===== MOBILE LAYOUT (Bitget-style) ===== */}
 			<Show when={isMobile()}>
-				<div class="relative z-50 bg-[#151921]">
+				<div class="relative z-50 bg-[#05051a]">
 					{/* Row 1: Symbol + Price + Connection */}
 					<div class="flex items-center justify-between px-4 pt-3 pb-2">
 						<div class="flex flex-col">
@@ -2545,6 +2923,148 @@ export default function BTCChart() {
 							<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-white/5 group-hover/handle:bg-indigo-500/50" />
 						</div>
 					</Show>
+				</Show>
+
+				{/* VIP Sniper Dashboard Overlay */}
+				<Show when={indicators().sniper && sniperData()}>
+					<div class="absolute left-2 top-1/2 -translate-y-1/2 z-30 pointer-events-none select-none transition-all duration-300">
+						<div class="bg-[#05051a]/95 backdrop-blur-md border border-[#25244a] rounded overflow-hidden shadow-2xl w-[160px] flex flex-col scale-[0.85] origin-left border-l-4 border-l-[#882ff2]">
+							{/* Header (Simplified since details moved to block) */}
+							<div class="bg-slate-950/40 border-b border-white/10 px-2 py-1 flex items-center justify-between">
+								<span class="text-[9px] font-black text-[#882ff2] uppercase tracking-widest">
+									VIP SNIPER
+								</span>
+								<div class="w-1.5 h-1.5 rounded-full bg-[#882ff2] animate-pulse" />
+							</div>
+
+							{/* Scores Block */}
+							<div class="flex flex-col text-[9px] font-black uppercase tracking-tighter">
+								<div class="flex items-center">
+									<div class="w-1/2 bg-emerald-500 text-white px-2 py-1 border-r border-white/10">BULL SCORE</div>
+									<div class="w-1/2 bg-emerald-500 text-white px-2 py-1 text-center font-black">
+										{Math.round(sniperData()?.bullPct ?? 0)}%
+									</div>
+								</div>
+								<div class="flex items-center">
+									<div class="w-1/2 bg-rose-500 text-white px-2 py-1 border-r border-white/10">BEAR SCORE</div>
+									<div class="w-1/2 bg-rose-500 text-white px-2 py-1 text-center font-black">
+										{Math.round(sniperData()?.bearPct ?? 0)}%
+									</div>
+								</div>
+								<div class="flex items-center">
+									<div class="w-1/2 bg-slate-800 text-white px-2 py-1 border-r border-white/10 shrink-0">MARKET BIAS</div>
+									<div class={`w-1/2 px-2 py-1 text-center font-black border-l border-white/10 ${sniperData()?.details.macdTrend === 'BULL' ? 'bg-emerald-500' : 'bg-rose-500'} text-white`}>
+										{sniperData()?.biasText}
+									</div>
+								</div>
+							</div>
+
+							{/* Details Grid */}
+							<div class="px-2 py-2 flex flex-col gap-1 bg-black/20">
+								{[
+									{
+										label: "Price/VWAP",
+										val: sniperData()?.details.priceVwap,
+										col:
+											sniperData()?.details.priceVwap === "ABOVE"
+												? "text-emerald-400"
+												: "text-rose-400",
+									},
+									{
+										label: "RSI (14)",
+										val: sniperData()?.details.rsi?.toFixed(1) ?? "—",
+										col:
+											(sniperData()?.details.rsi ?? 0) > 50
+												? "text-emerald-400"
+												: "text-rose-400",
+									},
+									{
+										label: "MACD Trend",
+										val: sniperData()?.details.macdTrend,
+										col:
+											sniperData()?.details.macdTrend === "BULL"
+												? "text-emerald-400"
+												: "text-rose-400",
+									},
+									{
+										label: "ADX Power",
+										val: Math.round(sniperData()?.details.adx ?? 0),
+										col: "text-emerald-400",
+									},
+									{
+										label: "EMA Cross",
+										val: sniperData()?.details.emaCross,
+										col:
+											sniperData()?.details.emaCross === "BULL"
+												? "text-emerald-400"
+												: "text-rose-400",
+									},
+									{
+										label: "ATR 14",
+										val: sniperData()?.details.atr?.toFixed(2) ?? "—",
+										col: "text-slate-300",
+									},
+									{
+										label: "5m RSI",
+										val: sniperData()?.details.rsi5m?.toFixed(1) ?? "—",
+										col: (sniperData()?.details.rsi5m ?? 0) > 50 ? "text-emerald-400" : "text-rose-400",
+									},
+									{
+										label: "Vol Status",
+										val: sniperData()?.details.volStatus ?? "—",
+										col:
+											sniperData()?.details.volStatus === "HIGH"
+												? "text-emerald-400"
+												: "text-slate-500",
+									},
+									{
+										label: "MACD Main",
+										val: sniperData()?.details.macdMain?.toFixed(2) ?? "—",
+										col: "text-emerald-400",
+									},
+									{
+										label: "MACD Sig",
+										val: sniperData()?.details.macdSig?.toFixed(2) ?? "—",
+										col: "text-rose-400",
+									},
+									{
+										label: "Trend Str",
+										val: sniperData()?.details.trendStr ?? "—",
+										col:
+											sniperData()?.details.trendStr === "STRONG"
+												? "text-emerald-400"
+												: "text-rose-400",
+									},
+									{
+										label: "Status",
+										val: sniperData()?.details.status ?? "—",
+										col: sniperData()?.details.status === "TRADE" ? "text-emerald-400" : "text-amber-400",
+									},
+								].map((item) => (
+									<div class="flex items-center justify-between border-b border-white/5 px-2 py-1 last:border-0 bg-slate-900/40 odd:bg-slate-900/60">
+										<span class="text-[8.5px] text-slate-400 font-bold uppercase tracking-tighter truncate">
+											{item.label}
+										</span>
+										<span
+											class={`text-[9px] font-black uppercase tracking-tighter ${item.col.includes('rose') ? 'text-rose-500' : item.col.includes('emerald') ? 'text-emerald-500' : 'text-slate-300'}`}
+										>
+											{item.val}
+										</span>
+									</div>
+								))}
+							</div>
+
+							{/* Trading Status (Bottom) */}
+							<div class="px-2 py-1 bg-slate-900 border-t border-white/10 flex items-center justify-between">
+								<span class="text-[7.5px] font-bold text-slate-500 uppercase">
+									Sniper Mode
+								</span>
+								<span class="text-[7.5px] font-black text-slate-400 uppercase tracking-widest">
+									KHANSAAB V.02
+								</span>
+							</div>
+						</div>
+					</div>
 				</Show>
 
 				{/* Bitget-style Legend Overlay */}
