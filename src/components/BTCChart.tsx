@@ -114,6 +114,7 @@ interface SniperData {
 		atr: number;
 		volStatus: "HIGH" | "LOW";
 		trendStr: "STRONG" | "WEAK";
+		macdMain: number;
 		macdSig: number;
 		status: string;
 		sniperMode: string;
@@ -1767,8 +1768,8 @@ export default function BTCChart() {
 		};
 
 		fetch5m();
-		const intervalId = setInterval(fetch5m, 10000); // refresh every 10s
-		onCleanup(() => clearInterval(intervalId));
+		const intervalId = window.setInterval(fetch5m, 10000); // refresh every 10s
+		onCleanup(() => window.clearInterval(intervalId));
 	});
 
 	// --- Load Data ---
