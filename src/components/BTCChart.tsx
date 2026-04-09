@@ -1059,8 +1059,8 @@ export default function BTCChart() {
 			high: formatValue(lastCandle.high),
 			low: formatValue(lastCandle.low),
 			close: formatValue(lastCandle.close),
-			changeVal: (change >= 0 ? "+" : "") + formatValue(change),
-			changePct: (change >= 0 ? "+" : "") + changePct.toFixed(2) + "%",
+			changeVal: `${change >= 0 ? "+" : ""}${formatValue(change)}`,
+			changePct: `${change >= 0 ? "+" : ""}${changePct.toFixed(2)}%`,
 			volume: formattedVolume,
 			currencySymbol: activeCurrency().symbol,
 			changeColor:
@@ -1698,13 +1698,8 @@ export default function BTCChart() {
 				high: formatTooltipPrice(candle.high),
 				low: formatTooltipPrice(candle.low),
 				close: formatTooltipPrice(candle.close),
-				changeVal:
-					(candle.close - candle.open >= 0 ? "+" : "") +
-					formatTooltipPrice(candle.close - candle.open),
-				changePct:
-					(((candle.close - candle.open) / candle.open) * 100 >= 0 ? "+" : "") +
-					(((candle.close - candle.open) / candle.open) * 100).toFixed(2) +
-					"%",
+				changeVal: `${candle.close - candle.open >= 0 ? "+" : ""}${formatTooltipPrice(candle.close - candle.open)}`,
+				changePct: `${((candle.close - candle.open) / candle.open) * 100 >= 0 ? "+" : ""}${(((candle.close - candle.open) / candle.open) * 100).toFixed(2)}%`,
 				volume: formattedVolume,
 				currencySymbol: activeCurrency().symbol,
 				changeColor:
@@ -2047,6 +2042,14 @@ export default function BTCChart() {
 													setInterval(opt.value);
 													setShowIntervalDropdown(false);
 												}}
+												onKeyDown={(e) => {
+													if (e.key === "Enter" || e.key === " ") {
+														setInterval(opt.value);
+														setShowIntervalDropdown(false);
+													}
+												}}
+												role="option"
+												tabIndex={0}
 											>
 												<button
 													type="button"
@@ -2331,6 +2334,14 @@ export default function BTCChart() {
 														setInterval(opt.value);
 														setShowIntervalDropdown(false);
 													}}
+													onKeyDown={(e) => {
+														if (e.key === "Enter" || e.key === " ") {
+															setInterval(opt.value);
+															setShowIntervalDropdown(false);
+														}
+													}}
+													role="option"
+													tabIndex={0}
 												>
 													<button
 														type="button"
@@ -2562,13 +2573,8 @@ export default function BTCChart() {
 												livePrice,
 												activeCurrency().code,
 											);
-											const liveChangeStr =
-												(liveChange >= 0 ? "+" : "") +
-												formatCryptoPrice(liveChange, activeCurrency().code);
-											const liveChangePctStr =
-												(liveChangePct >= 0 ? "+" : "") +
-												liveChangePct.toFixed(2) +
-												"%";
+											const liveChangeStr = `${liveChange >= 0 ? "+" : ""}${formatCryptoPrice(liveChange, activeCurrency().code)}`;
+											const liveChangePctStr = `${liveChangePct >= 0 ? "+" : ""}${liveChangePct.toFixed(2)}%`;
 											return (
 												<div class="flex items-center gap-1">
 													<span class={liveColor}>{livePriceStr}</span>
@@ -2600,13 +2606,8 @@ export default function BTCChart() {
 												livePrice,
 												activeCurrency().code,
 											);
-											const liveChangeStr =
-												(liveChange >= 0 ? "+" : "") +
-												formatCryptoPrice(liveChange, activeCurrency().code);
-											const liveChangePctStr =
-												(liveChangePct >= 0 ? "+" : "") +
-												liveChangePct.toFixed(2) +
-												"%";
+											const liveChangeStr = `${liveChange >= 0 ? "+" : ""}${formatCryptoPrice(liveChange, activeCurrency().code)}`;
+											const liveChangePctStr = `${liveChangePct >= 0 ? "+" : ""}${liveChangePct.toFixed(2)}%`;
 											return (
 												<div class="flex items-center gap-1.5 ml-1 scale-90 origin-left">
 													<span class="text-slate-500 font-medium">O</span>
