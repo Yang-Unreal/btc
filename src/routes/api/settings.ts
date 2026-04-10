@@ -26,6 +26,7 @@ export async function GET() {
 				: ["4h"],
 			notificationsEnabled: settings[0].notificationsEnabled === "true",
 			fourHAlertEnabled: settings[0].fourHAlertEnabled === "true",
+			vipSniper1hAlertEnabled: settings[0].vipSniper1hAlertEnabled === "true",
 			indicators: settings[0].indicators
 				? JSON.parse(settings[0].indicators)
 				: null,
@@ -50,6 +51,7 @@ export async function POST({ request }: { request: Request }) {
 			indicatorHeights,
 			notificationsEnabled,
 			fourHAlertEnabled,
+			vipSniper1hAlertEnabled,
 		} = body;
 
 		const updateData: Partial<NewUserSettings> = { updatedAt: new Date() };
@@ -78,6 +80,11 @@ export async function POST({ request }: { request: Request }) {
 		}
 		if (typeof fourHAlertEnabled === "boolean") {
 			updateData.fourHAlertEnabled = fourHAlertEnabled ? "true" : "false";
+		}
+		if (typeof vipSniper1hAlertEnabled === "boolean") {
+			updateData.vipSniper1hAlertEnabled = vipSniper1hAlertEnabled
+				? "true"
+				: "false";
 		}
 
 		if (Object.keys(updateData).length <= 1) {

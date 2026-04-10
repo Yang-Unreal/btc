@@ -286,6 +286,22 @@ function ProfileContent() {
 							/>
 							4H System {globalStore.fourHAlertEnabled() ? "ON" : "OFF"}
 						</button>
+
+						<button
+							type="button"
+							onClick={() =>
+								globalStore.setVipSniper1hAlertEnabled(
+									!globalStore.vipSniper1hAlertEnabled(),
+								)
+							}
+							class={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-2 ${globalStore.vipSniper1hAlertEnabled() ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}
+						>
+							<div
+								class={`w-2 h-2 rounded-full ${globalStore.vipSniper1hAlertEnabled() ? "bg-emerald-400 animate-pulse" : "bg-rose-400"}`}
+							/>
+							VIP Sniper 1h{" "}
+							{globalStore.vipSniper1hAlertEnabled() ? "ON" : "OFF"}
+						</button>
 					</div>
 
 					<button
