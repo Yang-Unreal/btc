@@ -78,6 +78,8 @@ interface TooltipData {
 	changePct?: string;
 	/** Raw numeric open price — used to compute live change vs currentPrice() */
 	openRaw?: number;
+	/** Raw numeric close price — used to display the K-line's close price */
+	closeRaw?: number;
 }
 
 // ... [Existing Interfaces for FNGData, TDState, etc. remain unchanged] ...
@@ -238,7 +240,7 @@ export default function BTCChart() {
 	let vwapSeries: ISeriesApi<"Line"> | undefined;
 	let ema9Series: ISeriesApi<"Line"> | undefined;
 	let ema21Series: ISeriesApi<"Line"> | undefined;
-	let sniperTPLineSeries: ISeriesApi<"Line">[] = [];
+	const sniperTPLineSeries: ISeriesApi<"Line">[] = [];
 
 	let ws: WebSocket | undefined;
 	let wsPingInterval: number | undefined;
@@ -687,8 +689,15 @@ export default function BTCChart() {
 		}
 
 		const data5m = untrack(() => btcData5m());
-		const rsi5mArr = data5m.length >= 14 ? calculateRSI(data5m.map(d => d.close), 14) : [];
-		const rsi5m = rsi5mArr.length > 0 ? rsi5mArr[rsi5mArr.length - 1] : undefined;
+		const rsi5mArr =
+			data5m.length >= 14
+				? calculateRSI(
+						data5m.map((d) => d.close),
+						14,
+					)
+				: [];
+		const rsi5m =
+			rsi5mArr.length > 0 ? rsi5mArr[rsi5mArr.length - 1] : undefined;
 
 		const closes = data.map((d) => d.close);
 		const ema9 = calculateEMA(closes, 9);
@@ -836,7 +845,8 @@ export default function BTCChart() {
 				adx: adx[lastIdx],
 				emaCross: ema9[lastIdx] > ema21[lastIdx] ? "BULL" : "BEAR",
 				atr: atr[lastIdx],
-				volStatus: (data[lastIdx].volume ?? 0) > volAvg[lastIdx] ? "HIGH" : "LOW",
+				volStatus:
+					(data[lastIdx].volume ?? 0) > volAvg[lastIdx] ? "HIGH" : "LOW",
 				trendStr: adx[lastIdx] > 25 ? "STRONG" : "WEAK",
 				macdMain: macd[lastIdx],
 				macdSig: macdSignal[lastIdx],
@@ -1244,13 +1254,28 @@ export default function BTCChart() {
 					volume: d.volume ?? 0,
 				})),
 			);
-			const e9Vals = calculateEMA(allData.slice(-100).map(d => d.close), 9);
-			const e21Vals = calculateEMA(allData.slice(-100).map(d => d.close), 21);
-			
-			vwapSeries?.update({ time: lastCandle.time, value: vwapVals[vwapVals.length - 1] });
-			ema9Series?.update({ time: lastCandle.time, value: e9Vals[e9Vals.length - 1] });
-			ema21Series?.update({ time: lastCandle.time, value: e21Vals[e21Vals.length - 1] });
-			
+			const e9Vals = calculateEMA(
+				allData.slice(-100).map((d) => d.close),
+				9,
+			);
+			const e21Vals = calculateEMA(
+				allData.slice(-100).map((d) => d.close),
+				21,
+			);
+
+			vwapSeries?.update({
+				time: lastCandle.time,
+				value: vwapVals[vwapVals.length - 1],
+			});
+			ema9Series?.update({
+				time: lastCandle.time,
+				value: e9Vals[e9Vals.length - 1],
+			});
+			ema21Series?.update({
+				time: lastCandle.time,
+				value: e21Vals[e21Vals.length - 1],
+			});
+
 			// Maintain visibility state correctly
 			vwapSeries?.applyOptions({ visible: false });
 			ema9Series?.applyOptions({ visible: !!currentInd.sniper });
@@ -1348,6 +1373,7 @@ export default function BTCChart() {
 				: undefined,
 			// Raw open value used by JSX to compute live change vs currentPrice()
 			openRaw: lastCandle.open,
+			closeRaw: lastCandle.close,
 			x: 0,
 			y: 0,
 			snapY: 0,
@@ -1376,7 +1402,9 @@ export default function BTCChart() {
 		vwapSeries?.applyOptions({ visible: false });
 		ema9Series?.applyOptions({ visible: !!currentInd.sniper });
 		ema21Series?.applyOptions({ visible: !!currentInd.sniper });
-		sniperTPLineSeries.forEach((s) => s.applyOptions({ visible: !!currentInd.sniper }));
+		sniperTPLineSeries.forEach((s) =>
+			s.applyOptions({ visible: !!currentInd.sniper }),
+		);
 		const totalHeight = chartContainer?.clientHeight || 450;
 		const heights = indicatorHeights();
 
@@ -1617,9 +1645,15 @@ export default function BTCChart() {
 			const setup = untrack(() => sniperData())?.tradeSetup;
 			if (setup) {
 				const lastTime = currentData[currentData.length - 1].time;
-				const firstTime = currentData[currentData.length - 20]?.time || currentData[0].time;
+				const firstTime =
+					currentData[currentData.length - 20]?.time || currentData[0].time;
 
-				const plotLine = (s: ISeriesApi<"Line">, val: number, color: string, style: number) => {
+				const plotLine = (
+					s: ISeriesApi<"Line">,
+					val: number,
+					color: string,
+					style: number,
+				) => {
 					s.applyOptions({ color, lineStyle: style });
 					s.setData([
 						{ time: firstTime, value: val },
@@ -1629,19 +1663,44 @@ export default function BTCChart() {
 
 				plotLine(sniperTPLineSeries[0], setup.entry, "#6366f1", 0);
 				plotLine(sniperTPLineSeries[1], setup.sl, "#ef4444", 0);
-				plotLine(sniperTPLineSeries[2], setup.t1, setup.t1Hit ? "#40E0D0" : "#22c55e", 2);
-				plotLine(sniperTPLineSeries[3], setup.t2, setup.t2Hit ? "#40E0D0" : "#22c55e", 2);
-				plotLine(sniperTPLineSeries[4], setup.t3, setup.t3Hit ? "#40E0D0" : "#22c55e", 2);
-				plotLine(sniperTPLineSeries[5], setup.t4, setup.t4Hit ? "#40E0D0" : "#065f46", 0);
-				plotLine(sniperTPLineSeries[6], setup.t5, setup.t5Hit ? "#40E0D0" : "#064e3b", 0);
+				plotLine(
+					sniperTPLineSeries[2],
+					setup.t1,
+					setup.t1Hit ? "#40E0D0" : "#22c55e",
+					2,
+				);
+				plotLine(
+					sniperTPLineSeries[3],
+					setup.t2,
+					setup.t2Hit ? "#40E0D0" : "#22c55e",
+					2,
+				);
+				plotLine(
+					sniperTPLineSeries[4],
+					setup.t3,
+					setup.t3Hit ? "#40E0D0" : "#22c55e",
+					2,
+				);
+				plotLine(
+					sniperTPLineSeries[5],
+					setup.t4,
+					setup.t4Hit ? "#40E0D0" : "#065f46",
+					0,
+				);
+				plotLine(
+					sniperTPLineSeries[6],
+					setup.t5,
+					setup.t5Hit ? "#40E0D0" : "#064e3b",
+					0,
+				);
 			} else {
-				sniperTPLineSeries.forEach(s => s.setData([]));
+				sniperTPLineSeries.forEach((s) => s.setData([]));
 			}
 		} else {
 			vwapSeries?.setData([]);
 			ema9Series?.setData([]);
 			ema21Series?.setData([]);
-			sniperTPLineSeries.forEach(s => s.setData([]));
+			sniperTPLineSeries.forEach((s) => s.setData([]));
 		}
 	};
 
@@ -1745,21 +1804,25 @@ export default function BTCChart() {
 	createEffect(() => {
 		const asset = activeAsset();
 		const currency = activeCurrency().code;
-		
+
 		// Internal fetch function for MTF data
 		const fetch5m = async () => {
 			try {
-				const res = await fetch(`/api/history?interval=5m&currency=${currency}&symbol=${asset.symbol}`);
+				const res = await fetch(
+					`/api/history?interval=5m&currency=${currency}&symbol=${asset.symbol}`,
+				);
 				const data = await res.json();
 				if (Array.isArray(data)) {
-					const mapped = data.map(item => ({
-						time: Math.floor(item[0]) as UTCTimestamp,
-						open: item[1],
-						high: item[2],
-						low: item[3],
-						close: item[4],
-						volume: item[5],
-					})).sort((a, b) => (a.time as number) - (b.time as number));
+					const mapped = data
+						.map((item) => ({
+							time: Math.floor(item[0]) as UTCTimestamp,
+							open: item[1],
+							high: item[2],
+							low: item[3],
+							close: item[4],
+							volume: item[5],
+						}))
+						.sort((a, b) => (a.time as number) - (b.time as number));
 					setBtcData5m(mapped);
 				}
 			} catch (e) {
@@ -1779,9 +1842,9 @@ export default function BTCChart() {
 		if (!chartContainer) return;
 
 		chart = createChart(chartContainer, {
-			layout: { 
-				background: { color: "#0b0a1a" }, 
-				textColor: "#a0a0b8" 
+			layout: {
+				background: { color: "#0b0a1a" },
+				textColor: "#a0a0b8",
 			},
 			grid: {
 				vertLines: { color: "#1c1b33" },
@@ -2077,6 +2140,8 @@ export default function BTCChart() {
 				high: formatTooltipPrice(candle.high),
 				low: formatTooltipPrice(candle.low),
 				close: formatTooltipPrice(candle.close),
+				openRaw: candle.open,
+				closeRaw: candle.close,
 				changeVal: `${candle.close - candle.open >= 0 ? "+" : ""}${formatTooltipPrice(candle.close - candle.open)}`,
 				changePct: `${((candle.close - candle.open) / candle.open) * 100 >= 0 ? "+" : ""}${(((candle.close - candle.open) / candle.open) * 100).toFixed(2)}%`,
 				volume: formattedVolume,
@@ -2941,20 +3006,28 @@ export default function BTCChart() {
 							{/* Scores Block */}
 							<div class="flex flex-col text-[9px] font-black uppercase tracking-tighter">
 								<div class="flex items-center">
-									<div class="w-1/2 bg-emerald-500 text-white px-2 py-1 border-r border-white/10">BULL SCORE</div>
+									<div class="w-1/2 bg-emerald-500 text-white px-2 py-1 border-r border-white/10">
+										BULL SCORE
+									</div>
 									<div class="w-1/2 bg-emerald-500 text-white px-2 py-1 text-center font-black">
 										{Math.round(sniperData()?.bullPct ?? 0)}%
 									</div>
 								</div>
 								<div class="flex items-center">
-									<div class="w-1/2 bg-rose-500 text-white px-2 py-1 border-r border-white/10">BEAR SCORE</div>
+									<div class="w-1/2 bg-rose-500 text-white px-2 py-1 border-r border-white/10">
+										BEAR SCORE
+									</div>
 									<div class="w-1/2 bg-rose-500 text-white px-2 py-1 text-center font-black">
 										{Math.round(sniperData()?.bearPct ?? 0)}%
 									</div>
 								</div>
 								<div class="flex items-center">
-									<div class="w-1/2 bg-slate-800 text-white px-2 py-1 border-r border-white/10 shrink-0">MARKET BIAS</div>
-									<div class={`w-1/2 px-2 py-1 text-center font-black border-l border-white/10 ${sniperData()?.details.macdTrend === 'BULL' ? 'bg-emerald-500' : 'bg-rose-500'} text-white`}>
+									<div class="w-1/2 bg-slate-800 text-white px-2 py-1 border-r border-white/10 shrink-0">
+										MARKET BIAS
+									</div>
+									<div
+										class={`w-1/2 px-2 py-1 text-center font-black border-l border-white/10 ${sniperData()?.details.macdTrend === "BULL" ? "bg-emerald-500" : "bg-rose-500"} text-white`}
+									>
 										{sniperData()?.biasText}
 									</div>
 								</div>
@@ -3008,7 +3081,10 @@ export default function BTCChart() {
 									{
 										label: "5m RSI",
 										val: sniperData()?.details.rsi5m?.toFixed(1) ?? "—",
-										col: (sniperData()?.details.rsi5m ?? 0) > 50 ? "text-emerald-400" : "text-rose-400",
+										col:
+											(sniperData()?.details.rsi5m ?? 0) > 50
+												? "text-emerald-400"
+												: "text-rose-400",
 									},
 									{
 										label: "Vol Status",
@@ -3039,7 +3115,10 @@ export default function BTCChart() {
 									{
 										label: "Status",
 										val: sniperData()?.details.status ?? "—",
-										col: sniperData()?.details.status === "TRADE" ? "text-emerald-400" : "text-amber-400",
+										col:
+											sniperData()?.details.status === "TRADE"
+												? "text-emerald-400"
+												: "text-amber-400",
 									},
 								].map((item) => (
 									<div class="flex items-center justify-between border-b border-white/5 px-2 py-1 last:border-0 bg-slate-900/40 odd:bg-slate-900/60">
@@ -3047,7 +3126,7 @@ export default function BTCChart() {
 											{item.label}
 										</span>
 										<span
-											class={`text-[9px] font-black uppercase tracking-tighter ${item.col.includes('rose') ? 'text-rose-500' : item.col.includes('emerald') ? 'text-emerald-500' : 'text-slate-300'}`}
+											class={`text-[9px] font-black uppercase tracking-tighter ${item.col.includes("rose") ? "text-rose-500" : item.col.includes("emerald") ? "text-emerald-500" : "text-slate-300"}`}
 										>
 											{item.val}
 										</span>
@@ -3081,24 +3160,31 @@ export default function BTCChart() {
 											{activeAsset().symbol}/USDC perpetual last price ·
 											Hyperliquid · {interval().toUpperCase()}
 										</div>
-										{/* C uses live currentPrice() — never jumps on interval switch */}
+										{/* C: show the candle's close price when hovering, otherwise use last candle */}
 										{(() => {
-											const livePrice = currentPrice();
+											const hasHoverData =
+												legendData()?.closeRaw !== undefined &&
+												legendData()?.closeRaw !== 0;
+											const closePrice = hasHoverData
+												? legendData()!.closeRaw!
+												: (legendData()?.closeRaw ??
+													legendData()?.openRaw ??
+													0);
 											const openVal = legendData()?.openRaw ?? 0;
-											const liveChange = livePrice - openVal;
+											const liveChange = closePrice - openVal;
 											const liveChangePct =
 												openVal > 0 ? (liveChange / openVal) * 100 : 0;
 											const liveColor =
 												liveChange >= 0 ? "text-emerald-500" : "text-rose-500";
-											const livePriceStr = formatCryptoPrice(
-												livePrice,
+											const closePriceStr = formatCryptoPrice(
+												closePrice,
 												activeCurrency().code,
 											);
 											const liveChangeStr = `${liveChange >= 0 ? "+" : ""}${formatCryptoPrice(liveChange, activeCurrency().code)}`;
 											const liveChangePctStr = `${liveChangePct >= 0 ? "+" : ""}${liveChangePct.toFixed(2)}%`;
 											return (
 												<div class="flex items-center gap-1">
-													<span class={liveColor}>{livePriceStr}</span>
+													<span class={liveColor}>{closePriceStr}</span>
 													<span class={liveColor}>{liveChangeStr}</span>
 													<span class={liveColor}>({liveChangePctStr})</span>
 												</div>
@@ -3114,17 +3200,24 @@ export default function BTCChart() {
 											Hyperliquid
 										</span>
 										{/* O/H/L: per-candle values (legitimately differ across intervals). */}
-										{/* C: pinned to real-time currentPrice() — never jumps on interval switch. */}
+										{/* C: show the candle's close price when hovering, otherwise use last candle */}
 										{(() => {
-											const livePrice = currentPrice();
+											const hasHoverData =
+												legendData()?.closeRaw !== undefined &&
+												legendData()?.closeRaw !== 0;
+											const closePrice = hasHoverData
+												? legendData()!.closeRaw!
+												: (legendData()?.closeRaw ??
+													legendData()?.openRaw ??
+													0);
 											const openVal = legendData()?.openRaw ?? 0;
-											const liveChange = livePrice - openVal;
+											const liveChange = closePrice - openVal;
 											const liveChangePct =
 												openVal > 0 ? (liveChange / openVal) * 100 : 0;
 											const liveColor =
 												liveChange >= 0 ? "text-emerald-500" : "text-rose-500";
-											const livePriceStr = formatCryptoPrice(
-												livePrice,
+											const closePriceStr = formatCryptoPrice(
+												closePrice,
 												activeCurrency().code,
 											);
 											const liveChangeStr = `${liveChange >= 0 ? "+" : ""}${formatCryptoPrice(liveChange, activeCurrency().code)}`;
@@ -3138,7 +3231,7 @@ export default function BTCChart() {
 													<span class="text-slate-500 font-medium ml-1">L</span>
 													<span class={t().changeColor}>{t().low}</span>
 													<span class="text-slate-500 font-medium ml-1">C</span>
-													<span class={liveColor}>{livePriceStr}</span>
+													<span class={liveColor}>{closePriceStr}</span>
 													<span class={`${liveColor} ml-1`}>
 														{liveChangeStr}
 													</span>
