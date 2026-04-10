@@ -245,29 +245,51 @@ async function fetchHistory(
 	interval: string = "1h",
 	currency: string = "USDC",
 ): Promise<BTCData[]> {
+	const HL_API = "https://api.hyperliquid.xyz/info";
+	const coin = symbol === "BTC" ? "BTC" : symbol;
+
+	const endTimeMs = Date.now();
+	const startTimeMs = endTimeMs - 30 * 24 * 60 * 60 * 1000;
+
 	try {
-		const res = await fetch(
-			`/api/history?interval=${interval}&currency=${currency}&symbol=${symbol}`,
-		);
-		if (!res.ok) throw new Error(`Failed to fetch history: ${res.status}`);
-		const json = await res.json();
-		return json.map(
-			(d: {
-				time: number;
-				o: number;
-				h: number;
-				l: number;
-				c: number;
-				v?: number;
+		const response = await fetch(HL_API, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				type: "candleSnapshot",
+				req: { coin, interval, startTime: startTimeMs, endTime: endTimeMs },
+			}),
+		});
+
+		if (!response.ok) {
+			throw new Error(`Hyperliquid API error: ${response.status}`);
+		}
+
+		const data = await response.json();
+		if (!Array.isArray(data)) {
+			throw new Error("Invalid response from Hyperliquid API");
+		}
+
+		const candles = data.map(
+			(c: {
+				t: number;
+				o: string;
+				h: string;
+				l: string;
+				c: string;
+				v: string;
 			}) => ({
-				time: d.time,
-				open: d.o,
-				high: d.h,
-				low: d.l,
-				close: d.c,
-				volume: d.v,
+				time: Math.floor(c.t / 1000),
+				open: parseFloat(c.o),
+				high: parseFloat(c.h),
+				low: parseFloat(c.l),
+				close: parseFloat(c.c),
+				volume: parseFloat(c.v),
 			}),
 		);
+
+		candles.sort((a, b) => a.time - b.time);
+		return candles;
 	} catch (error) {
 		console.error("❌ 获取历史数据失败:", error);
 		return [];
