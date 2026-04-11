@@ -149,9 +149,6 @@ async function sendTelegramMessage(message: string): Promise<void> {
 let lastAlertTime = 0;
 
 async function runMonitorCycle() {
-	const now = new Date();
-	const timeStr = now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
-
 	try {
 		// 先检查配置是否开启
 		const settings = await db
@@ -204,10 +201,6 @@ async function runMonitorCycle() {
 			Math.max(sma60, ema60) < Math.min(sma120, ema120);
 		const passedRule3 = !isBullishOrdered && !isBearishOrdered;
 
-		// console.log(
-		// 	`[${timeStr}] 4H BTC: $${currentPrice.toFixed(2)} | Diff: $${spread.toFixed(2)} (${spreadPercent.toFixed(2)}%) | ATR: $${atr.toFixed(2)} | R1:${passedRule1} R2:${passedRule2} R3:${passedRule3}`,
-		// );
-
 		if (passedRule1 && passedRule2 && passedRule3) {
 			const nowMs = Date.now();
 			if (nowMs - lastAlertTime < COOLDOWN_MS) return;
@@ -232,6 +225,9 @@ async function runMonitorCycle() {
 			);
 		}
 	} catch (e) {
+		const timeStr = new Date().toLocaleString("zh-CN", {
+			timeZone: "Asia/Shanghai",
+		});
 		console.error(`[${timeStr}] ❌ 4H 监控异常:`, e);
 	}
 }
@@ -243,10 +239,6 @@ export async function start4HMonitor() {
 		);
 		return;
 	}
-
-	// console.log("=".repeat(60));
-	// console.log("🔍 BTC 4H 均线绝对纠缠监控后台服务启动");
-	// console.log("=".repeat(60));
 
 	await runMonitorCycle();
 	setInterval(runMonitorCycle, ACTUAL_CHECK_INTERVAL_MS);

@@ -367,11 +367,11 @@ async function checkVIPSniper(): Promise<void> {
 		100;
 
 	const price = data[lastIdx].close;
-	const timeStr = new Date(data[lastIdx].time * 1000).toLocaleString("zh-CN", {
-		timeZone: "Asia/Shanghai",
-	});
 
 	if (triggerBuy && bullPct > 60) {
+		const timeStr = new Date(data[lastIdx].time * 1000).toLocaleString("zh-CN", {
+			timeZone: "Asia/Shanghai",
+		});
 		lastSignalState = 1;
 		lastAlertTime = now;
 		const message = `🟢 <b>VIP Sniper 买入信号</b>
@@ -385,6 +385,9 @@ async function checkVIPSniper(): Promise<void> {
 	}
 
 	if (triggerSell && bearPct > 60) {
+		const timeStr = new Date(data[lastIdx].time * 1000).toLocaleString("zh-CN", {
+			timeZone: "Asia/Shanghai",
+		});
 		lastSignalState = -1;
 		lastAlertTime = now;
 		const message = `🔴 <b>VIP Sniper 卖出信号</b>
@@ -396,12 +399,6 @@ async function checkVIPSniper(): Promise<void> {
 		console.log(message);
 		await sendTelegramMessage(message);
 	}
-
-	if (!triggerBuy && !triggerSell) {
-		// console.log(
-		// 	`[VIP Sniper 1h] ${timeStr} | 价格: $${price.toFixed(2)} | Bull: ${bullPct.toFixed(1)}% | Bear: ${bearPct.toFixed(1)}% | 状态: ${lastSignalState === 1 ? "多头" : lastSignalState === -1 ? "空头" : "观望"}`,
-		// );
-	}
 }
 
 export async function startVIPSniper1hMonitor() {
@@ -411,11 +408,6 @@ export async function startVIPSniper1hMonitor() {
 		);
 		return;
 	}
-
-	// console.log("=".repeat(60));
-	// console.log("🎯 VIP Sniper 1h 监控后台服务启动");
-	// console.log(`  检查间隔: 30秒`);
-	// console.log("=".repeat(60));
 
 	await checkVIPSniper();
 	setInterval(checkVIPSniper, 30000);

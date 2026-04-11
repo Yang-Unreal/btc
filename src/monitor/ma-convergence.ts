@@ -240,9 +240,6 @@ async function checkPriceAlerts(currentPrice: number): Promise<void> {
 }
 
 async function runMonitorCycle() {
-	const now = new Date();
-	const timeStr = now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
-
 	try {
 		const candles = await fetchCandles();
 		if (candles.length < 120) {
@@ -256,11 +253,14 @@ async function runMonitorCycle() {
 		const currentPrice = closes[closes.length - 1];
 
 		// 1. Check MA Convergence
-		await processMAConvergence(highs, lows, closes, currentPrice, timeStr);
+		await processMAConvergence(highs, lows, closes, currentPrice);
 
 		// 2. Check Price Alerts
 		await checkPriceAlerts(currentPrice);
 	} catch (e) {
+		const timeStr = new Date().toLocaleString("zh-CN", {
+			timeZone: "Asia/Shanghai",
+		});
 		console.error(`[${timeStr}] ❌ 监控周期异常:`, e);
 	}
 }
@@ -270,7 +270,6 @@ async function processMAConvergence(
 	lows: number[],
 	closes: number[],
 	currentPrice: number,
-	timeStr: string,
 ) {
 	// Calculate all 6 moving averages
 	const maValues: { name: string; value: number }[] = [];
@@ -313,10 +312,6 @@ async function processMAConvergence(
 		Math.max(sma20, ema20) < Math.min(sma60, ema60) &&
 		Math.max(sma60, ema60) < Math.min(sma120, ema120);
 	const passedRule3 = !isBullishOrdered && !isBearishOrdered;
-
-	// console.log(
-	// 	`[${timeStr}] 15M BTC: $${currentPrice.toFixed(2)} | Diff: $${spread.toFixed(2)} (${spreadPercent.toFixed(2)}%) | ATR: $${atr.toFixed(2)} | R1:${passedRule1} R2:${passedRule2} R3:${passedRule3}`,
-	// );
 
 	if (passedRule1 && passedRule2 && passedRule3) {
 		const nowMs = Date.now();
@@ -369,11 +364,6 @@ export async function startMAMonitor() {
 		);
 		return;
 	}
-
-	// console.log("=".repeat(60));
-	// console.log("🔍 BTC 双均线密集监控后台服务启动");
-	// console.log(`  检查间隔: ${CHECK_INTERVAL_MS / 1000}秒`);
-	// console.log("=".repeat(60));
 
 	// 立即执行一次
 	await runMonitorCycle();
