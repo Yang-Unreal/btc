@@ -396,14 +396,28 @@ function ProfileContent() {
 		]);
 		setPortfolioData(portfolioDataResult);
 		globalStore.setPortfolio(portfolioDataResult.holdings);
-		// Set balance from settings API or default
+		// Set balance and leverage from settings API or defaults
 		if (settingsResult.accountBalance) {
 			setPositionCalc((prev) => ({
 				...prev,
 				balance: settingsResult.accountBalance,
 			}));
 		}
+		if (settingsResult.leverage) {
+			setPositionCalc((prev) => ({
+				...prev,
+				leverage: settingsResult.leverage,
+			}));
+		}
 		setIsFetching(false);
+	};
+
+	const saveLeverage = async (newLeverage: string) => {
+		await fetch("/api/settings", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ leverage: newLeverage }),
+		});
 	};
 
 	const saveBalance = async (newBalance: string) => {
@@ -662,7 +676,10 @@ function ProfileContent() {
 							<select
 								id="calc-leverage"
 								value={positionCalc().leverage}
-								onChange={(e) => updateCalc("leverage", e.currentTarget.value)}
+								onChange={(e) => {
+									updateCalc("leverage", e.currentTarget.value);
+									saveLeverage(e.currentTarget.value);
+								}}
 								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
 							>
 								<For each={[1, 2, 3, 5, 10, 15, 20, 25, 30, 50, 100]}>

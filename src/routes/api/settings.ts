@@ -34,6 +34,7 @@ export async function GET() {
 				? JSON.parse(settings[0].indicatorHeights)
 				: null,
 			accountBalance: settings[0].accountBalance || "10000",
+			leverage: settings[0].leverage || "10",
 		});
 	} catch (e) {
 		console.error(e);
@@ -54,6 +55,7 @@ export async function POST({ request }: { request: Request }) {
 			fourHAlertEnabled,
 			vipSniper1hAlertEnabled,
 			accountBalance,
+			leverage,
 		} = body;
 
 		const updateData: Partial<NewUserSettings> = { updatedAt: new Date() };
@@ -90,6 +92,9 @@ export async function POST({ request }: { request: Request }) {
 		}
 		if (accountBalance && !isNaN(Number(accountBalance))) {
 			updateData.accountBalance = String(accountBalance);
+		}
+		if (leverage && !isNaN(Number(leverage))) {
+			updateData.leverage = String(leverage);
 		}
 
 		if (Object.keys(updateData).length <= 1) {

@@ -25,6 +25,7 @@ export const userSettings = pgTable("user_settings", {
 		.notNull()
 		.default("true"), // "true" or "false"
 	accountBalance: numeric("account_balance").notNull().default("10000"),
+	leverage: text("leverage").notNull().default("10"),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
