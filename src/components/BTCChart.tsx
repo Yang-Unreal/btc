@@ -1,5 +1,6 @@
 import { createQuery } from "@tanstack/solid-query";
 import {
+	BaselineSeries,
 	type CandlestickData,
 	CandlestickSeries,
 	createChart,
@@ -46,6 +47,16 @@ import type {
 type BTCData = CandlestickData<UTCTimestamp> & {
 	volume?: number;
 	color?: string;
+};
+
+type EMAFillData = {
+	time: UTCTimestamp;
+	value: number;
+	lowerValue: number;
+	topFillColor1?: string;
+	topFillColor2?: string;
+	bottomFillColor1?: string;
+	bottomFillColor2?: string;
 };
 
 // ... [Existing Interfaces for TooltipData, FNGData, etc. remain unchanged] ...
@@ -243,6 +254,7 @@ export default function BTCChart() {
 	let vwapSeries: ISeriesApi<"Line"> | undefined;
 	let ema9Series: ISeriesApi<"Line"> | undefined;
 	let ema21Series: ISeriesApi<"Line"> | undefined;
+	let emaFillSeries: ISeriesApi<"Baseline"> | undefined;
 	const sniperTPLineSeries: ISeriesApi<"Line">[] = [];
 
 	let ws: WebSocket | undefined;
@@ -1332,6 +1344,7 @@ export default function BTCChart() {
 			vwapSeries?.applyOptions({ visible: false });
 			ema9Series?.applyOptions({ visible: !!currentInd.sniper });
 			ema21Series?.applyOptions({ visible: !!currentInd.sniper });
+			emaFillSeries?.applyOptions({ visible: !!currentInd.sniper });
 		}
 
 		refreshAllMarkers(allData);
@@ -1454,6 +1467,7 @@ export default function BTCChart() {
 		vwapSeries?.applyOptions({ visible: false });
 		ema9Series?.applyOptions({ visible: !!currentInd.sniper });
 		ema21Series?.applyOptions({ visible: !!currentInd.sniper });
+		emaFillSeries?.applyOptions({ visible: !!currentInd.sniper });
 		sniperTPLineSeries.forEach((s) => {
 			s.applyOptions({ visible: !!currentInd.sniper });
 		});
@@ -1693,6 +1707,34 @@ export default function BTCChart() {
 			ema9Series?.setData(e9Data);
 			ema21Series?.setData(e21Data);
 
+			// Update EMA fill background - green when EMA9 > EMA21, red when EMA9 < EMA21
+			const fillData: EMAFillData[] = [];
+			for (let i = 0; i < currentData.length; i++) {
+				if (!Number.isNaN(e9Vals[i]) && !Number.isNaN(e21Vals[i])) {
+					const ema9Val = e9Vals[i];
+					const ema21Val = e21Vals[i];
+					const isBullish = ema9Val > ema21Val;
+					fillData.push({
+						time: currentData[i].time,
+						value: Math.max(ema9Val, ema21Val),
+						lowerValue: Math.min(ema9Val, ema21Val),
+						topFillColor1: isBullish
+							? "rgba(34, 197, 94, 0.4)"
+							: "rgba(239, 68, 68, 0.4)",
+						topFillColor2: isBullish
+							? "rgba(34, 197, 94, 0.05)"
+							: "rgba(239, 68, 68, 0.05)",
+						bottomFillColor1: isBullish
+							? "rgba(34, 197, 94, 0.4)"
+							: "rgba(239, 68, 68, 0.4)",
+						bottomFillColor2: isBullish
+							? "rgba(34, 197, 94, 0.05)"
+							: "rgba(239, 68, 68, 0.05)",
+					});
+				}
+			}
+			emaFillSeries?.setData(fillData);
+
 			// TP/SL Lines (read untracked to avoid infinite loop)
 			const setup = untrack(() => sniperData())?.tradeSetup;
 			if (setup) {
@@ -1754,6 +1796,7 @@ export default function BTCChart() {
 			vwapSeries?.setData([]);
 			ema9Series?.setData([]);
 			ema21Series?.setData([]);
+			emaFillSeries?.setData([]);
 			sniperTPLineSeries.forEach((s) => {
 				s.setData([]);
 			});
@@ -1931,6 +1974,20 @@ export default function BTCChart() {
 			handleScroll: { vertTouchDrag: false },
 		});
 
+		emaFillSeries = chart.addSeries(BaselineSeries, {
+			baseLineColor: "transparent",
+			baseLineVisible: false,
+			lineVisible: false,
+			priceLineVisible: false,
+			lastValueVisible: false,
+			baseValue: { type: "price", price: 0 },
+			relativeGradient: false,
+			topFillColor1: "rgba(34, 197, 94, 0.4)",
+			topFillColor2: "rgba(34, 197, 94, 0.05)",
+			bottomFillColor1: "rgba(239, 68, 68, 0.4)",
+			bottomFillColor2: "rgba(239, 68, 68, 0.05)",
+		});
+
 		candlestickSeries = chart.addSeries(CandlestickSeries, {
 			upColor: "#00f3ab",
 			downColor: "#f12d59",
@@ -2035,6 +2092,20 @@ export default function BTCChart() {
 			visible: false,
 			priceLineVisible: false,
 			lastValueVisible: true,
+		});
+
+		emaFillSeries = chart.addSeries(BaselineSeries, {
+			baseLineColor: "transparent",
+			baseLineVisible: false,
+			lineVisible: false,
+			priceLineVisible: false,
+			lastValueVisible: false,
+			baseValue: { type: "price", price: 0 },
+			relativeGradient: false,
+			topFillColor1: "rgba(34, 197, 94, 0.4)",
+			topFillColor2: "rgba(34, 197, 94, 0.05)",
+			bottomFillColor1: "rgba(239, 68, 68, 0.4)",
+			bottomFillColor2: "rgba(239, 68, 68, 0.05)",
 		});
 
 		for (let i = 0; i < 7; i++) {
