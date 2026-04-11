@@ -658,8 +658,8 @@ function ProfileContent() {
 							</label>
 							<input
 								id="calc-balance"
-								type="number"
-								step="any"
+								type="text"
+								inputmode="decimal"
 								placeholder="10000"
 								value={positionCalc().balance}
 								onInput={(e) => {
@@ -703,8 +703,8 @@ function ProfileContent() {
 							</label>
 							<input
 								id="calc-position-size"
-								type="number"
-								step="any"
+								type="text"
+								inputmode="decimal"
 								placeholder="0.1"
 								value={positionCalc().positionSize}
 								onInput={(e) =>
@@ -724,8 +724,8 @@ function ProfileContent() {
 							</label>
 							<input
 								id="calc-entry-price"
-								type="number"
-								step="any"
+								type="text"
+								inputmode="decimal"
 								placeholder="当前价格"
 								value={positionCalc().entryPrice}
 								onInput={(e) => updateCalc("entryPrice", e.currentTarget.value)}
@@ -744,8 +744,8 @@ function ProfileContent() {
 							</label>
 							<input
 								id="calc-fee-rate"
-								type="number"
-								step="any"
+								type="text"
+								inputmode="decimal"
 								placeholder="0.04"
 								value={positionCalc().feeRate}
 								onInput={(e) => updateCalc("feeRate", e.currentTarget.value)}
