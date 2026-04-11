@@ -243,7 +243,6 @@ function getBearScore(
 async function fetchHistory(
 	symbol: string = "BTC",
 	interval: string = "1h",
-	currency: string = "USDC",
 ): Promise<BTCData[]> {
 	const HL_API = "https://api.hyperliquid.xyz/info";
 	const coin = symbol === "BTC" ? "BTC" : symbol;
@@ -311,7 +310,7 @@ async function checkVIPSniper(): Promise<void> {
 		return;
 	}
 
-	const data = await fetchHistory("BTC", "1h", "USDC");
+	const data = await fetchHistory("BTC", "1h");
 	if (data.length < 30) {
 		console.log("数据不足，跳过");
 		return;

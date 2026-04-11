@@ -1402,9 +1402,9 @@ export default function BTCChart() {
 		vwapSeries?.applyOptions({ visible: false });
 		ema9Series?.applyOptions({ visible: !!currentInd.sniper });
 		ema21Series?.applyOptions({ visible: !!currentInd.sniper });
-		sniperTPLineSeries.forEach((s) =>
-			s.applyOptions({ visible: !!currentInd.sniper }),
-		);
+		sniperTPLineSeries.forEach((s) => {
+			s.applyOptions({ visible: !!currentInd.sniper });
+		});
 		const totalHeight = chartContainer?.clientHeight || 450;
 		const heights = indicatorHeights();
 
@@ -1694,13 +1694,17 @@ export default function BTCChart() {
 					0,
 				);
 			} else {
-				sniperTPLineSeries.forEach((s) => s.setData([]));
+				sniperTPLineSeries.forEach((s) => {
+					s.setData([]);
+				});
 			}
 		} else {
 			vwapSeries?.setData([]);
 			ema9Series?.setData([]);
 			ema21Series?.setData([]);
-			sniperTPLineSeries.forEach((s) => s.setData([]));
+			sniperTPLineSeries.forEach((s) => {
+				s.setData([]);
+			});
 		}
 	};
 
@@ -3165,12 +3169,11 @@ export default function BTCChart() {
 											const hasHoverData =
 												legendData()?.closeRaw !== undefined &&
 												legendData()?.closeRaw !== 0;
+											const data = legendData();
 											const closePrice = hasHoverData
-												? legendData()!.closeRaw!
-												: (legendData()?.closeRaw ??
-													legendData()?.openRaw ??
-													0);
-											const openVal = legendData()?.openRaw ?? 0;
+												? (data?.closeRaw ?? 0)
+												: (data?.closeRaw ?? data?.openRaw ?? 0);
+											const openVal = data?.openRaw ?? 0;
 											const liveChange = closePrice - openVal;
 											const liveChangePct =
 												openVal > 0 ? (liveChange / openVal) * 100 : 0;
@@ -3205,12 +3208,11 @@ export default function BTCChart() {
 											const hasHoverData =
 												legendData()?.closeRaw !== undefined &&
 												legendData()?.closeRaw !== 0;
+											const data = legendData();
 											const closePrice = hasHoverData
-												? legendData()!.closeRaw!
-												: (legendData()?.closeRaw ??
-													legendData()?.openRaw ??
-													0);
-											const openVal = legendData()?.openRaw ?? 0;
+												? (data?.closeRaw ?? 0)
+												: (data?.closeRaw ?? data?.openRaw ?? 0);
+											const openVal = data?.openRaw ?? 0;
 											const liveChange = closePrice - openVal;
 											const liveChangePct =
 												openVal > 0 ? (liveChange / openVal) * 100 : 0;
