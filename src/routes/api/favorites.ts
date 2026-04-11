@@ -5,13 +5,13 @@ import { favorites } from "~/lib/db/schema";
 
 export async function GET() {
 	try {
-		console.log("API: Fetching favorites...");
+		// console.log("API: Fetching favorites...");
 		if (!db) {
 			console.error("API Error: Database connection not initialized");
 			return json({ error: "Database unavailable" }, { status: 503 });
 		}
 		const allFavorites = await db.select().from(favorites);
-		console.log("API: Favorites fetched:", allFavorites.length);
+		// console.log("API: Favorites fetched:", allFavorites.length);
 		return json(allFavorites.map((f: { symbol: string }) => f.symbol));
 	} catch (error) {
 		console.error("API Error - Failed to fetch favorites:", error);

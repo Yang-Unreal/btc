@@ -41,8 +41,8 @@ export async function GET() {
 		if (!rawData.transactions) rawData.transactions = [];
 		if (!rawData.favorites) rawData.favorites = [];
 
-		console.log("Loading portfolio from:", DATA_FILE);
-		console.log("Raw transactions count:", rawData.transactions.length);
+		// console.log("Loading portfolio from:", DATA_FILE);
+		// console.log("Raw transactions count:", rawData.transactions.length);
 
 		const holdings: Record<string, AssetHolding> = {};
 

@@ -204,9 +204,9 @@ async function runMonitorCycle() {
 			Math.max(sma60, ema60) < Math.min(sma120, ema120);
 		const passedRule3 = !isBullishOrdered && !isBearishOrdered;
 
-		console.log(
-			`[${timeStr}] 4H BTC: $${currentPrice.toFixed(2)} | Diff: $${spread.toFixed(2)} (${spreadPercent.toFixed(2)}%) | ATR: $${atr.toFixed(2)} | R1:${passedRule1} R2:${passedRule2} R3:${passedRule3}`,
-		);
+		// console.log(
+		// 	`[${timeStr}] 4H BTC: $${currentPrice.toFixed(2)} | Diff: $${spread.toFixed(2)} (${spreadPercent.toFixed(2)}%) | ATR: $${atr.toFixed(2)} | R1:${passedRule1} R2:${passedRule2} R3:${passedRule3}`,
+		// );
 
 		if (passedRule1 && passedRule2 && passedRule3) {
 			const nowMs = Date.now();
@@ -244,9 +244,9 @@ export async function start4HMonitor() {
 		return;
 	}
 
-	console.log("=".repeat(60));
-	console.log("🔍 BTC 4H 均线绝对纠缠监控后台服务启动");
-	console.log("=".repeat(60));
+	// console.log("=".repeat(60));
+	// console.log("🔍 BTC 4H 均线绝对纠缠监控后台服务启动");
+	// console.log("=".repeat(60));
 
 	await runMonitorCycle();
 	setInterval(runMonitorCycle, ACTUAL_CHECK_INTERVAL_MS);

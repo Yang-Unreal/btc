@@ -133,7 +133,7 @@ const fetchHistory = async (
 	currency: string,
 ): Promise<CandlestickData[]> => {
 	try {
-		console.log(`[Titan] Fetching ${symbol} ${interval} in ${currency}...`);
+		// console.log(`[Titan] Fetching ${symbol} ${interval} in ${currency}...`);
 		const res = await fetch(
 			`/api/history?interval=${interval}&symbol=${symbol}&currency=${currency}`,
 		);
@@ -147,7 +147,7 @@ const fetchHistory = async (
 			return [];
 		}
 
-		console.log(`[Titan] Fetched ${symbol}: ${json.length} candles`);
+		// console.log(`[Titan] Fetched ${symbol}: ${json.length} candles`);
 		return json
 			.map((item: RawKlineData) => ({
 				time: Math.floor(item[0] / 1000),
@@ -205,7 +205,7 @@ export default function TitanTriggers() {
 		ws = new WebSocket("wss://ws.kraken.com");
 
 		ws.onopen = () => {
-			console.log(`[Titan] WS Connected (${cur})`);
+			// console.log(`[Titan] WS Connected (${cur})`);
 			ws?.send(
 				JSON.stringify({
 					event: "subscribe",

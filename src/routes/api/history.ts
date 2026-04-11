@@ -138,7 +138,7 @@ export async function GET({ request }: APIEvent) {
 		console.error("Hyperliquid History API Error:", error);
 		const stale = apiCache.getStale(cacheKey);
 		if (stale) {
-			console.log(`[History] Using stale cache for ${cacheKey}`);
+			// console.log(`[History] Using stale cache for ${cacheKey}`);
 			return json(stale);
 		}
 		return json({ error: "Internal Server Error" }, { status: 500 });

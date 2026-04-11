@@ -135,16 +135,16 @@ interface BitgetTicker {
 }
 
 export async function GET() {
-	console.log("MARKET_API: Request received");
+	// console.log("MARKET_API: Request received");
 	try {
 		const cacheKey = "market_cap_data";
 		const cachedData = apiCache.get(cacheKey);
 		if (cachedData) {
-			console.log("MARKET_API: Returning cached data");
+			// console.log("MARKET_API: Returning cached data");
 			return json(cachedData);
 		}
 
-		console.log("MARKET_API: Fetching fresh data...");
+		// console.log("MARKET_API: Fetching fresh data...");
 		const cgIds = Object.values(COINGECKO_MAP).join(",");
 
 		// --- 1. Fetch CoinGecko (Longer Cache / Stale Fallback) ---
@@ -154,7 +154,7 @@ export async function GET() {
 
 		if (cachedCG) {
 			cgData = cachedCG;
-			console.log("MARKET_API: Using cached CoinGecko data");
+			// console.log("MARKET_API: Using cached CoinGecko data");
 		} else {
 			const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${cgIds}&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=1h,24h,7d,30d,1y`;
 			try {
@@ -169,7 +169,7 @@ export async function GET() {
 						cgData = parsed;
 						// Cache for 5 minutes
 						apiCache.set(cgCacheKey, cgData, 5 * 60 * 1000);
-						console.log("MARKET_API: Fetched & Cached new CoinGecko data");
+						// console.log("MARKET_API: Fetched & Cached new CoinGecko data");
 					} else {
 						console.warn("MARKET_API: CG data invalid/empty");
 					}
@@ -182,7 +182,7 @@ export async function GET() {
 				// Fallback to stale data
 				const stale = apiCache.getStale<CoinGeckoMarket[]>(cgCacheKey);
 				if (stale && stale.length > 0) {
-					console.log("MARKET_API: Using STALE CoinGecko data as fallback");
+					// console.log("MARKET_API: Using STALE CoinGecko data as fallback");
 					cgData = stale;
 				}
 			}
@@ -262,7 +262,7 @@ export async function GET() {
 			apiCache.set(cacheKey, result, 10 * 1000);
 		} else {
 			apiCache.set(cacheKey, result, CACHE_DURATIONS.MARKET_DATA);
-			console.log("MARKET_API: Success, caching full result.");
+			// console.log("MARKET_API: Success, caching full result.");
 		}
 
 		return json(result);
