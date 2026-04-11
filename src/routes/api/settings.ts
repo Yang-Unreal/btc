@@ -33,6 +33,7 @@ export async function GET() {
 			indicatorHeights: settings[0].indicatorHeights
 				? JSON.parse(settings[0].indicatorHeights)
 				: null,
+			accountBalance: settings[0].accountBalance || "10000",
 		});
 	} catch (e) {
 		console.error(e);
@@ -52,6 +53,7 @@ export async function POST({ request }: { request: Request }) {
 			notificationsEnabled,
 			fourHAlertEnabled,
 			vipSniper1hAlertEnabled,
+			accountBalance,
 		} = body;
 
 		const updateData: Partial<NewUserSettings> = { updatedAt: new Date() };
@@ -85,6 +87,9 @@ export async function POST({ request }: { request: Request }) {
 			updateData.vipSniper1hAlertEnabled = vipSniper1hAlertEnabled
 				? "true"
 				: "false";
+		}
+		if (accountBalance && !isNaN(Number(accountBalance))) {
+			updateData.accountBalance = String(accountBalance);
 		}
 
 		if (Object.keys(updateData).length <= 1) {

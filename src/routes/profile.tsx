@@ -37,6 +37,7 @@ interface PortfolioResponse {
 	transactions: Transaction[];
 	holdings: Record<string, AssetHolding>;
 	favorites: string[];
+	balance?: string;
 }
 
 const INITIAL_DATA: PortfolioResponse = {
@@ -334,7 +335,6 @@ function ProfileContent() {
 		const positionValue = positionSize * entryPrice;
 		const margin = positionValue / leverage;
 		const fee = positionValue * feeRate * 2; // Open + Close fee
-		const riskPercent = balance > 0 ? (margin / balance) * 100 : 0;
 
 		// Calculate TP/SL from orders
 		let totalStopLossUSDC = 0;
@@ -367,6 +367,13 @@ function ProfileContent() {
 			}
 		}
 
+		// Risk = (stop loss amount + fees) / balance
+		// Use absolute value since negative stop loss means profit
+		const stopLossAmount =
+			totalStopLossUSDC < 0 ? Math.abs(totalStopLossUSDC) : totalStopLossUSDC;
+		const riskPercent =
+			balance > 0 ? ((stopLossAmount + fee) / balance) * 100 : 0;
+
 		return {
 			positionValue,
 			margin,
@@ -381,10 +388,30 @@ function ProfileContent() {
 
 	const loadData = async () => {
 		setIsFetching(true);
-		const data = await fetchPortfolioData();
-		setPortfolioData(data);
-		globalStore.setPortfolio(data.holdings);
+		const [portfolioDataResult, settingsResult] = await Promise.all([
+			fetchPortfolioData(),
+			fetch("/api/settings")
+				.then((r) => r.json())
+				.catch(() => ({})),
+		]);
+		setPortfolioData(portfolioDataResult);
+		globalStore.setPortfolio(portfolioDataResult.holdings);
+		// Set balance from settings API or default
+		if (settingsResult.accountBalance) {
+			setPositionCalc((prev) => ({
+				...prev,
+				balance: settingsResult.accountBalance,
+			}));
+		}
 		setIsFetching(false);
+	};
+
+	const saveBalance = async (newBalance: string) => {
+		await fetch("/api/settings", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ accountBalance: newBalance }),
+		});
 	};
 
 	onMount(() => loadData());
@@ -616,7 +643,10 @@ function ProfileContent() {
 								step="any"
 								placeholder="10000"
 								value={positionCalc().balance}
-								onInput={(e) => updateCalc("balance", e.currentTarget.value)}
+								onInput={(e) => {
+									updateCalc("balance", e.currentTarget.value);
+									saveBalance(e.currentTarget.value);
+								}}
 								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
 							/>
 						</div>

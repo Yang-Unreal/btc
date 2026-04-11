@@ -25,6 +25,7 @@ interface AssetHolding {
 interface PortfolioData {
 	transactions: Transaction[];
 	favorites: string[];
+	balance?: string;
 }
 
 export async function GET() {
@@ -90,6 +91,7 @@ export async function GET() {
 			transactions: rawData.transactions,
 			holdings,
 			favorites: rawData.favorites,
+			balance: rawData.balance || "10000",
 		});
 	} catch (e) {
 		console.error(e);
@@ -123,6 +125,9 @@ export async function POST({ request }: { request: Request }) {
 			// Delete transaction by ID
 			const { id } = body;
 			rawData.transactions = rawData.transactions.filter((tx) => tx.id !== id);
+		} else if (type === "UPDATE_BALANCE") {
+			// Update account balance
+			rawData.balance = String(body.balance || "10000");
 		} else if (type === "UPDATE") {
 			// Update existing transaction
 			const { id, ticker, txType, amount, price, fee } = body;

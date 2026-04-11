@@ -24,6 +24,7 @@ export const userSettings = pgTable("user_settings", {
 	vipSniper1hAlertEnabled: text("vip_sniper_1h_alert_enabled")
 		.notNull()
 		.default("true"), // "true" or "false"
+	accountBalance: numeric("account_balance").notNull().default("10000"),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
