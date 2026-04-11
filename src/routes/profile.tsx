@@ -368,11 +368,16 @@ function ProfileContent() {
 		}
 
 		// Risk = (stop loss amount + fees) / balance
-		// Use absolute value since negative stop loss means profit
-		const stopLossAmount =
-			totalStopLossUSDC < 0 ? Math.abs(totalStopLossUSDC) : totalStopLossUSDC;
-		const riskPercent =
-			balance > 0 ? ((stopLossAmount + fee) / balance) * 100 : 0;
+		// If no stop loss set, use margin + fees instead
+		const hasStopLoss = calc.stopLossOrders.some(
+			(o) => parseFloat(o.price) > 0,
+		);
+		const riskBase = hasStopLoss
+			? totalStopLossUSDC < 0
+				? Math.abs(totalStopLossUSDC)
+				: totalStopLossUSDC
+			: margin;
+		const riskPercent = balance > 0 ? ((riskBase + fee) / balance) * 100 : 0;
 
 		return {
 			positionValue,
