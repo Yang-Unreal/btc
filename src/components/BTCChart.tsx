@@ -43,7 +43,10 @@ import type {
 	Interval,
 } from "../lib/types";
 
-type BTCData = CandlestickData<UTCTimestamp> & { volume?: number };
+type BTCData = CandlestickData<UTCTimestamp> & {
+	volume?: number;
+	color?: string;
+};
 
 // ... [Existing Interfaces for TooltipData, FNGData, etc. remain unchanged] ...
 interface TooltipData {
@@ -909,9 +912,58 @@ export default function BTCChart() {
 				}
 			}
 
-			return mappedData.sort(
+			const sortedData = mappedData.sort(
 				(a: BTCData, b: BTCData) => (a.time as number) - (b.time as number),
 			);
+
+			// Add EMA9 retest colors
+			if (sortedData.length >= 21) {
+				const closes = sortedData.map((d) => d.close);
+				const opens = sortedData.map((d) => d.open);
+				const lows = sortedData.map((d) => d.low);
+				const highs = sortedData.map((d) => d.high);
+				const ema9 = calculateEMA(closes, 9);
+				const ema21 = calculateEMA(closes, 21);
+
+				// Only color retest based on EMA9
+				for (let i = 21; i < sortedData.length; i++) {
+					const open = opens[i];
+					const low = lows[i];
+					const high = highs[i];
+					const ema = ema9[i];
+					const ema21Val = ema21[i];
+					const prevClose = closes[i - 1];
+					const prevEma = ema9[i - 1];
+					const prevEma21 = ema21[i - 1];
+
+					// Retest: price crossed EMA9 - either from above to below, or from below to above
+					const wasAbove = prevClose > prevEma;
+					const longRetest = wasAbove && open > ema && low < ema;
+
+					const wasBelow = prevClose < prevEma;
+					const shortRetest = wasBelow && open < ema && high > ema;
+
+					// Check if also broke through EMA21 - if so, don't color yellow
+					const brokeEma21Up = prevClose < prevEma21 && high > ema21Val;
+					const brokeEma21Down = prevClose > prevEma21 && low < ema21Val;
+					const brokeBoth = brokeEma21Up || brokeEma21Down;
+
+					if ((longRetest || shortRetest) && !brokeBoth) {
+						sortedData[i].color = "#FACC15"; // yellow-400 for retest
+					}
+
+					// Mark EMA9/EMA21 crossover signal candles in black
+					if (i >= 1) {
+						const crossUp = ema9[i] > ema21[i] && ema9[i - 1] <= ema21[i - 1];
+						const crossDown = ema9[i] < ema21[i] && ema9[i - 1] >= ema21[i - 1];
+						if (crossUp || crossDown) {
+							sortedData[i].color = "#000000"; // black for signal candle
+						}
+					}
+				}
+			}
+
+			return sortedData;
 		} catch (err) {
 			console.error("Error fetching history:", err);
 			setError("Failed to load chart data");
@@ -1882,7 +1934,7 @@ export default function BTCChart() {
 		candlestickSeries = chart.addSeries(CandlestickSeries, {
 			upColor: "#00f3ab",
 			downColor: "#f12d59",
-			borderVisible: false,
+			borderVisible: true,
 			wickUpColor: "#00f3ab",
 			wickDownColor: "#f12d59",
 			priceFormat: {
