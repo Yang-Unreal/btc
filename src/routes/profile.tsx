@@ -4,6 +4,7 @@ import {
 	createMemo,
 	createSignal,
 	For,
+	Index,
 	type JSX,
 	onCleanup,
 	onMount,
@@ -99,6 +100,284 @@ function ProfileContent() {
 	const [price, setPrice] = createSignal<string>("");
 	const [fee, setFee] = createSignal<string>("");
 	const [submitting, setSubmitting] = createSignal(false);
+
+	// Position Calculator State
+	type OrderType = "market" | "limit";
+	type Direction = "long" | "short";
+
+	interface TPOrder {
+		id: string;
+		price: string;
+		orderType: OrderType;
+		positionPercent: number; // 0-100
+	}
+
+	interface SLOrder {
+		id: string;
+		price: string;
+		orderType: OrderType;
+		positionPercent: number;
+	}
+
+	const [positionCalc, setPositionCalc] = createSignal<{
+		balance: string;
+		leverage: string;
+		positionSize: string;
+		entryPrice: string;
+		feeRate: string;
+		orderType: OrderType;
+		direction: Direction;
+		takeProfitOrders: TPOrder[];
+		stopLossOrders: SLOrder[];
+	}>({
+		balance: "10000",
+		leverage: "10",
+		positionSize: "0.1",
+		entryPrice: "",
+		feeRate: "0.0432",
+		orderType: "market",
+		direction: "long",
+		takeProfitOrders: [],
+		stopLossOrders: [],
+	});
+
+	// Add new TP/SL order
+	const addTPOrder = () => {
+		setPositionCalc((prev) => ({
+			...prev,
+			takeProfitOrders: [
+				...prev.takeProfitOrders,
+				{
+					id: crypto.randomUUID(),
+					price: "",
+					orderType: "limit",
+					positionPercent: 100,
+				},
+			],
+		}));
+	};
+
+	const addSLOrder = () => {
+		setPositionCalc((prev) => ({
+			...prev,
+			stopLossOrders: [
+				...prev.stopLossOrders,
+				{
+					id: crypto.randomUUID(),
+					price: "",
+					orderType: "limit",
+					positionPercent: 100,
+				},
+			],
+		}));
+	};
+
+	const updateTPOrder = (
+		id: string,
+		field: keyof TPOrder,
+		value: string | number,
+	) => {
+		setPositionCalc((prev) => ({
+			...prev,
+			takeProfitOrders: prev.takeProfitOrders.map((order) =>
+				order.id === id ? { ...order, [field]: value } : order,
+			),
+		}));
+	};
+
+	const updateSLOrder = (
+		id: string,
+		field: keyof SLOrder,
+		value: string | number,
+	) => {
+		setPositionCalc((prev) => ({
+			...prev,
+			stopLossOrders: prev.stopLossOrders.map((order) =>
+				order.id === id ? { ...order, [field]: value } : order,
+			),
+		}));
+	};
+
+	const removeTPOrder = (id: string) => {
+		setPositionCalc((prev) => ({
+			...prev,
+			takeProfitOrders: prev.takeProfitOrders.filter(
+				(order) => order.id !== id,
+			),
+		}));
+	};
+
+	const removeSLOrder = (id: string) => {
+		setPositionCalc((prev) => ({
+			...prev,
+			stopLossOrders: prev.stopLossOrders.filter((order) => order.id !== id),
+		}));
+	};
+
+	// WebSocket for real-time BTC price
+	let ws: WebSocket | undefined;
+	let wsPingInterval: ReturnType<typeof setInterval> | undefined;
+
+	const connectWebSocket = () => {
+		if (ws?.readyState === WebSocket.OPEN) return;
+
+		ws = new WebSocket("wss://api.hyperliquid.xyz/ws");
+
+		ws.onopen = () => {
+			// Subscribe to trades for real-time last-price updates
+			ws?.send(
+				JSON.stringify({
+					method: "subscribe",
+					subscription: { type: "trades", coin: "BTC" },
+				}),
+			);
+			// HL requires a ping every 30s
+			wsPingInterval = window.setInterval(() => {
+				if (ws?.readyState === WebSocket.OPEN) {
+					ws.send(JSON.stringify({ method: "ping" }));
+				}
+			}, 30_000);
+		};
+
+		ws.onmessage = (event) => {
+			try {
+				const msg = JSON.parse(event.data);
+				// Ignore pong / subscription ack
+				if (
+					!msg ||
+					msg.channel === "subscriptionResponse" ||
+					msg.channel === "pong"
+				)
+					return;
+
+				// Real-time trades → extract last price
+				if (
+					msg.channel === "trades" &&
+					Array.isArray(msg.data) &&
+					msg.data.length > 0
+				) {
+					const lastTrade = msg.data[msg.data.length - 1];
+					if (lastTrade?.coin === "BTC" && lastTrade?.px) {
+						setPositionCalc((prev) => ({
+							...prev,
+							entryPrice: lastTrade.px,
+						}));
+					}
+				}
+			} catch {
+				// ignore
+			}
+		};
+
+		ws.onclose = () => {
+			if (wsPingInterval) {
+				window.clearInterval(wsPingInterval);
+				wsPingInterval = undefined;
+			}
+		};
+	};
+
+	const disconnectWebSocket = () => {
+		if (ws) {
+			ws.close();
+			ws = undefined;
+		}
+		if (wsPingInterval) {
+			window.clearInterval(wsPingInterval);
+			wsPingInterval = undefined;
+		}
+	};
+
+	// Auto-fill entry price when order type changes to market
+	const handleOrderTypeChange = (value: OrderType) => {
+		const newFeeRate = value === "market" ? "0.0432" : "0.0144";
+		setPositionCalc((prev) => ({
+			...prev,
+			orderType: value,
+			feeRate: newFeeRate,
+		}));
+		if (value === "market") {
+			connectWebSocket();
+		} else {
+			disconnectWebSocket();
+		}
+	};
+
+	// Connect WebSocket on mount if market order
+	onMount(() => {
+		if (positionCalc().orderType === "market") {
+			connectWebSocket();
+		}
+	});
+
+	// Cleanup WebSocket on unmount
+	onCleanup(() => {
+		disconnectWebSocket();
+	});
+
+	const updateCalc = (field: string, value: string) => {
+		setPositionCalc((prev) => ({ ...prev, [field]: value }));
+	};
+
+	const positionCalcResults = createMemo(() => {
+		const calc = positionCalc();
+		const balance = parseFloat(calc.balance) || 0;
+		const leverage = parseFloat(calc.leverage) || 1;
+		const positionSize = parseFloat(calc.positionSize) || 0;
+		const entryPrice = parseFloat(calc.entryPrice) || 0;
+		const feeRate = (parseFloat(calc.feeRate) || 0) / 100;
+		const direction = calc.direction;
+		const isLong = direction === "long";
+
+		if (!positionSize || !entryPrice) return null;
+
+		const positionValue = positionSize * entryPrice;
+		const margin = positionValue / leverage;
+		const fee = positionValue * feeRate * 2; // Open + Close fee
+		const riskPercent = balance > 0 ? (margin / balance) * 100 : 0;
+
+		// Calculate TP/SL from orders
+		let totalStopLossUSDC = 0;
+		let totalTakeProfitUSDC = 0;
+
+		const calcPnL = (price: number, posPercent: number) => {
+			const size = positionSize * (posPercent / 100);
+			let pnl = 0;
+			if (isLong) {
+				pnl = (price - entryPrice) * size;
+			} else {
+				pnl = (entryPrice - price) * size;
+			}
+			return pnl;
+		};
+
+		for (const order of calc.stopLossOrders) {
+			const slPrice = parseFloat(order.price) || 0;
+			if (slPrice > 0) {
+				const pnl = calcPnL(slPrice, order.positionPercent);
+				totalStopLossUSDC += pnl;
+			}
+		}
+
+		for (const order of calc.takeProfitOrders) {
+			const tpPrice = parseFloat(order.price) || 0;
+			if (tpPrice > 0) {
+				const pnl = calcPnL(tpPrice, order.positionPercent);
+				totalTakeProfitUSDC += pnl;
+			}
+		}
+
+		return {
+			positionValue,
+			margin,
+			fee,
+			riskPercent,
+			stopLossUSDC: totalStopLossUSDC,
+			takeProfitUSDC: totalTakeProfitUSDC,
+			stopLossOrders: calc.stopLossOrders,
+			takeProfitOrders: calc.takeProfitOrders,
+		};
+	});
 
 	const loadData = async () => {
 		setIsFetching(true);
@@ -315,7 +594,395 @@ function ProfileContent() {
 				</div>
 			</div>
 
-			{/* Top Summary Cards - Simplified for Mobile */}
+			{/* Position Calculator */}
+			<Card>
+				<div class="p-4 sm:p-6">
+					<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+						<span class="text-indigo-400">⚖️</span>
+						合约仓位计算器
+					</h2>
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+						{/* Account Balance */}
+						<div>
+							<label
+								for="calc-balance"
+								class="block text-xs text-slate-400 mb-1"
+							>
+								账户余额 (USDC)
+							</label>
+							<input
+								id="calc-balance"
+								type="number"
+								step="any"
+								placeholder="10000"
+								value={positionCalc().balance}
+								onInput={(e) => updateCalc("balance", e.currentTarget.value)}
+								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
+							/>
+						</div>
+
+						{/* Leverage */}
+						<div>
+							<label
+								for="calc-leverage"
+								class="block text-xs text-slate-400 mb-1"
+							>
+								杠杆倍数
+							</label>
+							<select
+								id="calc-leverage"
+								value={positionCalc().leverage}
+								onChange={(e) => updateCalc("leverage", e.currentTarget.value)}
+								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
+							>
+								<For each={[1, 2, 3, 5, 10, 15, 20, 25, 30, 50, 100]}>
+									{(lev) => <option value={lev}>{lev}x</option>}
+								</For>
+							</select>
+						</div>
+
+						{/* Position Size */}
+						<div>
+							<label
+								for="calc-position-size"
+								class="block text-xs text-slate-400 mb-1"
+							>
+								仓位数量
+							</label>
+							<input
+								id="calc-position-size"
+								type="number"
+								step="any"
+								placeholder="0.1"
+								value={positionCalc().positionSize}
+								onInput={(e) =>
+									updateCalc("positionSize", e.currentTarget.value)
+								}
+								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
+							/>
+						</div>
+
+						{/* Entry Price */}
+						<div>
+							<label
+								for="calc-entry-price"
+								class="block text-xs text-slate-400 mb-1"
+							>
+								开仓价格
+							</label>
+							<input
+								id="calc-entry-price"
+								type="number"
+								step="any"
+								placeholder="当前价格"
+								value={positionCalc().entryPrice}
+								onInput={(e) => updateCalc("entryPrice", e.currentTarget.value)}
+								readOnly={positionCalc().orderType === "market"}
+								class={`w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm ${positionCalc().orderType === "market" ? "opacity-50 cursor-not-allowed" : ""}`}
+							/>
+						</div>
+
+						{/* Fee Rate */}
+						<div>
+							<label
+								for="calc-fee-rate"
+								class="block text-xs text-slate-400 mb-1"
+							>
+								手续费率 (%)
+							</label>
+							<input
+								id="calc-fee-rate"
+								type="number"
+								step="any"
+								placeholder="0.04"
+								value={positionCalc().feeRate}
+								onInput={(e) => updateCalc("feeRate", e.currentTarget.value)}
+								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
+							/>
+						</div>
+
+						{/* Order Type */}
+						<div>
+							<label
+								for="calc-order-type"
+								class="block text-xs text-slate-400 mb-1"
+							>
+								订单类型
+							</label>
+							<select
+								id="calc-order-type"
+								value={positionCalc().orderType}
+								onChange={(e) => handleOrderTypeChange(e.currentTarget.value)}
+								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
+							>
+								<option value="market">市价</option>
+								<option value="limit">限价</option>
+							</select>
+						</div>
+
+						{/* Direction */}
+						<div>
+							<span class="block text-xs text-slate-400 mb-1">方向</span>
+							<div class="grid grid-cols-2 gap-2">
+								<button
+									type="button"
+									onClick={() => updateCalc("direction", "long")}
+									class={`py-2 rounded-lg font-bold text-sm ${positionCalc().direction === "long" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50" : "bg-black/40 text-slate-500 border border-white/10"}`}
+								>
+									做多
+								</button>
+								<button
+									type="button"
+									onClick={() => updateCalc("direction", "short")}
+									class={`py-2 rounded-lg font-bold text-sm ${positionCalc().direction === "short" ? "bg-rose-500/20 text-rose-400 border border-rose-500/50" : "bg-black/40 text-slate-500 border border-white/10"}`}
+								>
+									做空
+								</button>
+							</div>
+						</div>
+
+						{/* Stop Loss Orders */}
+						<div class="md:col-span-2 lg:col-span-3">
+							<div class="flex items-center justify-between mb-2">
+								<span class="block text-xs text-slate-400">止损 (SL)</span>
+								<button
+									type="button"
+									onClick={addSLOrder}
+									class="text-xs text-rose-400 hover:text-rose-300"
+								>
+									+ 添加止损
+								</button>
+							</div>
+							<div class="space-y-2">
+								<Index each={positionCalc().stopLossOrders}>
+									{(order) => (
+										<div class="flex items-center gap-2">
+											<select
+												value={order().orderType}
+												onChange={(e) =>
+													updateSLOrder(
+														order().id,
+														"orderType",
+														e.currentTarget.value,
+													)
+												}
+												class="bg-black border border-white/10 rounded px-2 py-1 text-white text-xs"
+											>
+												<option value="market">市价</option>
+												<option value="limit">限价</option>
+											</select>
+											<input
+												type="number"
+												step="any"
+												placeholder="价格"
+												value={order().price}
+												onInput={(e) =>
+													updateSLOrder(
+														order().id,
+														"price",
+														e.currentTarget.value,
+													)
+												}
+												class="flex-1 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+											/>
+											<input
+												type="number"
+												step="any"
+												placeholder="仓位%"
+												value={order().positionPercent}
+												onInput={(e) =>
+													updateSLOrder(
+														order().id,
+														"positionPercent",
+														parseFloat(e.currentTarget.value) || 0,
+													)
+												}
+												class="w-16 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+											/>
+											<span class="text-xs text-slate-500">%</span>
+											<button
+												type="button"
+												onClick={() => removeSLOrder(order().id)}
+												class="text-rose-500 hover:text-rose-400"
+											>
+												✕
+											</button>
+										</div>
+									)}
+								</Index>
+								{positionCalc().stopLossOrders.length === 0 && (
+									<div class="text-xs text-slate-600 italic">
+										点击"+ 添加止损"添加止损订单
+									</div>
+								)}
+							</div>
+						</div>
+
+						{/* Take Profit Orders */}
+						<div class="md:col-span-2 lg:col-span-3">
+							<div class="flex items-center justify-between mb-2">
+								<span class="block text-xs text-slate-400">止盈 (TP)</span>
+								<button
+									type="button"
+									onClick={addTPOrder}
+									class="text-xs text-emerald-400 hover:text-emerald-300"
+								>
+									+ 添加止盈
+								</button>
+							</div>
+							<div class="space-y-2">
+								<Index each={positionCalc().takeProfitOrders}>
+									{(order) => (
+										<div class="flex items-center gap-2">
+											<select
+												value={order().orderType}
+												onChange={(e) =>
+													updateTPOrder(
+														order().id,
+														"orderType",
+														e.currentTarget.value,
+													)
+												}
+												class="bg-black border border-white/10 rounded px-2 py-1 text-white text-xs"
+											>
+												<option value="market">市价</option>
+												<option value="limit">限价</option>
+											</select>
+											<input
+												type="number"
+												step="any"
+												placeholder="价格"
+												value={order().price}
+												onInput={(e) =>
+													updateTPOrder(
+														order().id,
+														"price",
+														e.currentTarget.value,
+													)
+												}
+												class="flex-1 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+											/>
+											<input
+												type="number"
+												step="any"
+												placeholder="仓位%"
+												value={order().positionPercent}
+												onInput={(e) =>
+													updateTPOrder(
+														order().id,
+														"positionPercent",
+														parseFloat(e.currentTarget.value) || 0,
+													)
+												}
+												class="w-16 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+											/>
+											<span class="text-xs text-slate-500">%</span>
+											<button
+												type="button"
+												onClick={() => removeTPOrder(order().id)}
+												class="text-rose-500 hover:text-rose-400"
+											>
+												✕
+											</button>
+										</div>
+									)}
+								</Index>
+								{positionCalc().takeProfitOrders.length === 0 && (
+									<div class="text-xs text-slate-600 italic">
+										点击"+ 添加止盈"添加止盈订单
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+
+					{/* Results */}
+					{positionCalcResults() && (
+						<div class="mt-6 p-4 bg-black/40 rounded-xl border border-white/10">
+							<h3 class="text-sm font-bold text-slate-300 mb-3">计算结果</h3>
+							<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+								<div class="text-center">
+									<div class="text-xs text-slate-500">仓位价值</div>
+									<div class="text-lg font-mono text-white">
+										${positionCalcResults()?.positionValue.toFixed(2)}
+									</div>
+								</div>
+								<div class="text-center">
+									<div class="text-xs text-slate-500">所需保证金</div>
+									<div class="text-lg font-mono text-indigo-400">
+										${positionCalcResults()?.margin.toFixed(2)}
+									</div>
+								</div>
+								<div class="text-center">
+									<div class="text-xs text-slate-500">预估手续费</div>
+									<div class="text-lg font-mono text-amber-400">
+										${positionCalcResults()?.fee.toFixed(2)}
+									</div>
+								</div>
+								<div class="text-center">
+									<div class="text-xs text-slate-500">可承受风险</div>
+									<div
+										class={`text-lg font-mono ${positionCalcResults()?.riskPercent > 0 ? "text-rose-400" : "text-slate-400"}`}
+									>
+										{positionCalcResults()?.riskPercent.toFixed(1)}%
+									</div>
+								</div>
+							</div>
+							{(positionCalcResults()?.stopLossOrders.length ||
+								positionCalcResults()?.takeProfitOrders.length) && (
+								<div class="mt-4 pt-4 border-t border-white/10">
+									<div class="grid grid-cols-2 gap-4">
+										{positionCalcResults()?.stopLossOrders.length > 0 && (
+											<div class="text-center p-3 bg-rose-500/10 rounded-lg border border-rose-500/30">
+												<div class="text-xs text-rose-400 mb-1">止损 (SL)</div>
+												<div
+													class={`text-lg font-mono ${(positionCalcResults()?.stopLossUSDC ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}
+												>
+													{(positionCalcResults()?.stopLossUSDC ?? 0) >= 0
+														? "+"
+														: ""}
+													{positionCalcResults()?.stopLossUSDC.toFixed(2)}
+												</div>
+												<div class="text-xs text-rose-500">
+													{positionCalcResults()
+														?.stopLossOrders.map(
+															(o) =>
+																`${o.orderType === "market" ? "市" : "限"} @ ${o.price || "-"} (${o.positionPercent}%)`,
+														)
+														.join(", ")}
+												</div>
+											</div>
+										)}
+										{positionCalcResults()?.takeProfitOrders.length > 0 && (
+											<div class="text-center p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
+												<div class="text-xs text-emerald-400 mb-1">
+													止盈 (TP)
+												</div>
+												<div
+													class={`text-lg font-mono ${(positionCalcResults()?.takeProfitUSDC ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}
+												>
+													{(positionCalcResults()?.takeProfitUSDC ?? 0) >= 0
+														? "+"
+														: ""}
+													{positionCalcResults()?.takeProfitUSDC.toFixed(2)}
+												</div>
+												<div class="text-xs text-emerald-500">
+													{positionCalcResults()
+														?.takeProfitOrders.map(
+															(o) =>
+																`${o.orderType === "market" ? "市" : "限"} @ ${o.price || "-"} (${o.positionPercent}%)`,
+														)
+														.join(", ")}
+												</div>
+											</div>
+										)}
+									</div>
+								</div>
+							)}
+						</div>
+					)}
+				</div>
+			</Card>
 			<div class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
 				<Card class="p-4 sm:p-6 relative">
 					<h3 class="text-[10px] sm:text-sm font-medium text-slate-400 uppercase tracking-wider mb-2 sm:mb-4">
@@ -359,8 +1026,6 @@ function ProfileContent() {
 					<div class="text-lg sm:text-3xl font-bold text-white">Grade: A+</div>
 				</Card>
 			</div>
-
-			{/* Main Content Grid */}
 			<div class="flex flex-col lg:grid lg:grid-cols-3 gap-6">
 				{/* Left Column: Assets */}
 				<div class="lg:col-span-2 space-y-6 order-2 lg:order-1">
@@ -565,8 +1230,6 @@ function ProfileContent() {
 					</Card>
 				</div>
 			</div>
-
-			{/* Modal - Optimized for mobile tap targets */}
 			<Show when={showModal()}>
 				<div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm">
 					<div class="bg-zinc-900 border-t sm:border border-white/10 rounded-t-3xl sm:rounded-3xl w-full max-w-md p-6 shadow-2xl relative">
