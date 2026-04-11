@@ -216,7 +216,7 @@ function ProfileContent() {
 
 	// WebSocket for real-time BTC price
 	let ws: WebSocket | undefined;
-	let wsPingInterval: ReturnType<typeof setInterval> | undefined;
+	let wsPingInterval: number | undefined;
 
 	const connectWebSocket = () => {
 		if (ws?.readyState === WebSocket.OPEN) return;
@@ -712,7 +712,9 @@ function ProfileContent() {
 							<select
 								id="calc-order-type"
 								value={positionCalc().orderType}
-								onChange={(e) => handleOrderTypeChange(e.currentTarget.value)}
+								onChange={(e) =>
+									handleOrderTypeChange(e.currentTarget.value as OrderType)
+								}
 								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
 							>
 								<option value="market">市价</option>
@@ -922,17 +924,18 @@ function ProfileContent() {
 								<div class="text-center">
 									<div class="text-xs text-slate-500">可承受风险</div>
 									<div
-										class={`text-lg font-mono ${positionCalcResults()?.riskPercent > 0 ? "text-rose-400" : "text-slate-400"}`}
+										class={`text-lg font-mono ${(positionCalcResults()?.riskPercent ?? 0) > 0 ? "text-rose-400" : "text-slate-400"}`}
 									>
 										{positionCalcResults()?.riskPercent.toFixed(1)}%
 									</div>
 								</div>
 							</div>
-							{(positionCalcResults()?.stopLossOrders.length ||
-								positionCalcResults()?.takeProfitOrders.length) && (
+							{(positionCalcResults()?.stopLossOrders?.length ||
+								positionCalcResults()?.takeProfitOrders?.length) && (
 								<div class="mt-4 pt-4 border-t border-white/10">
 									<div class="grid grid-cols-2 gap-4">
-										{positionCalcResults()?.stopLossOrders.length > 0 && (
+										{(positionCalcResults()?.stopLossOrders?.length ?? 0) >
+											0 && (
 											<div class="text-center p-3 bg-rose-500/10 rounded-lg border border-rose-500/30">
 												<div class="text-xs text-rose-400 mb-1">止损 (SL)</div>
 												<div
@@ -953,7 +956,8 @@ function ProfileContent() {
 												</div>
 											</div>
 										)}
-										{positionCalcResults()?.takeProfitOrders.length > 0 && (
+										{(positionCalcResults()?.takeProfitOrders?.length ?? 0) >
+											0 && (
 											<div class="text-center p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
 												<div class="text-xs text-emerald-400 mb-1">
 													止盈 (TP)
