@@ -701,19 +701,20 @@ function ProfileContent() {
 
 			{/* Position Calculator */}
 			<Card>
-				<div class="p-4 sm:p-6">
-					<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+				<div class="p-3 sm:p-6">
+					<h2 class="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
 						<span class="text-indigo-400">⚖️</span>
-						合约仓位计算器
+						<span class="hidden sm:inline">合约仓位计算器</span>
+						<span class="sm:hidden">仓位计算</span>
 					</h2>
-					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					<div class="grid grid-cols-2 gap-3">
 						{/* Account Balance */}
-						<div>
+						<div class="col-span-2 sm:col-span-1">
 							<label
 								for="calc-balance"
-								class="block text-xs text-slate-400 mb-1"
+								class="block text-[10px] sm:text-xs text-slate-400 mb-1"
 							>
-								账户余额 (USDC)
+								余额 (USDC)
 							</label>
 							<input
 								id="calc-balance"
@@ -725,17 +726,17 @@ function ProfileContent() {
 									updateCalc("balance", e.currentTarget.value);
 									saveBalance(e.currentTarget.value);
 								}}
-								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
+								class="w-full bg-black border border-white/10 rounded-lg sm:rounded-xl px-2 py-2.5 sm:px-3 sm:py-2 text-white font-mono text-sm"
 							/>
 						</div>
 
 						{/* Leverage */}
-						<div>
+						<div class="col-span-2 sm:col-span-1">
 							<label
 								for="calc-leverage"
-								class="block text-xs text-slate-400 mb-1"
+								class="block text-[10px] sm:text-xs text-slate-400 mb-1"
 							>
-								杠杆倍数
+								杠杆
 							</label>
 							<select
 								id="calc-leverage"
@@ -744,7 +745,7 @@ function ProfileContent() {
 									updateCalc("leverage", e.currentTarget.value);
 									saveLeverage(e.currentTarget.value);
 								}}
-								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
+								class="w-full bg-black border border-white/10 rounded-lg sm:rounded-xl px-2 py-2.5 sm:px-3 sm:py-2 text-white font-mono text-sm"
 							>
 								<For each={[1, 2, 3, 5, 10, 15, 20, 25, 30, 50, 100]}>
 									{(lev) => <option value={lev}>{lev}x</option>}
@@ -756,7 +757,7 @@ function ProfileContent() {
 						<div>
 							<label
 								for="calc-position-size"
-								class="block text-xs text-slate-400 mb-1"
+								class="block text-[10px] sm:text-xs text-slate-400 mb-1"
 							>
 								仓位数量
 							</label>
@@ -769,7 +770,7 @@ function ProfileContent() {
 								onInput={(e) =>
 									updateCalc("positionSize", e.currentTarget.value)
 								}
-								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
+								class="w-full bg-black border border-white/10 rounded-lg sm:rounded-xl px-2 py-2.5 sm:px-3 sm:py-2 text-white font-mono text-sm"
 							/>
 						</div>
 
@@ -777,7 +778,7 @@ function ProfileContent() {
 						<div>
 							<label
 								for="calc-entry-price"
-								class="block text-xs text-slate-400 mb-1"
+								class="block text-[10px] sm:text-xs text-slate-400 mb-1"
 							>
 								开仓价格
 							</label>
@@ -789,7 +790,7 @@ function ProfileContent() {
 								value={positionCalc().entryPrice}
 								onInput={(e) => updateCalc("entryPrice", e.currentTarget.value)}
 								readOnly={positionCalc().orderType === "market"}
-								class={`w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm ${positionCalc().orderType === "market" ? "opacity-50 cursor-not-allowed" : ""}`}
+								class={`w-full bg-black border border-white/10 rounded-lg sm:rounded-xl px-2 py-2.5 sm:px-3 sm:py-2 text-white font-mono text-sm ${positionCalc().orderType === "market" ? "opacity-50 cursor-not-allowed" : ""}`}
 							/>
 						</div>
 
@@ -797,9 +798,9 @@ function ProfileContent() {
 						<div>
 							<label
 								for="calc-fee-rate"
-								class="block text-xs text-slate-400 mb-1"
+								class="block text-[10px] sm:text-xs text-slate-400 mb-1"
 							>
-								手续费率 (%)
+								手续费 (%)
 							</label>
 							<input
 								id="calc-fee-rate"
@@ -808,7 +809,7 @@ function ProfileContent() {
 								placeholder="0.04"
 								value={positionCalc().feeRate}
 								onInput={(e) => updateCalc("feeRate", e.currentTarget.value)}
-								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
+								class="w-full bg-black border border-white/10 rounded-lg sm:rounded-xl px-2 py-2.5 sm:px-3 sm:py-2 text-white font-mono text-sm"
 							/>
 						</div>
 
@@ -816,7 +817,7 @@ function ProfileContent() {
 						<div>
 							<label
 								for="calc-order-type"
-								class="block text-xs text-slate-400 mb-1"
+								class="block text-[10px] sm:text-xs text-slate-400 mb-1"
 							>
 								订单类型
 							</label>
@@ -826,28 +827,30 @@ function ProfileContent() {
 								onChange={(e) =>
 									handleOrderTypeChange(e.currentTarget.value as OrderType)
 								}
-								class="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
+								class="w-full bg-black border border-white/10 rounded-lg sm:rounded-xl px-2 py-2.5 sm:px-3 sm:py-2 text-white font-mono text-sm"
 							>
 								<option value="market">市价</option>
 								<option value="limit">限价</option>
 							</select>
 						</div>
 
-						{/* Direction */}
-						<div>
-							<span class="block text-xs text-slate-400 mb-1">方向</span>
+						{/* Direction - Full width on mobile */}
+						<div class="col-span-2">
+							<span class="block text-[10px] sm:text-xs text-slate-400 mb-1">
+								方向
+							</span>
 							<div class="grid grid-cols-2 gap-2">
 								<button
 									type="button"
 									onClick={() => updateCalc("direction", "long")}
-									class={`py-2 rounded-lg font-bold text-sm ${positionCalc().direction === "long" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50" : "bg-black/40 text-slate-500 border border-white/10"}`}
+									class={`py-2.5 sm:py-2 rounded-lg font-bold text-sm ${positionCalc().direction === "long" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50" : "bg-black/40 text-slate-500 border border-white/10"}`}
 								>
 									做多
 								</button>
 								<button
 									type="button"
 									onClick={() => updateCalc("direction", "short")}
-									class={`py-2 rounded-lg font-bold text-sm ${positionCalc().direction === "short" ? "bg-rose-500/20 text-rose-400 border border-rose-500/50" : "bg-black/40 text-slate-500 border border-white/10"}`}
+									class={`py-2.5 sm:py-2 rounded-lg font-bold text-sm ${positionCalc().direction === "short" ? "bg-rose-500/20 text-rose-400 border border-rose-500/50" : "bg-black/40 text-slate-500 border border-white/10"}`}
 								>
 									做空
 								</button>
@@ -855,15 +858,17 @@ function ProfileContent() {
 						</div>
 
 						{/* Stop Loss Orders */}
-						<div class="md:col-span-2 lg:col-span-3">
+						<div class="col-span-2">
 							<div class="flex items-center justify-between mb-2">
-								<span class="block text-xs text-slate-400">止损 (SL)</span>
+								<span class="block text-[10px] sm:text-xs text-slate-400">
+									止损 (SL)
+								</span>
 								<button
 									type="button"
 									onClick={addSLOrder}
-									class="text-xs text-rose-400 hover:text-rose-300"
+									class="text-xs text-rose-400 hover:text-rose-300 px-2 py-1"
 								>
-									+ 添加止损
+									+ 添加
 								</button>
 							</div>
 							<div class="space-y-2">
@@ -874,7 +879,7 @@ function ProfileContent() {
 											(o) => o.id === order().id,
 										)?.pnl;
 										return (
-											<div class="flex items-center gap-2">
+											<div class="flex flex-wrap items-center gap-1.5 sm:gap-2 p-2 bg-black/30 rounded-lg">
 												<select
 													value={order().orderType}
 													onChange={(e) =>
@@ -884,10 +889,10 @@ function ProfileContent() {
 															e.currentTarget.value,
 														)
 													}
-													class="bg-black border border-white/10 rounded px-2 py-1 text-white text-xs"
+													class="bg-black border border-white/10 rounded px-1.5 py-1.5 text-white text-[10px] sm:text-xs min-w-[50px]"
 												>
-													<option value="market">市价</option>
-													<option value="limit">限价</option>
+													<option value="market">市</option>
+													<option value="limit">限</option>
 												</select>
 												<input
 													type="number"
@@ -901,12 +906,12 @@ function ProfileContent() {
 															e.currentTarget.value,
 														)
 													}
-													class="flex-1 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+													class="flex-1 min-w-[80px] bg-black border border-white/10 rounded px-2 py-1.5 text-white text-xs font-mono"
 												/>
 												<input
 													type="number"
 													step="any"
-													placeholder="仓位%"
+													placeholder="%"
 													value={order().positionPercent}
 													onInput={(e) =>
 														updateSLOrder(
@@ -915,21 +920,21 @@ function ProfileContent() {
 															parseFloat(e.currentTarget.value) || 0,
 														)
 													}
-													class="w-16 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+													class="w-14 sm:w-16 bg-black border border-white/10 rounded px-2 py-1.5 text-white text-xs font-mono"
 												/>
-												<span class="text-xs text-slate-500">%</span>
+												<span class="text-[10px] text-slate-500">%</span>
 												{orderPnl !== undefined && (
 													<span
-														class={`text-xs font-mono min-w-[60px] text-right ${orderPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+														class={`text-xs font-mono min-w-[55px] sm:min-w-[60px] text-right ${orderPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}
 													>
 														{orderPnl >= 0 ? "+" : ""}
-														{orderPnl.toFixed(2)}
+														{orderPnl.toFixed(1)}
 													</span>
 												)}
 												<button
 													type="button"
 													onClick={() => removeSLOrder(order().id)}
-													class="text-rose-500 hover:text-rose-400"
+													class="text-rose-500 hover:text-rose-400 p-1"
 												>
 													✕
 												</button>
@@ -938,23 +943,25 @@ function ProfileContent() {
 									}}
 								</Index>
 								{positionCalc().stopLossOrders.length === 0 && (
-									<div class="text-xs text-slate-600 italic">
-										点击"+ 添加止损"添加止损订单
+									<div class="text-[10px] sm:text-xs text-slate-600 italic py-2">
+										点击"+ 添加"添加止损
 									</div>
 								)}
 							</div>
 						</div>
 
 						{/* Take Profit Orders */}
-						<div class="md:col-span-2 lg:col-span-3">
+						<div class="col-span-2">
 							<div class="flex items-center justify-between mb-2">
-								<span class="block text-xs text-slate-400">止盈 (TP)</span>
+								<span class="block text-[10px] sm:text-xs text-slate-400">
+									止盈 (TP)
+								</span>
 								<button
 									type="button"
 									onClick={addTPOrder}
-									class="text-xs text-emerald-400 hover:text-emerald-300"
+									class="text-xs text-emerald-400 hover:text-emerald-300 px-2 py-1"
 								>
-									+ 添加止盈
+									+ 添加
 								</button>
 							</div>
 							<div class="space-y-2">
@@ -965,7 +972,7 @@ function ProfileContent() {
 											(o) => o.id === order().id,
 										)?.pnl;
 										return (
-											<div class="flex items-center gap-2">
+											<div class="flex flex-wrap items-center gap-1.5 sm:gap-2 p-2 bg-black/30 rounded-lg">
 												<select
 													value={order().orderType}
 													onChange={(e) =>
@@ -975,10 +982,10 @@ function ProfileContent() {
 															e.currentTarget.value,
 														)
 													}
-													class="bg-black border border-white/10 rounded px-2 py-1 text-white text-xs"
+													class="bg-black border border-white/10 rounded px-1.5 py-1.5 text-white text-[10px] sm:text-xs min-w-[50px]"
 												>
-													<option value="market">市价</option>
-													<option value="limit">限价</option>
+													<option value="market">市</option>
+													<option value="limit">限</option>
 												</select>
 												<input
 													type="number"
@@ -992,12 +999,12 @@ function ProfileContent() {
 															e.currentTarget.value,
 														)
 													}
-													class="flex-1 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+													class="flex-1 min-w-[80px] bg-black border border-white/10 rounded px-2 py-1.5 text-white text-xs font-mono"
 												/>
 												<input
 													type="number"
 													step="any"
-													placeholder="仓位%"
+													placeholder="%"
 													value={order().positionPercent}
 													onInput={(e) =>
 														updateTPOrder(
@@ -1006,21 +1013,21 @@ function ProfileContent() {
 															parseFloat(e.currentTarget.value) || 0,
 														)
 													}
-													class="w-16 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+													class="w-14 sm:w-16 bg-black border border-white/10 rounded px-2 py-1.5 text-white text-xs font-mono"
 												/>
-												<span class="text-xs text-slate-500">%</span>
+												<span class="text-[10px] text-slate-500">%</span>
 												{orderPnl !== undefined && (
 													<span
-														class={`text-xs font-mono min-w-[60px] text-right ${orderPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+														class={`text-xs font-mono min-w-[55px] sm:min-w-[60px] text-right ${orderPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}
 													>
 														{orderPnl >= 0 ? "+" : ""}
-														{orderPnl.toFixed(2)}
+														{orderPnl.toFixed(1)}
 													</span>
 												)}
 												<button
 													type="button"
 													onClick={() => removeTPOrder(order().id)}
-													class="text-rose-500 hover:text-rose-400"
+													class="text-rose-500 hover:text-rose-400 p-1"
 												>
 													✕
 												</button>
@@ -1029,8 +1036,8 @@ function ProfileContent() {
 									}}
 								</Index>
 								{positionCalc().takeProfitOrders.length === 0 && (
-									<div class="text-xs text-slate-600 italic">
-										点击"+ 添加止盈"添加止盈订单
+									<div class="text-[10px] sm:text-xs text-slate-600 italic py-2">
+										点击"+ 添加"添加止盈
 									</div>
 								)}
 							</div>
@@ -1039,31 +1046,41 @@ function ProfileContent() {
 
 					{/* Results */}
 					{positionCalcResults() && (
-						<div class="mt-6 p-4 bg-black/40 rounded-xl border border-white/10">
-							<h3 class="text-sm font-bold text-slate-300 mb-3">计算结果</h3>
-							<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-								<div class="text-center">
-									<div class="text-xs text-slate-500">仓位价值</div>
-									<div class="text-lg font-mono text-white">
-										${positionCalcResults()?.positionValue.toFixed(2)}
+						<div class="mt-4 p-3 sm:p-4 bg-black/40 rounded-xl border border-white/10">
+							<h3 class="text-xs sm:text-sm font-bold text-slate-300 mb-2 sm:mb-3">
+								计算结果
+							</h3>
+							<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+								<div class="text-center p-2">
+									<div class="text-[9px] sm:text-[10px] text-slate-500">
+										仓位价值
+									</div>
+									<div class="text-sm sm:text-lg font-mono text-white">
+										${positionCalcResults()?.positionValue.toFixed(0)}
 									</div>
 								</div>
-								<div class="text-center">
-									<div class="text-xs text-slate-500">所需保证金</div>
-									<div class="text-lg font-mono text-indigo-400">
-										${positionCalcResults()?.margin.toFixed(2)}
+								<div class="text-center p-2">
+									<div class="text-[9px] sm:text-[10px] text-slate-500">
+										保证金
+									</div>
+									<div class="text-sm sm:text-lg font-mono text-indigo-400">
+										${positionCalcResults()?.margin.toFixed(0)}
 									</div>
 								</div>
-								<div class="text-center">
-									<div class="text-xs text-slate-500">预估手续费</div>
-									<div class="text-lg font-mono text-amber-400">
-										${positionCalcResults()?.fee.toFixed(2)}
+								<div class="text-center p-2">
+									<div class="text-[9px] sm:text-[10px] text-slate-500">
+										手续费
+									</div>
+									<div class="text-sm sm:text-lg font-mono text-amber-400">
+										${positionCalcResults()?.fee.toFixed(0)}
 									</div>
 								</div>
-								<div class="text-center">
-									<div class="text-xs text-slate-500">可承受风险</div>
+								<div class="text-center p-2">
+									<div class="text-[9px] sm:text-[10px] text-slate-500">
+										风险
+									</div>
 									<div
-										class={`text-lg font-mono ${(positionCalcResults()?.riskPercent ?? 0) > 0 ? "text-rose-400" : "text-slate-400"}`}
+										class={`text-sm sm:text-lg font-mono ${(positionCalcResults()?.riskPercent ?? 0) > 0 ? "text-rose-400" : "text-slate-400"}`}
 									>
 										{positionCalcResults()?.riskPercent.toFixed(1)}%
 									</div>
@@ -1071,25 +1088,27 @@ function ProfileContent() {
 							</div>
 							{(positionCalcResults()?.stopLossOrders?.length ||
 								positionCalcResults()?.takeProfitOrders?.length) && (
-								<div class="mt-4 pt-4 border-t border-white/10">
-									<div class="grid grid-cols-2 gap-4">
+								<div class="mt-3 pt-3 border-t border-white/10">
+									<div class="grid grid-cols-2 gap-2 sm:gap-4">
 										{(positionCalcResults()?.stopLossOrders?.length ?? 0) >
 											0 && (
-											<div class="text-center p-3 bg-rose-500/10 rounded-lg border border-rose-500/30">
-												<div class="text-xs text-rose-400 mb-1">止损 (SL)</div>
+											<div class="text-center p-2 sm:p-3 bg-rose-500/10 rounded-lg border border-rose-500/30">
+												<div class="text-[10px] text-rose-400 mb-1">
+													止损 (SL)
+												</div>
 												<div
-													class={`text-lg font-mono ${(positionCalcResults()?.stopLossUSDC ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}
+													class={`text-base sm:text-lg font-mono ${(positionCalcResults()?.stopLossUSDC ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}
 												>
 													{(positionCalcResults()?.stopLossUSDC ?? 0) >= 0
 														? "+"
 														: ""}
-													{positionCalcResults()?.stopLossUSDC.toFixed(2)}
+													{positionCalcResults()?.stopLossUSDC.toFixed(0)}
 												</div>
-												<div class="text-xs text-rose-500">
+												<div class="text-[9px] sm:text-xs text-rose-500 truncate px-1">
 													{positionCalcResults()
 														?.stopLossOrders.map(
 															(o) =>
-																`${o.orderType === "market" ? "市" : "限"} @ ${o.price || "-"} (${o.positionPercent}%)`,
+																`${o.price || "-"} (${o.positionPercent}%)`,
 														)
 														.join(", ")}
 												</div>
@@ -1097,23 +1116,23 @@ function ProfileContent() {
 										)}
 										{(positionCalcResults()?.takeProfitOrders?.length ?? 0) >
 											0 && (
-											<div class="text-center p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
-												<div class="text-xs text-emerald-400 mb-1">
+											<div class="text-center p-2 sm:p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
+												<div class="text-[10px] text-emerald-400 mb-1">
 													止盈 (TP)
 												</div>
 												<div
-													class={`text-lg font-mono ${(positionCalcResults()?.takeProfitUSDC ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}
+													class={`text-base sm:text-lg font-mono ${(positionCalcResults()?.takeProfitUSDC ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}
 												>
 													{(positionCalcResults()?.takeProfitUSDC ?? 0) >= 0
 														? "+"
 														: ""}
-													{positionCalcResults()?.takeProfitUSDC.toFixed(2)}
+													{positionCalcResults()?.takeProfitUSDC.toFixed(0)}
 												</div>
-												<div class="text-xs text-emerald-500">
+												<div class="text-[9px] sm:text-xs text-emerald-500 truncate px-1">
 													{positionCalcResults()
 														?.takeProfitOrders.map(
 															(o) =>
-																`${o.orderType === "market" ? "市" : "限"} @ ${o.price || "-"} (${o.positionPercent}%)`,
+																`${o.price || "-"} (${o.positionPercent}%)`,
 														)
 														.join(", ")}
 												</div>
