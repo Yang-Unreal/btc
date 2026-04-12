@@ -46,5 +46,37 @@ export type OpenInterestHistory = typeof openInterestHistory.$inferSelect;
 export type NewOpenInterestHistory = typeof openInterestHistory.$inferInsert;
 export type UserSettings = typeof userSettings.$inferSelect;
 export type NewUserSettings = typeof userSettings.$inferInsert;
+export const pyramidPositions = pgTable("pyramid_positions", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	entries: text("entries").notNull(), // JSON string array of {price, size}
+	currentPrice: numeric("current_price").notNull(),
+	stopLoss: numeric("stop_loss").notNull(),
+	isShort: text("is_short").notNull().default("true"),
+	totalSize: numeric("total_size").notNull(),
+	avgPrice: numeric("avg_price").notNull(),
+	totalPnl: numeric("total_pnl").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export type PriceAlert = typeof priceAlerts.$inferSelect;
 export type NewPriceAlert = typeof priceAlerts.$inferInsert;
+export type PyramidPosition = typeof pyramidPositions.$inferSelect;
+export type NewPyramidPosition = typeof pyramidPositions.$inferInsert;
+
+export const positionCalculator = pgTable("position_calculator", {
+	id: text("id").primaryKey().default("default"),
+	balance: numeric("balance").notNull().default("10000"),
+	leverage: numeric("leverage").notNull().default("10"),
+	positionSize: numeric("position_size").notNull().default("0.1"),
+	entryPrice: text("entry_price"),
+	feeRate: numeric("fee_rate").notNull().default("0.0432"),
+	orderType: text("order_type").notNull().default("market"),
+	direction: text("direction").notNull().default("long"),
+	takeProfitOrders: text("take_profit_orders"), // JSON string
+	stopLossOrders: text("stop_loss_orders"), // JSON string
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type PositionCalculator = typeof positionCalculator.$inferSelect;
+export type NewPositionCalculator = typeof positionCalculator.$inferInsert;

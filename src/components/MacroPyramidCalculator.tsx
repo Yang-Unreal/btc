@@ -1,4 +1,4 @@
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 
 interface PositionEntry {
@@ -20,6 +20,57 @@ export default function MacroPyramidCalculator() {
 	const [showBulk, setShowBulk] = createSignal(false);
 	const [bulkInput, setBulkInput] = createSignal("");
 	const [isOpen, setIsOpen] = createSignal(false);
+	const [isLoaded, setIsLoaded] = createSignal(false);
+
+	const saveToDb = async () => {
+		if (!isLoaded()) return;
+		try {
+			await fetch("/api/pyramid", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					entries: entries.map((e) => ({ price: e.price, size: e.size })),
+					currentPrice: currentPrice(),
+					stopLoss: stopLoss(),
+					isShort: isShort(),
+					totalSize: totalSize(),
+					avgPrice: avgPrice(),
+					totalPnl: totalPnL(),
+				}),
+			});
+		} catch (e) {
+			console.error("Failed to save pyramid positions:", e);
+		}
+	};
+
+	const debouncedSave = () => {
+		setTimeout(saveToDb, 500);
+	};
+
+	onMount(async () => {
+		try {
+			const res = await fetch("/api/pyramid");
+			if (res.ok) {
+				const data = await res.json();
+				if (data && data.entries && data.entries.length > 0) {
+					const loadedEntries = data.entries.map(
+						(e: { price: number; size: number }, idx: number) => ({
+							id: idx + 1,
+							price: e.price,
+							size: e.size,
+						}),
+					);
+					setEntries(reconcile(loadedEntries));
+					setCurrentPrice(data.currentPrice);
+					setStopLoss(data.stopLoss);
+					setIsShort(data.isShort);
+				}
+			}
+		} catch (e) {
+			console.error("Failed to load pyramid positions:", e);
+		}
+		setIsLoaded(true);
+	});
 
 	const totalSize = createMemo(() =>
 		entries.reduce((sum, e) => sum + e.size, 0),
@@ -60,10 +111,12 @@ export default function MacroPyramidCalculator() {
 			price: lastEntry ? lastEntry.price + 500 : 70000,
 			size: 0.04,
 		});
+		debouncedSave();
 	};
 
 	const removeEntry = (id: number) => {
 		setEntries(entries.filter((e) => e.id !== id));
+		debouncedSave();
 	};
 
 	const updateEntry = (id: number, field: "price" | "size", value: number) => {
@@ -71,6 +124,7 @@ export default function MacroPyramidCalculator() {
 		if (index !== -1) {
 			setEntries(index, field, value);
 		}
+		debouncedSave();
 	};
 
 	const handleBulkInput = (val: string) => {
@@ -87,6 +141,7 @@ export default function MacroPyramidCalculator() {
 		if (newEntries.length > 0) {
 			setEntries(reconcile(newEntries));
 		}
+		debouncedSave();
 	};
 
 	const generatePyramid = (
@@ -103,6 +158,7 @@ export default function MacroPyramidCalculator() {
 		}));
 		setEntries(reconcile(newEntries));
 		setShowBulk(false);
+		debouncedSave();
 	};
 
 	return (
@@ -165,7 +221,10 @@ export default function MacroPyramidCalculator() {
 						</div>
 						<button
 							type="button"
-							onClick={() => setIsShort(!isShort())}
+							onClick={() => {
+								setIsShort(!isShort());
+								debouncedSave();
+							}}
 							class={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${
 								isShort()
 									? "border-rose-500/50 bg-rose-500/10 text-rose-400"
@@ -229,7 +288,10 @@ export default function MacroPyramidCalculator() {
 								<input
 									type="number"
 									value={stopLoss()}
-									onInput={(e) => setStopLoss(Number(e.currentTarget.value))}
+									onInput={(e) => {
+										setStopLoss(Number(e.currentTarget.value));
+										debouncedSave();
+									}}
 									class="w-full bg-zinc-800/50 border border-rose-500/20 rounded px-3 py-1.5 text-sm text-rose-400 focus:outline-none focus:border-rose-500/50 transition-colors font-mono"
 									placeholder="Stop price..."
 								/>
@@ -248,9 +310,10 @@ export default function MacroPyramidCalculator() {
 									<input
 										type="number"
 										value={currentPrice()}
-										onInput={(e) =>
-											setCurrentPrice(Number(e.currentTarget.value))
-										}
+										onInput={(e) => {
+											setCurrentPrice(Number(e.currentTarget.value));
+											debouncedSave();
+										}}
 										class="col-span-2 bg-zinc-800/50 border border-indigo-500/20 rounded px-2 py-1 text-xs text-indigo-400 focus:outline-none focus:border-indigo-500/50 transition-colors font-mono"
 									/>
 									<input
@@ -259,9 +322,10 @@ export default function MacroPyramidCalculator() {
 										max="150000"
 										step="100"
 										value={currentPrice()}
-										onInput={(e) =>
-											setCurrentPrice(Number(e.currentTarget.value))
-										}
+										onInput={(e) => {
+											setCurrentPrice(Number(e.currentTarget.value));
+											debouncedSave();
+										}}
 										class="col-span-3 accent-indigo-500 bg-zinc-800 rounded-lg appearance-none cursor-pointer h-1.5"
 									/>
 								</div>

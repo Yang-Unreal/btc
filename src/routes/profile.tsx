@@ -142,6 +142,47 @@ function ProfileContent() {
 		stopLossOrders: [],
 	});
 
+	const savePositionCalcToDb = async () => {
+		try {
+			await fetch("/api/position-calc", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(positionCalc()),
+			});
+		} catch (e) {
+			console.error("Failed to save position calc:", e);
+		}
+	};
+
+	const debouncedSavePositionCalc = () => {
+		setTimeout(savePositionCalcToDb, 500);
+	};
+
+	onMount(async () => {
+		try {
+			const res = await fetch("/api/position-calc");
+			if (res.ok) {
+				const data = await res.json();
+				if (data) {
+					setPositionCalc((prev) => ({
+						...prev,
+						balance: data.balance || "10000",
+						leverage: data.leverage || "10",
+						positionSize: data.positionSize || "0.1",
+						entryPrice: data.entryPrice || "",
+						feeRate: data.feeRate || "0.0432",
+						orderType: data.orderType || "market",
+						direction: data.direction || "long",
+						takeProfitOrders: data.takeProfitOrders || [],
+						stopLossOrders: data.stopLossOrders || [],
+					}));
+				}
+			}
+		} catch (e) {
+			console.error("Failed to load position calc:", e);
+		}
+	});
+
 	// Add new TP/SL order
 	const addTPOrder = () => {
 		setPositionCalc((prev) => ({
@@ -156,6 +197,7 @@ function ProfileContent() {
 				},
 			],
 		}));
+		debouncedSavePositionCalc();
 	};
 
 	const addSLOrder = () => {
@@ -171,6 +213,7 @@ function ProfileContent() {
 				},
 			],
 		}));
+		debouncedSavePositionCalc();
 	};
 
 	const updateTPOrder = (
@@ -184,6 +227,7 @@ function ProfileContent() {
 				order.id === id ? { ...order, [field]: value } : order,
 			),
 		}));
+		debouncedSavePositionCalc();
 	};
 
 	const updateSLOrder = (
@@ -197,6 +241,7 @@ function ProfileContent() {
 				order.id === id ? { ...order, [field]: value } : order,
 			),
 		}));
+		debouncedSavePositionCalc();
 	};
 
 	const removeTPOrder = (id: string) => {
@@ -206,6 +251,7 @@ function ProfileContent() {
 				(order) => order.id !== id,
 			),
 		}));
+		debouncedSavePositionCalc();
 	};
 
 	const removeSLOrder = (id: string) => {
@@ -213,6 +259,7 @@ function ProfileContent() {
 			...prev,
 			stopLossOrders: prev.stopLossOrders.filter((order) => order.id !== id),
 		}));
+		debouncedSavePositionCalc();
 	};
 
 	// WebSocket for real-time BTC price
@@ -259,10 +306,14 @@ function ProfileContent() {
 				) {
 					const lastTrade = msg.data[msg.data.length - 1];
 					if (lastTrade?.coin === "BTC" && lastTrade?.px) {
-						setPositionCalc((prev) => ({
-							...prev,
-							entryPrice: lastTrade.px,
-						}));
+						// Only update price for market orders, keep manual input for limit orders
+						if (positionCalc().orderType === "market") {
+							setPositionCalc((prev) => ({
+								...prev,
+								entryPrice: lastTrade.px,
+							}));
+							debouncedSavePositionCalc();
+						}
 					}
 				}
 			} catch {
@@ -302,6 +353,7 @@ function ProfileContent() {
 		} else {
 			disconnectWebSocket();
 		}
+		debouncedSavePositionCalc();
 	};
 
 	// Connect WebSocket on mount if market order
@@ -318,6 +370,7 @@ function ProfileContent() {
 
 	const updateCalc = (field: string, value: string) => {
 		setPositionCalc((prev) => ({ ...prev, [field]: value }));
+		debouncedSavePositionCalc();
 	};
 
 	const positionCalcResults = createMemo(() => {
@@ -351,21 +404,27 @@ function ProfileContent() {
 			return pnl;
 		};
 
-		for (const order of calc.stopLossOrders) {
-			const slPrice = parseFloat(order.price) || 0;
-			if (slPrice > 0) {
-				const pnl = calcPnL(slPrice, order.positionPercent);
-				totalStopLossUSDC += pnl;
-			}
-		}
+		const stopLossOrdersWithPnl = calc.stopLossOrders
+			.map((order) => {
+				const slPrice = parseFloat(order.price) || 0;
+				const pnl = slPrice > 0 ? calcPnL(slPrice, order.positionPercent) : 0;
+				if (slPrice > 0) {
+					totalStopLossUSDC += pnl;
+				}
+				return { ...order, pnl };
+			})
+			.filter((o) => parseFloat(o.price) > 0);
 
-		for (const order of calc.takeProfitOrders) {
-			const tpPrice = parseFloat(order.price) || 0;
-			if (tpPrice > 0) {
-				const pnl = calcPnL(tpPrice, order.positionPercent);
-				totalTakeProfitUSDC += pnl;
-			}
-		}
+		const takeProfitOrdersWithPnl = calc.takeProfitOrders
+			.map((order) => {
+				const tpPrice = parseFloat(order.price) || 0;
+				const pnl = tpPrice > 0 ? calcPnL(tpPrice, order.positionPercent) : 0;
+				if (tpPrice > 0) {
+					totalTakeProfitUSDC += pnl;
+				}
+				return { ...order, pnl };
+			})
+			.filter((o) => parseFloat(o.price) > 0);
 
 		// Risk = (stop loss amount + fees) / balance
 		// If no stop loss set, use margin + fees instead
@@ -386,8 +445,8 @@ function ProfileContent() {
 			riskPercent,
 			stopLossUSDC: totalStopLossUSDC,
 			takeProfitUSDC: totalTakeProfitUSDC,
-			stopLossOrders: calc.stopLossOrders,
-			takeProfitOrders: calc.takeProfitOrders,
+			stopLossOrders: stopLossOrdersWithPnl,
+			takeProfitOrders: takeProfitOrdersWithPnl,
 		};
 	});
 
@@ -809,60 +868,74 @@ function ProfileContent() {
 							</div>
 							<div class="space-y-2">
 								<Index each={positionCalc().stopLossOrders}>
-									{(order) => (
-										<div class="flex items-center gap-2">
-											<select
-												value={order().orderType}
-												onChange={(e) =>
-													updateSLOrder(
-														order().id,
-														"orderType",
-														e.currentTarget.value,
-													)
-												}
-												class="bg-black border border-white/10 rounded px-2 py-1 text-white text-xs"
-											>
-												<option value="market">市价</option>
-												<option value="limit">限价</option>
-											</select>
-											<input
-												type="number"
-												step="any"
-												placeholder="价格"
-												value={order().price}
-												onInput={(e) =>
-													updateSLOrder(
-														order().id,
-														"price",
-														e.currentTarget.value,
-													)
-												}
-												class="flex-1 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
-											/>
-											<input
-												type="number"
-												step="any"
-												placeholder="仓位%"
-												value={order().positionPercent}
-												onInput={(e) =>
-													updateSLOrder(
-														order().id,
-														"positionPercent",
-														parseFloat(e.currentTarget.value) || 0,
-													)
-												}
-												class="w-16 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
-											/>
-											<span class="text-xs text-slate-500">%</span>
-											<button
-												type="button"
-												onClick={() => removeSLOrder(order().id)}
-												class="text-rose-500 hover:text-rose-400"
-											>
-												✕
-											</button>
-										</div>
-									)}
+									{(order) => {
+										const results = positionCalcResults();
+										const orderPnl = results?.stopLossOrders.find(
+											(o) => o.id === order().id,
+										)?.pnl;
+										return (
+											<div class="flex items-center gap-2">
+												<select
+													value={order().orderType}
+													onChange={(e) =>
+														updateSLOrder(
+															order().id,
+															"orderType",
+															e.currentTarget.value,
+														)
+													}
+													class="bg-black border border-white/10 rounded px-2 py-1 text-white text-xs"
+												>
+													<option value="market">市价</option>
+													<option value="limit">限价</option>
+												</select>
+												<input
+													type="number"
+													step="any"
+													placeholder="价格"
+													value={order().price}
+													onInput={(e) =>
+														updateSLOrder(
+															order().id,
+															"price",
+															e.currentTarget.value,
+														)
+													}
+													class="flex-1 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+												/>
+												<input
+													type="number"
+													step="any"
+													placeholder="仓位%"
+													value={order().positionPercent}
+													onInput={(e) =>
+														updateSLOrder(
+															order().id,
+															"positionPercent",
+															parseFloat(e.currentTarget.value) || 0,
+														)
+													}
+													class="w-16 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+												/>
+												<span class="text-xs text-slate-500">%</span>
+												{orderPnl !== undefined && (
+													<span
+														class={`text-xs font-mono min-w-[60px] text-right ${orderPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+													>
+														{orderPnl >= 0 ? "+" : ""}
+														{orderPnl.toFixed(2)}
+													</span>
+												)}
+												<button
+													type="button"
+													onClick={() => removeSLOrder(order().id)}
+													class="text-rose-500 hover:text-rose-400"
+												>
+													✕
+												</button>
+											</div>
+										);
+									}}
 								</Index>
 								{positionCalc().stopLossOrders.length === 0 && (
 									<div class="text-xs text-slate-600 italic">
@@ -886,60 +959,74 @@ function ProfileContent() {
 							</div>
 							<div class="space-y-2">
 								<Index each={positionCalc().takeProfitOrders}>
-									{(order) => (
-										<div class="flex items-center gap-2">
-											<select
-												value={order().orderType}
-												onChange={(e) =>
-													updateTPOrder(
-														order().id,
-														"orderType",
-														e.currentTarget.value,
-													)
-												}
-												class="bg-black border border-white/10 rounded px-2 py-1 text-white text-xs"
-											>
-												<option value="market">市价</option>
-												<option value="limit">限价</option>
-											</select>
-											<input
-												type="number"
-												step="any"
-												placeholder="价格"
-												value={order().price}
-												onInput={(e) =>
-													updateTPOrder(
-														order().id,
-														"price",
-														e.currentTarget.value,
-													)
-												}
-												class="flex-1 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
-											/>
-											<input
-												type="number"
-												step="any"
-												placeholder="仓位%"
-												value={order().positionPercent}
-												onInput={(e) =>
-													updateTPOrder(
-														order().id,
-														"positionPercent",
-														parseFloat(e.currentTarget.value) || 0,
-													)
-												}
-												class="w-16 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
-											/>
-											<span class="text-xs text-slate-500">%</span>
-											<button
-												type="button"
-												onClick={() => removeTPOrder(order().id)}
-												class="text-rose-500 hover:text-rose-400"
-											>
-												✕
-											</button>
-										</div>
-									)}
+									{(order) => {
+										const results = positionCalcResults();
+										const orderPnl = results?.takeProfitOrders.find(
+											(o) => o.id === order().id,
+										)?.pnl;
+										return (
+											<div class="flex items-center gap-2">
+												<select
+													value={order().orderType}
+													onChange={(e) =>
+														updateTPOrder(
+															order().id,
+															"orderType",
+															e.currentTarget.value,
+														)
+													}
+													class="bg-black border border-white/10 rounded px-2 py-1 text-white text-xs"
+												>
+													<option value="market">市价</option>
+													<option value="limit">限价</option>
+												</select>
+												<input
+													type="number"
+													step="any"
+													placeholder="价格"
+													value={order().price}
+													onInput={(e) =>
+														updateTPOrder(
+															order().id,
+															"price",
+															e.currentTarget.value,
+														)
+													}
+													class="flex-1 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+												/>
+												<input
+													type="number"
+													step="any"
+													placeholder="仓位%"
+													value={order().positionPercent}
+													onInput={(e) =>
+														updateTPOrder(
+															order().id,
+															"positionPercent",
+															parseFloat(e.currentTarget.value) || 0,
+														)
+													}
+													class="w-16 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs font-mono"
+												/>
+												<span class="text-xs text-slate-500">%</span>
+												{orderPnl !== undefined && (
+													<span
+														class={`text-xs font-mono min-w-[60px] text-right ${orderPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+													>
+														{orderPnl >= 0 ? "+" : ""}
+														{orderPnl.toFixed(2)}
+													</span>
+												)}
+												<button
+													type="button"
+													onClick={() => removeTPOrder(order().id)}
+													class="text-rose-500 hover:text-rose-400"
+												>
+													✕
+												</button>
+											</div>
+										);
+									}}
 								</Index>
 								{positionCalc().takeProfitOrders.length === 0 && (
 									<div class="text-xs text-slate-600 italic">
