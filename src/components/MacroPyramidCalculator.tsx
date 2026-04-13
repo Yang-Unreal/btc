@@ -52,7 +52,7 @@ export default function MacroPyramidCalculator() {
 			const res = await fetch("/api/pyramid");
 			if (res.ok) {
 				const data = await res.json();
-				if (data && data.entries && data.entries.length > 0) {
+				if (data?.entries && data.entries.length > 0) {
 					const loadedEntries = data.entries.map(
 						(e: { price: number; size: number }, idx: number) => ({
 							id: idx + 1,

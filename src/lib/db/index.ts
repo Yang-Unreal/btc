@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import { eq } from "drizzle-orm";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
@@ -9,12 +10,18 @@ config();
 const metaEnv = import.meta as { env?: { DATABASE_URL?: string } };
 const databaseUrl = process.env.DATABASE_URL || metaEnv.env?.DATABASE_URL;
 
-let dbInstance;
+let dbInstance: PostgresJsDatabase<typeof schema> | undefined;
 if (databaseUrl) {
 	dbInstance = drizzle(postgres(databaseUrl), { schema });
 }
 
-export const db = dbInstance;
+export const db = dbInstance as PostgresJsDatabase<typeof schema>;
+
+export function assertDb(): void {
+	if (!dbInstance) {
+		throw new Error("Database not configured");
+	}
+}
 
 export async function savePyramidPositions(data: {
 	entries: Array<{ price: number; size: number }>;
@@ -94,13 +101,13 @@ export async function savePositionCalculator(data: {
 		id: string;
 		price: string;
 		orderType: string;
-		positionPercent: number;
+		positionSize: string;
 	}>;
 	stopLossOrders: Array<{
 		id: string;
 		price: string;
 		orderType: string;
-		positionPercent: number;
+		positionSize: string;
 	}>;
 }) {
 	if (!db) return null;

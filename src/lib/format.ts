@@ -53,7 +53,7 @@ export function formatCryptoPrice(price: number, currency = "USD"): string {
 	const subscriptCount = zerosCount
 		.toString()
 		.split("")
-		.map((d) => SUBSCRIPTS[Number.parseInt(d)])
+		.map((d) => SUBSCRIPTS[Number.parseInt(d, 10)])
 		.join("");
 
 	return `${symbol}0.0${subscriptCount}${displayDigits}`;

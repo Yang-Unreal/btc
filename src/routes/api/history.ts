@@ -47,7 +47,12 @@ async function fetchHLCandles(
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
 			type: "candleSnapshot",
-			req: { coin, interval: hlInterval, startTime: startTimeMs, endTime: endTimeMs },
+			req: {
+				coin,
+				interval: hlInterval,
+				startTime: startTimeMs,
+				endTime: endTimeMs,
+			},
 		}),
 	});
 
@@ -80,13 +85,20 @@ export async function GET({ request }: APIEvent) {
 	try {
 		if (toParam) {
 			// Pagination mode: fetch one page (~200 candles) ending at toParam
-			const endTimeMs = parseInt(toParam);
+			const endTimeMs = parseInt(toParam, 10);
 			const intervalMs = intervalToMs(hlInterval);
 			const startTimeMs = endTimeMs - intervalMs * 1000;
 
-			const pageData = await fetchHLCandles(symbol, hlInterval, startTimeMs, endTimeMs);
+			const pageData = await fetchHLCandles(
+				symbol,
+				hlInterval,
+				startTimeMs,
+				endTimeMs,
+			);
 			// Exclude the candle at exactly endTime (it's the boundary from the previous fetch)
-			const filtered = pageData.filter((d) => d[0] < Math.floor(endTimeMs / 1000));
+			const filtered = pageData.filter(
+				(d) => d[0] < Math.floor(endTimeMs / 1000),
+			);
 
 			apiCache.set(cacheKey, filtered, CACHE_DURATIONS.HISTORICAL_DATA);
 			return json(filtered);
@@ -97,7 +109,12 @@ export async function GET({ request }: APIEvent) {
 		const intervalMs = intervalToMs(hlInterval);
 		const startTimeMs = now - intervalMs * 3000;
 
-		const mappedData = await fetchHLCandles(symbol, hlInterval, startTimeMs, now);
+		const mappedData = await fetchHLCandles(
+			symbol,
+			hlInterval,
+			startTimeMs,
+			now,
+		);
 
 		// If fewer than 2000, try to supplement with older data
 		if (mappedData.length > 0 && mappedData.length < 2000) {
@@ -110,7 +127,12 @@ export async function GET({ request }: APIEvent) {
 
 			for (let page = 0; page < pagesNeeded; page++) {
 				const pageStartMs = cursor - intervalMs * 1000;
-				const pageData = await fetchHLCandles(symbol, hlInterval, pageStartMs, cursor);
+				const pageData = await fetchHLCandles(
+					symbol,
+					hlInterval,
+					pageStartMs,
+					cursor,
+				);
 				if (pageData.length === 0) break;
 				olderData = [...pageData, ...olderData];
 				cursor = pageData[0][0] * 1000;

@@ -90,10 +90,10 @@ export async function POST({ request }: { request: Request }) {
 				? "true"
 				: "false";
 		}
-		if (accountBalance && !isNaN(Number(accountBalance))) {
+		if (accountBalance && !Number.isNaN(Number(accountBalance))) {
 			updateData.accountBalance = String(accountBalance);
 		}
-		if (leverage && !isNaN(Number(leverage))) {
+		if (leverage && !Number.isNaN(Number(leverage))) {
 			updateData.leverage = String(leverage);
 		}
 

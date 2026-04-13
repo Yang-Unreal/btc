@@ -185,7 +185,10 @@ export const calculateMACD = (
 		macd.push(fastEMA[i] - slowEMA[i]);
 	}
 
-	const signalLine = calculateEMA(macd.filter((v) => !Number.isNaN(v)), signal);
+	const signalLine = calculateEMA(
+		macd.filter((v) => !Number.isNaN(v)),
+		signal,
+	);
 	const signalResult: number[] = Array(data.length - signalLine.length).fill(
 		NaN,
 	);
@@ -274,7 +277,10 @@ export const calculateADX = (
 		dx.push(diSum === 0 ? 0 : (diDiff / diSum) * 100);
 	}
 
-	const adx = smooth(dx.filter((v) => !Number.isNaN(v)), period);
+	const adx = smooth(
+		dx.filter((v) => !Number.isNaN(v)),
+		period,
+	);
 	const adxResult: number[] = Array(data.length - adx.length).fill(NaN);
 	adxResult.push(...adx);
 
@@ -282,7 +288,13 @@ export const calculateADX = (
 };
 
 export const calculateVWAP = (
-	data: { time: number; high: number; low: number; close: number; volume: number }[],
+	data: {
+		time: number;
+		high: number;
+		low: number;
+		close: number;
+		volume: number;
+	}[],
 ): number[] => {
 	let cumulativeTPV = 0;
 	let cumulativeVolume = 0;

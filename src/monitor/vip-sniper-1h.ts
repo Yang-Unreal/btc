@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
-import { db } from "../lib/db";
+import { assertDb, db } from "../lib/db";
 import { userSettings } from "../lib/db/schema";
+
+assertDb();
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
@@ -369,9 +371,12 @@ async function checkVIPSniper(): Promise<void> {
 	const price = data[lastIdx].close;
 
 	if (triggerBuy && bullPct > 60) {
-		const timeStr = new Date(data[lastIdx].time * 1000).toLocaleString("zh-CN", {
-			timeZone: "Asia/Shanghai",
-		});
+		const timeStr = new Date(data[lastIdx].time * 1000).toLocaleString(
+			"zh-CN",
+			{
+				timeZone: "Asia/Shanghai",
+			},
+		);
 		lastSignalState = 1;
 		lastAlertTime = now;
 		const message = `🟢 <b>VIP Sniper 买入信号</b>
@@ -385,9 +390,12 @@ async function checkVIPSniper(): Promise<void> {
 	}
 
 	if (triggerSell && bearPct > 60) {
-		const timeStr = new Date(data[lastIdx].time * 1000).toLocaleString("zh-CN", {
-			timeZone: "Asia/Shanghai",
-		});
+		const timeStr = new Date(data[lastIdx].time * 1000).toLocaleString(
+			"zh-CN",
+			{
+				timeZone: "Asia/Shanghai",
+			},
+		);
 		lastSignalState = -1;
 		lastAlertTime = now;
 		const message = `🔴 <b>VIP Sniper 卖出信号</b>

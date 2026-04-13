@@ -1,228 +1,226 @@
 {
-  "id": "79e849cf-134a-46d2-ab9c-5133deebe484",
-  "prevId": "f0ad1244-22c5-411f-b747-00fa1228972d",
-  "version": "7",
-  "dialect": "postgresql",
-  "tables": {
-    "public.favorites": {
-      "name": "favorites",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "symbol": {
-          "name": "symbol",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "favorites_symbol_unique": {
-          "name": "favorites_symbol_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "symbol"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.open_interest_history": {
-      "name": "open_interest_history",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "timestamp": {
-          "name": "timestamp",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "oi_btc": {
-          "name": "oi_btc",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.price_alerts": {
-      "name": "price_alerts",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "symbol": {
-          "name": "symbol",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'BTC'"
-        },
-        "target_price": {
-          "name": "target_price",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "direction": {
-          "name": "direction",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'CROSSING'"
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'true'"
-        },
-        "triggered": {
-          "name": "triggered",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'false'"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_settings": {
-      "name": "user_settings",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "'default'"
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'USD'"
-        },
-        "interval": {
-          "name": "interval",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'1h'"
-        },
-        "indicators": {
-          "name": "indicators",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "indicator_heights": {
-          "name": "indicator_heights",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "notifications_enabled": {
-          "name": "notifications_enabled",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'true'"
-        },
-        "four_h_alert_enabled": {
-          "name": "four_h_alert_enabled",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'false'"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    }
-  },
-  "enums": {},
-  "schemas": {},
-  "sequences": {},
-  "roles": {},
-  "policies": {},
-  "views": {},
-  "_meta": {
-    "columns": {},
-    "schemas": {},
-    "tables": {}
-  }
+	"id": "79e849cf-134a-46d2-ab9c-5133deebe484",
+	"prevId": "f0ad1244-22c5-411f-b747-00fa1228972d",
+	"version": "7",
+	"dialect": "postgresql",
+	"tables": {
+		"public.favorites": {
+			"name": "favorites",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"symbol": {
+					"name": "symbol",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"favorites_symbol_unique": {
+					"name": "favorites_symbol_unique",
+					"nullsNotDistinct": false,
+					"columns": ["symbol"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.open_interest_history": {
+			"name": "open_interest_history",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"timestamp": {
+					"name": "timestamp",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"oi_btc": {
+					"name": "oi_btc",
+					"type": "numeric",
+					"primaryKey": false,
+					"notNull": true
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.price_alerts": {
+			"name": "price_alerts",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"symbol": {
+					"name": "symbol",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'BTC'"
+				},
+				"target_price": {
+					"name": "target_price",
+					"type": "numeric",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"direction": {
+					"name": "direction",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'CROSSING'"
+				},
+				"enabled": {
+					"name": "enabled",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'true'"
+				},
+				"triggered": {
+					"name": "triggered",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'false'"
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.user_settings": {
+			"name": "user_settings",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "'default'"
+				},
+				"currency": {
+					"name": "currency",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'USD'"
+				},
+				"interval": {
+					"name": "interval",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'1h'"
+				},
+				"indicators": {
+					"name": "indicators",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"indicator_heights": {
+					"name": "indicator_heights",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"notifications_enabled": {
+					"name": "notifications_enabled",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'true'"
+				},
+				"four_h_alert_enabled": {
+					"name": "four_h_alert_enabled",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'false'"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		}
+	},
+	"enums": {},
+	"schemas": {},
+	"sequences": {},
+	"roles": {},
+	"policies": {},
+	"views": {},
+	"_meta": {
+		"columns": {},
+		"schemas": {},
+		"tables": {}
+	}
 }

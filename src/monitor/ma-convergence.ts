@@ -1,6 +1,8 @@
 import { and, eq } from "drizzle-orm";
-import { db } from "../lib/db";
+import { assertDb, db } from "../lib/db";
 import { priceAlerts, userSettings } from "../lib/db/schema";
+
+assertDb();
 
 /**
  * BTC 双均线密集监控脚本
@@ -129,7 +131,7 @@ async function fetchCandles(): Promise<number[][]> {
 
 	// data.data: [[time, open, high, low, close, volume, quoteVol], ...]
 	const candles = data.data.map((item: string[]) => [
-		parseInt(item[0]), // time
+		parseInt(item[0], 10), // time
 		parseFloat(item[1]), // open
 		parseFloat(item[2]), // high
 		parseFloat(item[3]), // low

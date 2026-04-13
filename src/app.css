@@ -3,8 +3,8 @@
 :root {
 	/* Palette */
 	/* Kraken Pro Palette */
-	--color-bg: #0b0a1a;          /* Deep Purple-Black */
-	--color-surface: #05051a;     /* Darker UI Panels */
+	--color-bg: #0b0a1a; /* Deep Purple-Black */
+	--color-surface: #05051a; /* Darker UI Panels */
 	--color-surface-elevated: #1c1b33;
 	--color-border: #25244a;
 	--color-border-strong: #3d3b66;
@@ -13,9 +13,9 @@
 	--color-text-dim: #6b6b8f;
 
 	/* Kraken Pro Brand Colors */
-	--color-accent: #882ff2;      /* Signature Purple */
-	--color-success: #00f3ab;     /* Kraken Green */
-	--color-danger: #f12d59;      /* Kraken Red */
+	--color-accent: #882ff2; /* Signature Purple */
+	--color-success: #00f3ab; /* Kraken Green */
+	--color-danger: #f12d59; /* Kraken Red */
 
 	--ease-productive: cubic-bezier(0.2, 0, 0.38, 0.9);
 	--ease-expressive: cubic-bezier(0.4, 0.14, 0.3, 1);

@@ -110,14 +110,14 @@ function ProfileContent() {
 		id: string;
 		price: string;
 		orderType: OrderType;
-		positionPercent: number; // 0-100
+		positionSize: string; // BTC数量
 	}
 
 	interface SLOrder {
 		id: string;
 		price: string;
 		orderType: OrderType;
-		positionPercent: number;
+		positionSize: string;
 	}
 
 	const [positionCalc, setPositionCalc] = createSignal<{
@@ -193,7 +193,7 @@ function ProfileContent() {
 					id: crypto.randomUUID(),
 					price: "",
 					orderType: "limit",
-					positionPercent: 100,
+					positionSize: "",
 				},
 			],
 		}));
@@ -209,7 +209,7 @@ function ProfileContent() {
 					id: crypto.randomUUID(),
 					price: "",
 					orderType: "limit",
-					positionPercent: 100,
+					positionSize: "",
 				},
 			],
 		}));
@@ -393,13 +393,12 @@ function ProfileContent() {
 		let totalStopLossUSDC = 0;
 		let totalTakeProfitUSDC = 0;
 
-		const calcPnL = (price: number, posPercent: number) => {
-			const size = positionSize * (posPercent / 100);
+		const calcPnL = (price: number, orderSize: number) => {
 			let pnl = 0;
 			if (isLong) {
-				pnl = (price - entryPrice) * size;
+				pnl = (price - entryPrice) * orderSize;
 			} else {
-				pnl = (entryPrice - price) * size;
+				pnl = (entryPrice - price) * orderSize;
 			}
 			return pnl;
 		};
@@ -407,7 +406,10 @@ function ProfileContent() {
 		const stopLossOrdersWithPnl = calc.stopLossOrders
 			.map((order) => {
 				const slPrice = parseFloat(order.price) || 0;
-				const pnl = slPrice > 0 ? calcPnL(slPrice, order.positionPercent) : 0;
+				const pnl =
+					slPrice > 0
+						? calcPnL(slPrice, parseFloat(order.positionSize) || 0)
+						: 0;
 				if (slPrice > 0) {
 					totalStopLossUSDC += pnl;
 				}
@@ -418,7 +420,10 @@ function ProfileContent() {
 		const takeProfitOrdersWithPnl = calc.takeProfitOrders
 			.map((order) => {
 				const tpPrice = parseFloat(order.price) || 0;
-				const pnl = tpPrice > 0 ? calcPnL(tpPrice, order.positionPercent) : 0;
+				const pnl =
+					tpPrice > 0
+						? calcPnL(tpPrice, parseFloat(order.positionSize) || 0)
+						: 0;
 				if (tpPrice > 0) {
 					totalTakeProfitUSDC += pnl;
 				}
@@ -878,6 +883,27 @@ function ProfileContent() {
 										const orderPnl = results?.stopLossOrders.find(
 											(o) => o.id === order().id,
 										)?.pnl;
+										const displayPnl =
+											orderPnl !== undefined && orderPnl !== null
+												? orderPnl
+												: (() => {
+														const price = parseFloat(order().price) || 0;
+														const btcSize =
+															parseFloat(order().positionSize) || 0;
+														const currentPrice = positionCalc().entryPrice;
+														const isLong = positionCalc().direction === "long";
+														if (
+															!currentPrice ||
+															price <= 0 ||
+															Number(btcSize) <= 0
+														)
+															return undefined;
+														return isLong
+															? (price - parseFloat(currentPrice)) *
+																	Number(btcSize)
+															: (parseFloat(currentPrice) - price) *
+																	Number(btcSize);
+													})();
 										return (
 											<div class="flex flex-wrap items-center gap-1.5 sm:gap-2 p-2 bg-black/30 rounded-lg">
 												<select
@@ -909,26 +935,27 @@ function ProfileContent() {
 													class="flex-1 min-w-[80px] bg-black border border-white/10 rounded px-2 py-1.5 text-white text-xs font-mono"
 												/>
 												<input
-													type="number"
+													type="text"
+													inputmode="decimal"
 													step="any"
-													placeholder="%"
-													value={order().positionPercent}
+													placeholder="BTC"
+													value={order().positionSize}
 													onInput={(e) =>
 														updateSLOrder(
 															order().id,
-															"positionPercent",
-															parseFloat(e.currentTarget.value) || 0,
+															"positionSize",
+															e.currentTarget.value,
 														)
 													}
 													class="w-14 sm:w-16 bg-black border border-white/10 rounded px-2 py-1.5 text-white text-xs font-mono"
 												/>
-												<span class="text-[10px] text-slate-500">%</span>
-												{orderPnl !== undefined && (
+												<span class="text-[10px] text-slate-500">BTC</span>
+												{displayPnl !== undefined && (
 													<span
-														class={`text-xs font-mono min-w-[55px] sm:min-w-[60px] text-right ${orderPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+														class={`text-xs font-mono min-w-[55px] sm:min-w-[60px] text-right ${displayPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}
 													>
-														{orderPnl >= 0 ? "+" : ""}
-														{orderPnl.toFixed(1)}
+														{displayPnl >= 0 ? "+" : ""}
+														{displayPnl.toFixed(1)}
 													</span>
 												)}
 												<button
@@ -971,6 +998,26 @@ function ProfileContent() {
 										const orderPnl = results?.takeProfitOrders.find(
 											(o) => o.id === order().id,
 										)?.pnl;
+										const displayPnl =
+											orderPnl !== undefined && orderPnl !== null
+												? orderPnl
+												: (() => {
+														const price = parseFloat(order().price) || 0;
+														const btcSize = order().positionSize || 0;
+														const currentPrice = positionCalc().entryPrice;
+														const isLong = positionCalc().direction === "long";
+														if (
+															!currentPrice ||
+															price <= 0 ||
+															Number(btcSize) <= 0
+														)
+															return undefined;
+														return isLong
+															? (price - parseFloat(currentPrice)) *
+																	Number(btcSize)
+															: (parseFloat(currentPrice) - price) *
+																	Number(btcSize);
+													})();
 										return (
 											<div class="flex flex-wrap items-center gap-1.5 sm:gap-2 p-2 bg-black/30 rounded-lg">
 												<select
@@ -1002,26 +1049,27 @@ function ProfileContent() {
 													class="flex-1 min-w-[80px] bg-black border border-white/10 rounded px-2 py-1.5 text-white text-xs font-mono"
 												/>
 												<input
-													type="number"
+													type="text"
+													inputmode="decimal"
 													step="any"
-													placeholder="%"
-													value={order().positionPercent}
+													placeholder="BTC"
+													value={order().positionSize}
 													onInput={(e) =>
 														updateTPOrder(
 															order().id,
-															"positionPercent",
-															parseFloat(e.currentTarget.value) || 0,
+															"positionSize",
+															e.currentTarget.value,
 														)
 													}
 													class="w-14 sm:w-16 bg-black border border-white/10 rounded px-2 py-1.5 text-white text-xs font-mono"
 												/>
-												<span class="text-[10px] text-slate-500">%</span>
-												{orderPnl !== undefined && (
+												<span class="text-[10px] text-slate-500">BTC</span>
+												{displayPnl !== undefined && (
 													<span
-														class={`text-xs font-mono min-w-[55px] sm:min-w-[60px] text-right ${orderPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+														class={`text-xs font-mono min-w-[55px] sm:min-w-[60px] text-right ${displayPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}
 													>
-														{orderPnl >= 0 ? "+" : ""}
-														{orderPnl.toFixed(1)}
+														{displayPnl >= 0 ? "+" : ""}
+														{displayPnl.toFixed(1)}
 													</span>
 												)}
 												<button
@@ -1107,8 +1155,7 @@ function ProfileContent() {
 												<div class="text-[9px] sm:text-xs text-rose-500 truncate px-1">
 													{positionCalcResults()
 														?.stopLossOrders.map(
-															(o) =>
-																`${o.price || "-"} (${o.positionPercent}%)`,
+															(o) => `${o.price || "-"} (${o.positionSize}BTC)`,
 														)
 														.join(", ")}
 												</div>
@@ -1131,8 +1178,7 @@ function ProfileContent() {
 												<div class="text-[9px] sm:text-xs text-emerald-500 truncate px-1">
 													{positionCalcResults()
 														?.takeProfitOrders.map(
-															(o) =>
-																`${o.price || "-"} (${o.positionPercent}%)`,
+															(o) => `${o.price || "-"} (${o.positionSize}BTC)`,
 														)
 														.join(", ")}
 												</div>

@@ -198,8 +198,6 @@ const IconChevronDown = () => (
 	</svg>
 );
 
-
-
 export default function BTCChart() {
 	let chartContainer: HTMLDivElement | undefined;
 	let chart: IChartApi | undefined;
@@ -468,8 +466,6 @@ export default function BTCChart() {
 			borderColor: "border-cyan-400",
 		},
 	];
-
-
 
 	const calculateTDMarkers = (data: BTCData[]) => {
 		if (!indicators().tdSeq || data.length < 5) {
@@ -1899,8 +1895,6 @@ export default function BTCChart() {
 		const intervalId = window.setInterval(fetch5m, 10000); // refresh every 10s
 		onCleanup(() => window.clearInterval(intervalId));
 	});
-
-
 
 	onMount(() => {
 		if (!chartContainer) return;

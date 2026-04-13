@@ -1,7 +1,9 @@
 import { Title } from "@solidjs/meta";
 import { clientOnly } from "@solidjs/start";
 import AssetTable from "~/components/AssetTable";
+
 const BTCChart = clientOnly(() => import("~/components/BTCChart"));
+
 import MacroPyramidCalculator from "~/components/MacroPyramidCalculator";
 
 export default function Home() {
@@ -31,7 +33,6 @@ export default function Home() {
 						<AssetTable />
 					</div>
 				</section>
-
 			</div>
 		</div>
 	);

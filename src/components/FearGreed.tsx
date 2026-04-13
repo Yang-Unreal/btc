@@ -82,7 +82,7 @@ export default function FearGreed() {
 	// SVG Gauge Logic
 	const radius = 80;
 	const stroke = 12;
-	const normalizedValue = () => parseInt(data()?.value || "50");
+	const normalizedValue = () => parseInt(data()?.value || "50", 10);
 	const circumference = Math.PI * radius; // Half circle
 	const strokeDashoffset = () =>
 		circumference - (normalizedValue() / 100) * circumference;

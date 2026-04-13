@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
-import { db } from "../lib/db";
+import { assertDb, db } from "../lib/db";
 import { userSettings } from "../lib/db/schema";
+
+assertDb();
 
 /**
  * BTC 4H 均线绝对纠缠监控脚本
@@ -107,7 +109,7 @@ async function fetchCandles(): Promise<number[][]> {
 	}
 
 	const candles = data.data.map((item: string[]) => [
-		parseInt(item[0]), // time
+		parseInt(item[0], 10), // time
 		parseFloat(item[1]), // open
 		parseFloat(item[2]), // high
 		parseFloat(item[3]), // low
