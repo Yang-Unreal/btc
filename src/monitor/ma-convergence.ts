@@ -185,6 +185,7 @@ async function sendTelegramMessage(message: string): Promise<void> {
 // ============================================================
 
 let lastAlertTime = 0;
+let previousPrice = 0;
 
 async function checkPriceAlerts(currentPrice: number): Promise<void> {
 	const now = new Date();
@@ -205,15 +206,16 @@ async function checkPriceAlerts(currentPrice: number): Promise<void> {
 		for (const alert of alerts) {
 			const target = Number(alert.targetPrice);
 
-			// Simple "equals or crossed" logic
-			// Since we check every minute, we check if price is "very close" or crossed
-			// But to be simple and reliable: if it was below and now above, or vice versa
-			// For this implementation, we'll just check if it's within a tiny margin (0.1%) or crossed
-			// Actually, let's keep it simple: if currentPrice is within $50 of target, trigger.
-			// Better: if it's the first time we see it hit the target.
+			// Check for crossing: price crossed target from either direction
+			const crossedUp =
+				previousPrice > 0 && previousPrice < target && currentPrice >= target;
+			const crossedDown =
+				previousPrice > 0 && previousPrice > target && currentPrice <= target;
 
-			const margin = 50; // $50 tolerance for 1-minute checks
-			if (Math.abs(currentPrice - target) <= margin) {
+			// Also trigger if currently within $50 of target (for when alert was created after crossing)
+			const withinMargin = Math.abs(currentPrice - target) <= 50;
+
+			if (crossedUp || crossedDown || withinMargin) {
 				// TRIGGER!
 				await sendTelegramMessage(
 					[
@@ -236,6 +238,9 @@ async function checkPriceAlerts(currentPrice: number): Promise<void> {
 				console.log(`[${timeStr}] 🔔 价格提醒触发: $${target}`);
 			}
 		}
+
+		// Update previous price for next cycle
+		previousPrice = currentPrice;
 	} catch (e) {
 		console.error("Failed to check price alerts:", e);
 	}
