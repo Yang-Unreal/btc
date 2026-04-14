@@ -7,7 +7,8 @@
 		"start": "vinxi start",
 		"version": "vinxi version",
 		"db:push": "drizzle-kit push",
-		"monitor:ma": "bun run src/monitor/ma-convergence.ts"
+		"monitor:ma": "bun run src/monitor/ma-convergence.ts",
+		"monitor:4h": "bun run src/monitor/4h-entanglement.ts"
 	},
 	"dependencies": {
 		"@solidjs/meta": "^0.29.4",

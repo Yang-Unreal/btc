@@ -84,6 +84,29 @@ function calculateATR(
 }
 
 // ============================================================
+// Hyperliquid API for real-time price
+// ============================================================
+
+async function fetchHyperliquidPrice(): Promise<number> {
+	const HL_API = "https://api.hyperliquid.xyz/info";
+	try {
+		const response = await fetch(HL_API, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ type: "allMids" }),
+		});
+		if (!response.ok) return NaN;
+		const data = await response.json();
+		if (data?.BTC) {
+			return parseFloat(data.BTC);
+		}
+		return NaN;
+	} catch {
+		return NaN;
+	}
+}
+
+// ============================================================
 // Bitget API
 // ============================================================
 
@@ -162,13 +185,18 @@ async function runMonitorCycle() {
 			return;
 		}
 
+		// Get real-time price from Hyperliquid
+		const hlPrice = await fetchHyperliquidPrice();
+		const hasRealTimePrice = !Number.isNaN(hlPrice);
+
 		const candles = await fetchCandles();
 		if (candles.length < 120) return;
 
 		const highs = candles.map((c) => c[2]);
 		const lows = candles.map((c) => c[3]);
 		const closes = candles.map((c) => c[4]);
-		const currentPrice = closes[closes.length - 1];
+		// Use Hyperliquid real-time price if available, otherwise fall back to candle close
+		const currentPrice = hasRealTimePrice ? hlPrice : closes[closes.length - 1];
 
 		const sma20 = calculateSMA(closes, 20);
 		const ema20 = calculateEMA(closes, 20);

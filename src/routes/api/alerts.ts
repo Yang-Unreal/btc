@@ -30,9 +30,20 @@ export async function POST({ request }: { request: Request }) {
 
 		if (type === "TOGGLE") {
 			if (!id) return json({ error: "ID required" }, { status: 400 });
+
+			// When enabling an alert, also reset triggered status so it can trigger again
+			const updateData = {
+				enabled: enabled ? "true" : "false",
+				updatedAt: new Date(),
+			};
+			if (enabled) {
+				// @ts-expect-error - adding triggered field conditionally
+				updateData.triggered = "false";
+			}
+
 			await db
 				.update(priceAlerts)
-				.set({ enabled: enabled ? "true" : "false", updatedAt: new Date() })
+				.set(updateData)
 				.where(eq(priceAlerts.id, id));
 			return json({ success: true });
 		}

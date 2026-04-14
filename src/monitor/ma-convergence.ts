@@ -105,7 +105,31 @@ function calculateATR(
 }
 
 // ============================================================
-// Bitget API
+// Hyperliquid API for real-time perpetual price
+// ============================================================
+
+async function fetchHyperliquidPrice(): Promise<number> {
+	const HL_API = "https://api.hyperliquid.xyz/info";
+	try {
+		const response = await fetch(HL_API, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ type: "allMids" }),
+		});
+		if (!response.ok) return NaN;
+		const data = await response.json();
+		// allMids returns { "BTC": "74277.5", ... } for perpetual contracts
+		if (data?.BTC) {
+			return parseFloat(data.BTC);
+		}
+		return NaN;
+	} catch {
+		return NaN;
+	}
+}
+
+// ============================================================
+// Bitget API (for historical candles)
 // ============================================================
 
 interface BitgetResponse {
@@ -248,6 +272,11 @@ async function checkPriceAlerts(currentPrice: number): Promise<void> {
 
 async function runMonitorCycle() {
 	try {
+		// Get real-time price from Hyperliquid for price alerts
+		const hlPrice = await fetchHyperliquidPrice();
+		const hasRealTimePrice = !Number.isNaN(hlPrice);
+
+		// Get candle data for MA convergence
 		const candles = await fetchCandles();
 		if (candles.length < 120) {
 			return;
@@ -256,13 +285,13 @@ async function runMonitorCycle() {
 		const highs = candles.map((c) => c[2]);
 		const lows = candles.map((c) => c[3]);
 		const closes = candles.map((c) => c[4]);
-		// Keep track of highs, lows, closes for ATR logic as well
-		const currentPrice = closes[closes.length - 1];
+		// Use Hyperliquid real-time price if available, otherwise fall back to candle close
+		const currentPrice = hasRealTimePrice ? hlPrice : closes[closes.length - 1];
 
-		// 1. Check MA Convergence
-		await processMAConvergence(highs, lows, closes, currentPrice);
+		// 1. Check MA Convergence (always uses candle data)
+		await processMAConvergence(highs, lows, closes, closes[closes.length - 1]);
 
-		// 2. Check Price Alerts
+		// 2. Check Price Alerts (uses real-time price)
 		await checkPriceAlerts(currentPrice);
 	} catch (e) {
 		const timeStr = new Date().toLocaleString("zh-CN", {
