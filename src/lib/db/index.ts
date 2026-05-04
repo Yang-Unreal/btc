@@ -31,6 +31,10 @@ export async function savePyramidPositions(data: {
 	totalSize: number;
 	avgPrice: number;
 	totalPnl: number;
+	showAveraging: boolean;
+	quickAdd: { price: number; size: number };
+	showBulk: boolean;
+	bulkInput: string;
 }) {
 	if (!db) return null;
 	try {
@@ -47,6 +51,10 @@ export async function savePyramidPositions(data: {
 					totalSize: data.totalSize.toString(),
 					avgPrice: data.avgPrice.toString(),
 					totalPnl: data.totalPnl.toString(),
+					showAveraging: data.showAveraging ? "true" : "false",
+					quickAdd: JSON.stringify(data.quickAdd),
+					showBulk: data.showBulk ? "true" : "false",
+					bulkInput: data.bulkInput,
 					updatedAt: new Date(),
 				})
 				.where(eq(schema.pyramidPositions.id, existing[0].id));
@@ -59,6 +67,10 @@ export async function savePyramidPositions(data: {
 				totalSize: data.totalSize.toString(),
 				avgPrice: data.avgPrice.toString(),
 				totalPnl: data.totalPnl.toString(),
+				showAveraging: data.showAveraging ? "true" : "false",
+				quickAdd: JSON.stringify(data.quickAdd),
+				showBulk: data.showBulk ? "true" : "false",
+				bulkInput: data.bulkInput,
 			});
 		}
 		return true;
@@ -82,6 +94,10 @@ export async function loadPyramidPositions() {
 			totalSize: parseFloat(row.totalSize),
 			avgPrice: parseFloat(row.avgPrice),
 			totalPnl: parseFloat(row.totalPnl),
+			showAveraging: row.showAveraging === "true",
+			quickAdd: row.quickAdd ? JSON.parse(row.quickAdd as string) : { price: 0, size: 0 },
+			showBulk: row.showBulk === "true",
+			bulkInput: row.bulkInput || "",
 		};
 	} catch (error) {
 		console.error("Failed to load pyramid positions:", error);
@@ -92,8 +108,6 @@ export async function loadPyramidPositions() {
 export async function savePositionCalculator(data: {
 	balance: string;
 	leverage: string;
-	positionSize: string;
-	entryPrice: string;
 	feeRate: string;
 	orderType: string;
 	direction: string;
@@ -109,6 +123,12 @@ export async function savePositionCalculator(data: {
 		orderType: string;
 		positionSize: string;
 	}>;
+	entries: Array<{
+		id: string;
+		price: string;
+		size: string;
+	}>;
+	showAveraging: boolean;
 }) {
 	if (!db) return null;
 	try {
@@ -117,19 +137,30 @@ export async function savePositionCalculator(data: {
 			.from(schema.positionCalculator)
 			.where(eq(schema.positionCalculator.id, "default"))
 			.limit(1);
+		// Calculate summary values for legacy columns
+		const totalSize = data.entries.reduce((sum, e) => sum + (parseFloat(e.size) || 0), 0);
+		const totalValue = data.entries.reduce((sum, e) => {
+			const p = parseFloat(e.price) || 0;
+			const s = parseFloat(e.size) || 0;
+			return sum + p * s;
+		}, 0);
+		const avgEntryPrice = totalSize > 0 ? (totalValue / totalSize).toString() : "0";
+
 		if (existing.length > 0) {
 			await db
 				.update(schema.positionCalculator)
 				.set({
 					balance: data.balance,
 					leverage: data.leverage,
-					positionSize: data.positionSize,
-					entryPrice: data.entryPrice || null,
+					positionSize: totalSize.toString(),
+					entryPrice: avgEntryPrice,
 					feeRate: data.feeRate,
 					orderType: data.orderType,
 					direction: data.direction,
 					takeProfitOrders: JSON.stringify(data.takeProfitOrders),
 					stopLossOrders: JSON.stringify(data.stopLossOrders),
+					entries: JSON.stringify(data.entries),
+					showAveraging: data.showAveraging ? "true" : "false",
 					updatedAt: new Date(),
 				})
 				.where(eq(schema.positionCalculator.id, "default"));
@@ -138,13 +169,15 @@ export async function savePositionCalculator(data: {
 				id: "default",
 				balance: data.balance,
 				leverage: data.leverage,
-				positionSize: data.positionSize,
-				entryPrice: data.entryPrice || null,
+				positionSize: totalSize.toString(),
+				entryPrice: avgEntryPrice,
 				feeRate: data.feeRate,
 				orderType: data.orderType,
 				direction: data.direction,
 				takeProfitOrders: JSON.stringify(data.takeProfitOrders),
 				stopLossOrders: JSON.stringify(data.stopLossOrders),
+				entries: JSON.stringify(data.entries),
+				showAveraging: data.showAveraging ? "true" : "false",
 			});
 		}
 		return true;
@@ -178,6 +211,8 @@ export async function loadPositionCalculator() {
 			stopLossOrders: row.stopLossOrders
 				? JSON.parse(row.stopLossOrders as string)
 				: [],
+			entries: row.entries ? JSON.parse(row.entries as string) : [],
+			showAveraging: row.showAveraging === "true",
 		};
 	} catch (error) {
 		console.error("Failed to load position calculator:", error);

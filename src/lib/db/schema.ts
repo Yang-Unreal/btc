@@ -52,6 +52,10 @@ export const pyramidPositions = pgTable("pyramid_positions", {
 	totalSize: numeric("total_size").notNull(),
 	avgPrice: numeric("avg_price").notNull(),
 	totalPnl: numeric("total_pnl").notNull(),
+	showAveraging: text("show_averaging").notNull().default("false"),
+	quickAdd: text("quick_add"), // JSON string of {price, size}
+	showBulk: text("show_bulk").notNull().default("false"),
+	bulkInput: text("bulk_input"),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -72,6 +76,8 @@ export const positionCalculator = pgTable("position_calculator", {
 	direction: text("direction").notNull().default("long"),
 	takeProfitOrders: text("take_profit_orders"), // JSON string
 	stopLossOrders: text("stop_loss_orders"), // JSON string
+	entries: text("entries"), // JSON string array of {id, price, size}
+	showAveraging: text("show_averaging").notNull().default("false"),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

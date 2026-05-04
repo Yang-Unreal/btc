@@ -21,6 +21,11 @@ export default function MacroPyramidCalculator() {
 	const [bulkInput, setBulkInput] = createSignal("");
 	const [isOpen, setIsOpen] = createSignal(false);
 	const [isLoaded, setIsLoaded] = createSignal(false);
+	const [showAveraging, setShowAveraging] = createSignal(false);
+	const [quickAdd, setQuickAdd] = createStore({
+		price: 0,
+		size: 0,
+	});
 
 	const saveToDb = async () => {
 		if (!isLoaded()) return;
@@ -36,6 +41,10 @@ export default function MacroPyramidCalculator() {
 					totalSize: totalSize(),
 					avgPrice: avgPrice(),
 					totalPnl: totalPnL(),
+					showAveraging: showAveraging(),
+					quickAdd: { price: quickAdd.price, size: quickAdd.size },
+					showBulk: showBulk(),
+					bulkInput: bulkInput(),
 				}),
 			});
 		} catch (e) {
@@ -43,8 +52,10 @@ export default function MacroPyramidCalculator() {
 		}
 	};
 
+	let saveTimeout: any;
 	const debouncedSave = () => {
-		setTimeout(saveToDb, 500);
+		clearTimeout(saveTimeout);
+		saveTimeout = setTimeout(saveToDb, 500);
 	};
 
 	onMount(async () => {
@@ -64,6 +75,10 @@ export default function MacroPyramidCalculator() {
 					setCurrentPrice(data.currentPrice);
 					setStopLoss(data.stopLoss);
 					setIsShort(data.isShort);
+					setShowAveraging(data.showAveraging || false);
+					if (data.quickAdd) setQuickAdd(data.quickAdd);
+					setShowBulk(data.showBulk || false);
+					setBulkInput(data.bulkInput || "");
 				}
 			}
 		} catch (e) {
@@ -160,6 +175,27 @@ export default function MacroPyramidCalculator() {
 		setShowBulk(false);
 		debouncedSave();
 	};
+
+	const commitQuickAdd = () => {
+		if (quickAdd.price <= 0 || quickAdd.size <= 0) return;
+		const newId =
+			entries.length > 0 ? Math.max(...entries.map((e) => e.id)) + 1 : 1;
+		setEntries(entries.length, {
+			id: newId,
+			price: quickAdd.price,
+			size: quickAdd.size,
+		});
+		setQuickAdd({ price: 0, size: 0 });
+		setShowAveraging(false);
+		debouncedSave();
+	};
+
+	const newAvgAfterAdd = createMemo(() => {
+		const currentVal = entries.reduce((sum, e) => sum + e.price * e.size, 0);
+		const addedVal = quickAdd.price * quickAdd.size;
+		const newSize = totalSize() + quickAdd.size;
+		return newSize > 0 ? (currentVal + addedVal) / newSize : 0;
+	});
 
 	return (
 		<>
@@ -342,7 +378,21 @@ export default function MacroPyramidCalculator() {
 							<div class="flex gap-3">
 								<button
 									type="button"
-									onClick={() => setShowBulk(!showBulk())}
+									onClick={() => {
+										setShowAveraging(!showAveraging());
+										setShowBulk(false);
+										if (quickAdd.price === 0) setQuickAdd("price", currentPrice());
+									}}
+									class={`text-[10px] font-bold transition-colors uppercase ${showAveraging() ? "text-indigo-400" : "text-zinc-500 hover:text-indigo-400"}`}
+								>
+									[ Averaging ]
+								</button>
+								<button
+									type="button"
+									onClick={() => {
+										setShowBulk(!showBulk());
+										setShowAveraging(false);
+									}}
 									class={`text-[10px] font-bold transition-colors uppercase ${showBulk() ? "text-indigo-400" : "text-zinc-500 hover:text-indigo-400"}`}
 								>
 									[ Bulk Mode ]
@@ -356,6 +406,59 @@ export default function MacroPyramidCalculator() {
 								</button>
 							</div>
 						</div>
+						
+						{showAveraging() && (
+							<div class="mb-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+								<div class="p-4 bg-indigo-500/5 rounded-xl border border-indigo-500/20 space-y-4">
+									<div class="flex items-center justify-between">
+										<span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Averaging Tool</span>
+										<span class="text-[9px] font-mono text-zinc-500 italic">Simulate addition</span>
+									</div>
+									
+									<div class="grid grid-cols-2 gap-4">
+										<div class="space-y-1.5">
+											<label class="text-[9px] font-mono text-zinc-500 uppercase">Add Price</label>
+											<input
+												type="number"
+												value={quickAdd.price}
+												onInput={(e) => setQuickAdd("price", Number(e.currentTarget.value))}
+												class="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 font-mono"
+											/>
+										</div>
+										<div class="space-y-1.5">
+											<label class="text-[9px] font-mono text-zinc-500 uppercase">Add Size</label>
+											<input
+												type="number"
+												step="0.01"
+												value={quickAdd.size}
+												onInput={(e) => setQuickAdd("size", Number(e.currentTarget.value))}
+												class="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 font-mono"
+											/>
+										</div>
+									</div>
+
+									<div class="pt-2 border-t border-white/5 flex flex-col gap-2">
+										<div class="flex justify-between items-center text-[10px] font-mono">
+											<span class="text-zinc-400">NEW AVG PRICE:</span>
+											<span class="text-indigo-400 font-bold">${newAvgAfterAdd().toFixed(2)}</span>
+										</div>
+										<div class="flex justify-between items-center text-[10px] font-mono">
+											<span class="text-zinc-400">PRICE SHIFT:</span>
+											<span class={newAvgAfterAdd() >= avgPrice() ? "text-emerald-400" : "text-rose-400"}>
+												{Math.abs(newAvgAfterAdd() - avgPrice()).toFixed(2)}U
+											</span>
+										</div>
+										<button
+											type="button"
+											onClick={commitQuickAdd}
+											class="w-full mt-2 py-2 rounded bg-indigo-600 text-white text-[10px] font-bold uppercase hover:bg-indigo-500 transition-colors shadow-lg active:scale-95"
+										>
+											Apply to Position
+										</button>
+									</div>
+								</div>
+							</div>
+						)}
 
 						{showBulk() && (
 							<div class="mb-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">

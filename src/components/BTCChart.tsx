@@ -175,6 +175,9 @@ export default function BTCChart() {
 	const [wsConnected, setWsConnected] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
 
+	// Volume tracking for aggregated intervals
+	let lastSubVols = new Map<number, number>();
+
 	const [interval, setInterval] = createSignal<Interval>("4h");
 
 	// NEW: Currency State
@@ -824,6 +827,13 @@ export default function BTCChart() {
 							volume: parseFloat(candle.v),
 						};
 
+						// Track sub-interval volume deltas to prevent double-counting on aggregated candles
+						const subTs = Math.floor(candle.t / 1000);
+						const prevSubVol = lastSubVols.get(subTs) || 0;
+						const currentSubVol = newData.volume || 0;
+						const subDelta = currentSubVol - prevSubVol;
+						lastSubVols.set(subTs, currentSubVol);
+
 						// For aggregated candles, we must merge with the existing candle if the timestamp matches
 						const isAggregated =
 							activeInterval === "1w" || activeInterval === "1M";
@@ -839,12 +849,15 @@ export default function BTCChart() {
 								high: Math.max(lastCandle.high, newData.high),
 								low: Math.min(lastCandle.low, newData.low),
 								close: newData.close,
-								volume: (lastCandle.volume || 0) + (newData.volume || 0),
+								volume: (lastCandle.volume || 0) + (prevSubVol === 0 ? 0 : subDelta), 
 							};
+							// Note: If prevSubVol is 0, it's the first time we see this sub-interval (day) 
+							// in this session. We don't add the whole volume because the week's history 
+							// likely already included it. We only add subsequent deltas.
 						}
 
 						candlestickSeries.update(newData);
-						if (volumeSeries && newData.volume) {
+						if (volumeSeries && newData.volume !== undefined) {
 							volumeSeries.update({
 								time: newData.time,
 								value: newData.volume,
@@ -967,8 +980,11 @@ export default function BTCChart() {
 		};
 
 		const volumeVal = lastCandle.volume;
-		const formattedVolume = volumeVal
-			? (Math.round(volumeVal * 100) / 100).toLocaleString()
+		const formattedVolume = volumeVal !== undefined
+			? volumeVal.toLocaleString(undefined, { 
+					minimumFractionDigits: 0, 
+					maximumFractionDigits: volumeVal < 1 ? 4 : 2 
+				})
 			: "—";
 
 		// Calculate values for latest candle
@@ -1364,6 +1380,8 @@ export default function BTCChart() {
 				});
 
 				connectWebSocket(interval(), activeAsset());
+				// Reset sub-volume tracking when changing interval/asset
+				lastSubVols.clear();
 			}
 		});
 	});

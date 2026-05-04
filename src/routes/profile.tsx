@@ -120,26 +120,31 @@ function ProfileContent() {
 		positionSize: string;
 	}
 
+	interface PositionEntry {
+		id: string;
+		price: string;
+		size: string;
+	}
 	const [positionCalc, setPositionCalc] = createSignal<{
 		balance: string;
 		leverage: string;
-		positionSize: string;
-		entryPrice: string;
+		entries: PositionEntry[];
 		feeRate: string;
 		orderType: OrderType;
 		direction: Direction;
 		takeProfitOrders: TPOrder[];
 		stopLossOrders: SLOrder[];
+		showAveraging: boolean;
 	}>({
 		balance: "10000",
 		leverage: "10",
-		positionSize: "0.1",
-		entryPrice: "",
+		entries: [{ id: crypto.randomUUID(), price: "", size: "0.1" }],
 		feeRate: "0.0432",
 		orderType: "market",
 		direction: "long",
 		takeProfitOrders: [],
 		stopLossOrders: [],
+		showAveraging: false,
 	});
 
 	const savePositionCalcToDb = async () => {
@@ -154,32 +159,26 @@ function ProfileContent() {
 		}
 	};
 
+	let saveCalcTimeout: any;
 	const debouncedSavePositionCalc = () => {
-		setTimeout(savePositionCalcToDb, 500);
+		clearTimeout(saveCalcTimeout);
+		saveCalcTimeout = setTimeout(savePositionCalcToDb, 500);
 	};
+
 
 	onMount(async () => {
 		try {
-			const res = await fetch("/api/position-calc");
-			if (res.ok) {
-				const data = await res.json();
-				if (data) {
-					setPositionCalc((prev) => ({
-						...prev,
-						balance: data.balance || "10000",
-						leverage: data.leverage || "10",
-						positionSize: data.positionSize || "0.1",
-						entryPrice: data.entryPrice || "",
-						feeRate: data.feeRate || "0.0432",
-						orderType: data.orderType || "market",
-						direction: data.direction || "long",
-						takeProfitOrders: data.takeProfitOrders || [],
-						stopLossOrders: data.stopLossOrders || [],
-					}));
-				}
+			// Fetch position calculator data first
+			const calcRes = await fetch("/api/position-calc");
+			let calcData = null;
+			if (calcRes.ok) {
+				calcData = await calcRes.json();
 			}
+
+			// Then load main portfolio and legacy settings
+			await loadData(calcData);
 		} catch (e) {
-			console.error("Failed to load position calc:", e);
+			console.error("Failed to load profile data:", e);
 		}
 	});
 
@@ -262,6 +261,45 @@ function ProfileContent() {
 		debouncedSavePositionCalc();
 	};
 
+	// Position Entry Management
+	const addPositionEntry = () => {
+		setPositionCalc((prev) => ({
+			...prev,
+			entries: [
+				...prev.entries,
+				{
+					id: crypto.randomUUID(),
+					price: prev.orderType === "market" ? prev.entries[0]?.price || "" : "",
+					size: "0.1",
+				},
+			],
+		}));
+		debouncedSavePositionCalc();
+	};
+
+	const removePositionEntry = (id: string) => {
+		setPositionCalc((prev) => {
+			if (prev.entries.length <= 1) return prev;
+			return {
+				...prev,
+				entries: prev.entries.filter((e) => e.id !== id),
+			};
+		});
+		debouncedSavePositionCalc();
+	};
+
+	const updatePositionEntry = (
+		id: string,
+		field: keyof PositionEntry,
+		value: string,
+	) => {
+		setPositionCalc((prev) => ({
+			...prev,
+			entries: prev.entries.map((e) => (e.id === id ? { ...e, [field]: value } : e)),
+		}));
+		debouncedSavePositionCalc();
+	};
+
 	// WebSocket for real-time BTC price
 	let ws: WebSocket | undefined;
 	let wsPingInterval: number | undefined;
@@ -310,7 +348,9 @@ function ProfileContent() {
 						if (positionCalc().orderType === "market") {
 							setPositionCalc((prev) => ({
 								...prev,
-								entryPrice: lastTrade.px,
+								entries: prev.entries.map((e, idx) =>
+									idx === 0 ? { ...e, price: lastTrade.px } : e,
+								),
 							}));
 							debouncedSavePositionCalc();
 						}
@@ -377,15 +417,23 @@ function ProfileContent() {
 		const calc = positionCalc();
 		const balance = parseFloat(calc.balance) || 0;
 		const leverage = parseFloat(calc.leverage) || 1;
-		const positionSize = parseFloat(calc.positionSize) || 0;
-		const entryPrice = parseFloat(calc.entryPrice) || 0;
+		
+		// Calculate total size and average entry price from all entries
+		const totalSize = calc.entries.reduce((sum, e) => sum + (parseFloat(e.size) || 0), 0);
+		const totalValue = calc.entries.reduce((sum, e) => {
+			const p = parseFloat(e.price) || 0;
+			const s = parseFloat(e.size) || 0;
+			return sum + p * s;
+		}, 0);
+		const entryPrice = totalSize > 0 ? totalValue / totalSize : 0;
+		
 		const feeRate = (parseFloat(calc.feeRate) || 0) / 100;
 		const direction = calc.direction;
 		const isLong = direction === "long";
 
-		if (!positionSize || !entryPrice) return null;
+		if (!totalSize || !entryPrice) return null;
 
-		const positionValue = positionSize * entryPrice;
+		const positionValue = totalSize * entryPrice;
 		const margin = positionValue / leverage;
 		const fee = positionValue * feeRate * 2; // Open + Close fee
 
@@ -448,6 +496,8 @@ function ProfileContent() {
 			margin,
 			fee,
 			riskPercent,
+			entryPrice, // Add averaged entry price to results
+			totalSize,  // Add total size to results
 			stopLossUSDC: totalStopLossUSDC,
 			takeProfitUSDC: totalTakeProfitUSDC,
 			stopLossOrders: stopLossOrdersWithPnl,
@@ -455,7 +505,7 @@ function ProfileContent() {
 		};
 	});
 
-	const loadData = async () => {
+	const loadData = async (calcData?: any) => {
 		setIsFetching(true);
 		const [portfolioDataResult, settingsResult] = await Promise.all([
 			fetchPortfolioData(),
@@ -465,19 +515,29 @@ function ProfileContent() {
 		]);
 		setPortfolioData(portfolioDataResult);
 		globalStore.setPortfolio(portfolioDataResult.holdings);
-		// Set balance and leverage from settings API or defaults
-		if (settingsResult.accountBalance) {
+		
+		// Unify state: prioritize position-calc data, fallback to settingsResult
+		if (calcData) {
 			setPositionCalc((prev) => ({
 				...prev,
-				balance: settingsResult.accountBalance,
+				balance: calcData.balance || settingsResult.accountBalance || "10000",
+				leverage: calcData.leverage || settingsResult.leverage || "10",
+				entries: calcData.entries ||
+					(calcData.positionSize
+						? [{ id: crypto.randomUUID(), price: calcData.entryPrice || "", size: calcData.positionSize }]
+						: [{ id: crypto.randomUUID(), price: "", size: "0.1" }]),
+				feeRate: calcData.feeRate || "0.0432",
+				orderType: calcData.orderType || "market",
+				direction: calcData.direction || "long",
+				takeProfitOrders: calcData.takeProfitOrders || [],
+				stopLossOrders: calcData.stopLossOrders || [],
+				showAveraging: calcData.showAveraging || false,
 			}));
+		} else if (settingsResult) {
+			if (settingsResult.accountBalance) setPositionCalc(p => ({ ...p, balance: settingsResult.accountBalance }));
+			if (settingsResult.leverage) setPositionCalc(p => ({ ...p, leverage: settingsResult.leverage }));
 		}
-		if (settingsResult.leverage) {
-			setPositionCalc((prev) => ({
-				...prev,
-				leverage: settingsResult.leverage,
-			}));
-		}
+		
 		setIsFetching(false);
 	};
 
@@ -497,7 +557,8 @@ function ProfileContent() {
 		});
 	};
 
-	onMount(() => loadData());
+	// Removed redundant onMount since handled above
+	// onMount(() => loadData());
 
 	const isLoading = () => !loaded() || isFetching();
 
@@ -742,45 +803,106 @@ function ProfileContent() {
 							</select>
 						</div>
 
-						{/* Position Size */}
-						<div>
-							<label
-								for="calc-position-size"
-								class="block text-[10px] sm:text-xs text-slate-400 mb-1"
-							>
-								仓位数量
-							</label>
-							<input
-								id="calc-position-size"
-								type="text"
-								inputmode="decimal"
-								placeholder="0.1"
-								value={positionCalc().positionSize}
-								onInput={(e) =>
-									updateCalc("positionSize", e.currentTarget.value)
-								}
-								class="w-full bg-black border border-white/10 rounded-lg sm:rounded-xl px-2 py-2.5 sm:px-3 sm:py-2 text-white font-mono text-sm"
-							/>
-						</div>
+						{/* Position Entries (Averaging) */}
+						<div class="col-span-2 space-y-3">
+							<div class="flex items-center justify-between">
+								<label class="block text-[10px] sm:text-xs text-slate-400">
+									入场详情 {positionCalc().entries.length > 1 ? "(已平均)" : ""}
+								</label>
+								<button
+									type="button"
+									onClick={() => {
+										const newVal = !positionCalc().showAveraging;
+										setPositionCalc(prev => ({ ...prev, showAveraging: newVal }));
+										debouncedSavePositionCalc();
+									}}
+									class={`text-xs px-2 py-1 transition-colors ${positionCalc().showAveraging ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-indigo-400'}`}
+								>
+									{positionCalc().showAveraging ? "收起加仓" : "+ 加仓"}
+								</button>
+							</div>
+							
+							<Show when={positionCalc().showAveraging || positionCalc().entries.length > 1}>
+								<div class="space-y-2">
+									<Index each={positionCalc().entries}>
+										{(entry, idx) => (
+											<div class="flex items-center gap-2">
+												<div class="flex-1 grid grid-cols-2 gap-2">
+													<div>
+														<input
+															type="text"
+															inputmode="decimal"
+															placeholder="价格"
+															value={entry().price}
+															onInput={(e) => updatePositionEntry(entry().id, "price", e.currentTarget.value)}
+															readOnly={positionCalc().orderType === "market" && idx === 0}
+															class={`w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs ${positionCalc().orderType === "market" && idx === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+														/>
+													</div>
+													<div>
+														<input
+															type="text"
+															inputmode="decimal"
+															placeholder="数量 (BTC)"
+															value={entry().size}
+															onInput={(e) => updatePositionEntry(entry().id, "size", e.currentTarget.value)}
+															class="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs"
+														/>
+													</div>
+												</div>
+												<Show when={positionCalc().entries.length > 1}>
+													<button
+														type="button"
+														onClick={() => removePositionEntry(entry().id)}
+														class="text-rose-500 hover:text-rose-400 p-1"
+													>
+														✕
+													</button>
+												</Show>
+											</div>
+										)}
+									</Index>
+									
+									<Show when={positionCalc().showAveraging}>
+										<button
+											type="button"
+											onClick={addPositionEntry}
+											class="w-full py-1.5 border border-dashed border-white/10 rounded-lg text-[10px] text-slate-500 hover:text-indigo-400 hover:border-indigo-400/30 transition-all mt-1"
+										>
+											+ 继续添加仓位
+										</button>
+									</Show>
+								</div>
+							</Show>
+							
+							<Show when={!positionCalc().showAveraging && positionCalc().entries.length === 1}>
+								<div class="grid grid-cols-2 gap-2">
+									<input
+										type="text"
+										inputmode="decimal"
+										placeholder="开仓价格"
+										value={positionCalc().entries[0].price}
+										onInput={(e) => updatePositionEntry(positionCalc().entries[0].id, "price", e.currentTarget.value)}
+										readOnly={positionCalc().orderType === "market"}
+										class={`w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-sm ${positionCalc().orderType === "market" ? "opacity-50 cursor-not-allowed" : ""}`}
+									/>
+									<input
+										type="text"
+										inputmode="decimal"
+										placeholder="数量"
+										value={positionCalc().entries[0].size}
+										onInput={(e) => updatePositionEntry(positionCalc().entries[0].id, "size", e.currentTarget.value)}
+										class="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-sm"
+									/>
+								</div>
+							</Show>
 
-						{/* Entry Price */}
-						<div>
-							<label
-								for="calc-entry-price"
-								class="block text-[10px] sm:text-xs text-slate-400 mb-1"
-							>
-								开仓价格
-							</label>
-							<input
-								id="calc-entry-price"
-								type="text"
-								inputmode="decimal"
-								placeholder="当前价格"
-								value={positionCalc().entryPrice}
-								onInput={(e) => updateCalc("entryPrice", e.currentTarget.value)}
-								readOnly={positionCalc().orderType === "market"}
-								class={`w-full bg-black border border-white/10 rounded-lg sm:rounded-xl px-2 py-2.5 sm:px-3 sm:py-2 text-white font-mono text-sm ${positionCalc().orderType === "market" ? "opacity-50 cursor-not-allowed" : ""}`}
-							/>
+							<Show when={positionCalc().entries.length > 1}>
+								<div class="flex justify-between items-center px-3 py-2 bg-indigo-500/5 border border-indigo-500/10 rounded-lg text-[10px] font-mono">
+									<span class="text-indigo-300 uppercase">平均开仓价:</span>
+									<span class="text-white text-xs">${positionCalcResults()?.entryPrice.toFixed(2)}</span>
+								</div>
+							</Show>
 						</div>
 
 						{/* Fee Rate */}
@@ -874,7 +996,7 @@ function ProfileContent() {
 														const price = parseFloat(order().price) || 0;
 														const btcSize =
 															parseFloat(order().positionSize) || 0;
-														const currentPrice = positionCalc().entryPrice;
+														const currentPrice = results?.entryPrice;
 														const isLong = positionCalc().direction === "long";
 														if (
 															!currentPrice ||
@@ -883,9 +1005,9 @@ function ProfileContent() {
 														)
 															return undefined;
 														return isLong
-															? (price - parseFloat(currentPrice)) *
+															? (price - currentPrice) *
 																	Number(btcSize)
-															: (parseFloat(currentPrice) - price) *
+															: (currentPrice - price) *
 																	Number(btcSize);
 													})();
 										return (
@@ -988,7 +1110,7 @@ function ProfileContent() {
 												: (() => {
 														const price = parseFloat(order().price) || 0;
 														const btcSize = order().positionSize || 0;
-														const currentPrice = positionCalc().entryPrice;
+														const currentPrice = results?.entryPrice;
 														const isLong = positionCalc().direction === "long";
 														if (
 															!currentPrice ||
@@ -997,9 +1119,9 @@ function ProfileContent() {
 														)
 															return undefined;
 														return isLong
-															? (price - parseFloat(currentPrice)) *
+															? (price - currentPrice) *
 																	Number(btcSize)
-															: (parseFloat(currentPrice) - price) *
+															: (currentPrice - price) *
 																	Number(btcSize);
 													})();
 										return (
