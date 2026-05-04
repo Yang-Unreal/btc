@@ -26,7 +26,6 @@ export async function GET() {
 				: ["4h"],
 			notificationsEnabled: settings[0].notificationsEnabled === "true",
 			fourHAlertEnabled: settings[0].fourHAlertEnabled === "true",
-			vipSniper1hAlertEnabled: settings[0].vipSniper1hAlertEnabled === "true",
 			indicators: settings[0].indicators
 				? JSON.parse(settings[0].indicators)
 				: null,
@@ -53,18 +52,17 @@ export async function POST({ request }: { request: Request }) {
 			indicatorHeights,
 			notificationsEnabled,
 			fourHAlertEnabled,
-			vipSniper1hAlertEnabled,
 			accountBalance,
 			leverage,
 		} = body;
 
 		const updateData: Partial<NewUserSettings> = { updatedAt: new Date() };
-		if (currency && ["USD", "EUR"].includes(currency)) {
+		if (currency && ["USD", "EUR", "GBP"].includes(currency)) {
 			updateData.currency = currency;
 		}
 		if (
 			interval &&
-			["1m", "5m", "15m", "30m", "1h", "4h", "12h", "1d", "1w"].includes(
+			["1m", "5m", "15m", "30m", "1h", "4h", "12h", "1d", "1w", "1M"].includes(
 				interval,
 			)
 		) {
@@ -84,11 +82,6 @@ export async function POST({ request }: { request: Request }) {
 		}
 		if (typeof fourHAlertEnabled === "boolean") {
 			updateData.fourHAlertEnabled = fourHAlertEnabled ? "true" : "false";
-		}
-		if (typeof vipSniper1hAlertEnabled === "boolean") {
-			updateData.vipSniper1hAlertEnabled = vipSniper1hAlertEnabled
-				? "true"
-				: "false";
 		}
 		if (accountBalance && !Number.isNaN(Number(accountBalance))) {
 			updateData.accountBalance = String(accountBalance);

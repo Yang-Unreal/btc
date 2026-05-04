@@ -31,6 +31,64 @@ function mapHLCandle(c: HLCandle): number[] {
 	];
 }
 
+function aggregateToWeekly(dailyCandles: number[][]): number[][] {
+	if (dailyCandles.length === 0) return [];
+	const weekly: number[][] = [];
+	let currentWeek: number[] | null = null;
+	let currentWeekMondayTs = 0;
+
+	for (const day of dailyCandles) {
+		const dayTs = day[0] * 1000;
+		const date = new Date(dayTs);
+		const dayOfWeek = date.getUTCDay(); // 0=Sun, 1=Mon
+		const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+		const mondayTs = dayTs - diff * 86400000;
+
+		if (!currentWeek || mondayTs !== currentWeekMondayTs) {
+			if (currentWeek) weekly.push(currentWeek);
+			currentWeekMondayTs = mondayTs;
+			currentWeek = [...day];
+			currentWeek[0] = mondayTs / 1000;
+		} else {
+			currentWeek[2] = Math.max(currentWeek[2], day[2]); // High
+			currentWeek[3] = Math.min(currentWeek[3], day[3]); // Low
+			currentWeek[4] = day[4]; // Close
+			currentWeek[5] += day[5]; // Volume
+		}
+	}
+	if (currentWeek) weekly.push(currentWeek);
+	return weekly;
+}
+
+function aggregateToMonthly(dailyCandles: number[][]): number[][] {
+	if (dailyCandles.length === 0) return [];
+	const monthly: number[][] = [];
+	let currentMonth: number[] | null = null;
+	let currentMonthStr = "";
+
+	for (const day of dailyCandles) {
+		const date = new Date(day[0] * 1000);
+		const monthStr = `${date.getUTCFullYear()}-${date.getUTCMonth()}`;
+
+		if (!currentMonth || monthStr !== currentMonthStr) {
+			if (currentMonth) monthly.push(currentMonth);
+			currentMonthStr = monthStr;
+			currentMonth = [...day];
+			const firstOfMonth = new Date(
+				Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1),
+			);
+			currentMonth[0] = firstOfMonth.getTime() / 1000;
+		} else {
+			currentMonth[2] = Math.max(currentMonth[2], day[2]);
+			currentMonth[3] = Math.min(currentMonth[3], day[3]);
+			currentMonth[4] = day[4];
+			currentMonth[5] += day[5];
+		}
+	}
+	if (currentMonth) monthly.push(currentMonth);
+	return monthly;
+}
+
 /**
  * Fetch candles from Hyperliquid.
  * startTime and endTime are in milliseconds.
@@ -73,7 +131,9 @@ export async function GET({ request }: APIEvent) {
 	const symbol = url.searchParams.get("symbol") || "BTC";
 	const toParam = url.searchParams.get("to");
 
-	const hlInterval = HL_INTERVAL_MAP[interval as Interval] || "1h";
+	const hlIntervalMapping = HL_INTERVAL_MAP[interval as Interval] || "1h";
+	const useAggregation = interval === "1w" || interval === "1M";
+	const hlInterval = useAggregation ? "1d" : hlIntervalMapping;
 
 	const cacheKey = `history_hl_${symbol}_${currency}_${interval}_${toParam || "latest"}`;
 	const cachedData = apiCache.get(cacheKey);
@@ -87,7 +147,7 @@ export async function GET({ request }: APIEvent) {
 			// Pagination mode: fetch one page (~200 candles) ending at toParam
 			const endTimeMs = parseInt(toParam, 10);
 			const intervalMs = intervalToMs(hlInterval);
-			const startTimeMs = endTimeMs - intervalMs * 1000;
+			const startTimeMs = Math.max(0, endTimeMs - intervalMs * 1000);
 
 			const pageData = await fetchHLCandles(
 				symbol,
@@ -96,9 +156,15 @@ export async function GET({ request }: APIEvent) {
 				endTimeMs,
 			);
 			// Exclude the candle at exactly endTime (it's the boundary from the previous fetch)
-			const filtered = pageData.filter(
+			let filtered = pageData.filter(
 				(d) => d[0] < Math.floor(endTimeMs / 1000),
 			);
+
+			if (interval === "1w") {
+				filtered = aggregateToWeekly(filtered);
+			} else if (interval === "1M") {
+				filtered = aggregateToMonthly(filtered);
+			}
 
 			apiCache.set(cacheKey, filtered, CACHE_DURATIONS.HISTORICAL_DATA);
 			return json(filtered);
@@ -107,7 +173,7 @@ export async function GET({ request }: APIEvent) {
 		// Initial load: fetch ~3000 candles ending now
 		const now = Date.now();
 		const intervalMs = intervalToMs(hlInterval);
-		const startTimeMs = now - intervalMs * 3000;
+		const startTimeMs = Math.max(0, now - intervalMs * 3000);
 
 		const mappedData = await fetchHLCandles(
 			symbol,
@@ -117,16 +183,17 @@ export async function GET({ request }: APIEvent) {
 		);
 
 		// If fewer than 2000, try to supplement with older data
-		if (mappedData.length > 0 && mappedData.length < 2000) {
-			const earliestMs = mappedData[0][0] * 1000;
-			const needed = 3000 - mappedData.length;
+		let finalData = mappedData;
+		if (finalData.length > 0 && finalData.length < 2000) {
+			const earliestMs = finalData[0][0] * 1000;
+			const needed = 3000 - finalData.length;
 			const pagesNeeded = Math.ceil(needed / 1000);
 
 			let olderData: number[][] = [];
 			let cursor = earliestMs;
 
 			for (let page = 0; page < pagesNeeded; page++) {
-				const pageStartMs = cursor - intervalMs * 1000;
+				const pageStartMs = Math.max(0, cursor - intervalMs * 1000);
 				const pageData = await fetchHLCandles(
 					symbol,
 					hlInterval,
@@ -140,7 +207,7 @@ export async function GET({ request }: APIEvent) {
 			}
 
 			if (olderData.length > 0) {
-				const combined = [...olderData, ...mappedData];
+				const combined = [...olderData, ...finalData];
 				// Deduplicate by timestamp
 				const seen = new Set<number>();
 				const deduped = combined.filter((d) => {
@@ -149,13 +216,18 @@ export async function GET({ request }: APIEvent) {
 					return true;
 				});
 				deduped.sort((a, b) => a[0] - b[0]);
-				apiCache.set(cacheKey, deduped, CACHE_DURATIONS.HISTORICAL_DATA);
-				return json(deduped);
+				finalData = deduped;
 			}
 		}
 
-		apiCache.set(cacheKey, mappedData, CACHE_DURATIONS.HISTORICAL_DATA);
-		return json(mappedData);
+		if (interval === "1w") {
+			finalData = aggregateToWeekly(finalData);
+		} else if (interval === "1M") {
+			finalData = aggregateToMonthly(finalData);
+		}
+
+		apiCache.set(cacheKey, finalData, CACHE_DURATIONS.HISTORICAL_DATA);
+		return json(finalData);
 	} catch (error) {
 		console.error("Hyperliquid History API Error:", error);
 		const stale = apiCache.getStale(cacheKey);

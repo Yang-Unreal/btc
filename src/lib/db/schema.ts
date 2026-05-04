@@ -21,9 +21,6 @@ export const userSettings = pgTable("user_settings", {
 	indicatorHeights: text("indicator_heights"), // Store as JSON string for oscillators/atr heights
 	notificationsEnabled: text("notifications_enabled").notNull().default("true"), // "true" or "false"
 	fourHAlertEnabled: text("four_h_alert_enabled").notNull().default("false"), // "true" or "false"
-	vipSniper1hAlertEnabled: text("vip_sniper_1h_alert_enabled")
-		.notNull()
-		.default("true"), // "true" or "false"
 	accountBalance: numeric("account_balance").notNull().default("10000"),
 	leverage: text("leverage").notNull().default("10"),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),

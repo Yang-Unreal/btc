@@ -148,7 +148,7 @@ const fetchHistory = async (
 
 		return json
 			.map((item: RawKlineData) => ({
-				time: Math.floor(item[0] / 1000),
+				time: Math.floor(item[0]),
 				open: item[1],
 				high: item[2],
 				low: item[3],

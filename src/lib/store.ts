@@ -11,8 +11,6 @@ function createGlobalStore() {
 	const [currency, setCurrency] = createSignal<"USD" | "EUR">("USD");
 	const [notificationsEnabled, setNotificationsEnabled] = createSignal(true);
 	const [fourHAlertEnabled, setFourHAlertEnabled] = createSignal(false);
-	const [vipSniper1hAlertEnabled, setVipSniper1hAlertEnabled] =
-		createSignal(true);
 	const [loaded, setLoaded] = createSignal(false);
 	const [portfolio, setPortfolio] = createSignal<Record<string, AssetHolding>>(
 		{},
@@ -32,9 +30,6 @@ function createGlobalStore() {
 			}
 			if (typeof data.fourHAlertEnabled === "boolean") {
 				setFourHAlertEnabled(data.fourHAlertEnabled);
-			}
-			if (typeof data.vipSniper1hAlertEnabled === "boolean") {
-				setVipSniper1hAlertEnabled(data.vipSniper1hAlertEnabled);
 			}
 		} catch (e) {
 			// On error, load from localStorage
@@ -105,19 +100,6 @@ function createGlobalStore() {
 		}
 	};
 
-	const saveVipSniper1hAlertEnabled = async (enabled: boolean) => {
-		setVipSniper1hAlertEnabled(enabled);
-		try {
-			await fetch("/api/settings", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ vipSniper1hAlertEnabled: enabled }),
-			});
-		} catch (e) {
-			console.error("Failed to save VIP Sniper 1h alert settings:", e);
-		}
-	};
-
 	return {
 		currency,
 		setCurrency: saveCurrency,
@@ -125,8 +107,6 @@ function createGlobalStore() {
 		setNotificationsEnabled: saveNotificationsEnabled,
 		fourHAlertEnabled,
 		setFourHAlertEnabled: saveFourHAlertEnabled,
-		vipSniper1hAlertEnabled,
-		setVipSniper1hAlertEnabled: saveVipSniper1hAlertEnabled,
 		loadSettings,
 		loaded,
 		portfolio,
