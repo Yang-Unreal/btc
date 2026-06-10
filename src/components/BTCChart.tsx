@@ -167,8 +167,9 @@ export default function BTCChart() {
 	let ws: WebSocket | undefined;
 	let wsPingInterval: number | undefined;
 	let lastLoadedSymbol = "";
-	let wsCurrentAssetSymbol = ""; // track what symbol the WS is currently serving
-	let wsCurrentInterval = ""; // track the current HL interval subscription
+	let wsCurrentAssetSymbol = "";
+	let wsCurrentInterval = "";
+	let lastPriceUpdate = 0;
 
 	const [isLoading, setIsLoading] = createSignal(true);
 	const [isLoadingMore, setIsLoadingMore] = createSignal(false);
@@ -176,7 +177,7 @@ export default function BTCChart() {
 	const [error, setError] = createSignal<string | null>(null);
 
 	// Volume tracking for aggregated intervals
-	let lastSubVols = new Map<number, number>();
+	const lastSubVols = new Map<number, number>();
 
 	const [interval, setInterval] = createSignal<Interval>("4h");
 
@@ -577,8 +578,6 @@ export default function BTCChart() {
 				(a: BTCData, b: BTCData) => (a.time as number) - (b.time as number),
 			);
 
-
-
 			return sortedData;
 		} catch (err) {
 			console.error("Error fetching history:", err);
@@ -765,16 +764,19 @@ export default function BTCChart() {
 				)
 					return;
 
-				// 1. Real-time trades → extract last price for top-left display
+				// 1. Real-time trades → extract last price for top-left display (throttled)
 				if (
 					msg.channel === "trades" &&
 					Array.isArray(msg.data) &&
 					msg.data.length > 0
 				) {
-					const lastTrade = msg.data[msg.data.length - 1];
-					// Only update if the trade is for our current coin
-					if (lastTrade?.coin === coin && lastTrade?.px) {
-						setCurrentPrice(parseFloat(lastTrade.px));
+					const now = Date.now();
+					if (now - lastPriceUpdate > 200) {
+						const lastTrade = msg.data[msg.data.length - 1];
+						if (lastTrade?.coin === coin && lastTrade?.px) {
+							setCurrentPrice(parseFloat(lastTrade.px));
+							lastPriceUpdate = now;
+						}
 					}
 					return;
 				}
@@ -849,10 +851,11 @@ export default function BTCChart() {
 								high: Math.max(lastCandle.high, newData.high),
 								low: Math.min(lastCandle.low, newData.low),
 								close: newData.close,
-								volume: (lastCandle.volume || 0) + (prevSubVol === 0 ? 0 : subDelta), 
+								volume:
+									(lastCandle.volume || 0) + (prevSubVol === 0 ? 0 : subDelta),
 							};
-							// Note: If prevSubVol is 0, it's the first time we see this sub-interval (day) 
-							// in this session. We don't add the whole volume because the week's history 
+							// Note: If prevSubVol is 0, it's the first time we see this sub-interval (day)
+							// in this session. We don't add the whole volume because the week's history
 							// likely already included it. We only add subsequent deltas.
 						}
 
@@ -980,12 +983,13 @@ export default function BTCChart() {
 		};
 
 		const volumeVal = lastCandle.volume;
-		const formattedVolume = volumeVal !== undefined
-			? volumeVal.toLocaleString(undefined, { 
-					minimumFractionDigits: 0, 
-					maximumFractionDigits: volumeVal < 1 ? 4 : 2 
-				})
-			: "—";
+		const formattedVolume =
+			volumeVal !== undefined
+				? volumeVal.toLocaleString(undefined, {
+						minimumFractionDigits: 0,
+						maximumFractionDigits: volumeVal < 1 ? 4 : 2,
+					})
+				: "—";
 
 		// Calculate values for latest candle
 		const closes = data.map((d) => d.close);
@@ -1536,6 +1540,16 @@ export default function BTCChart() {
 
 		let lastTooltipTime: number | null = null;
 		let cachedTooltipData: Omit<TooltipData, "x" | "y" | "snapY"> | null = null;
+		let crosshairRafId: number | null = null;
+
+		const scheduleLegendUpdate = () => {
+			if (crosshairRafId !== null) return;
+			crosshairRafId = requestAnimationFrame(() => {
+				crosshairRafId = null;
+				const data = untrack(() => btcData());
+				if (data.length > 0) updateLegendToLatest(data);
+			});
+		};
 
 		chart.subscribeCrosshairMove((param: MouseEventParams) => {
 			if (!chartContainer || !candlestickSeries) return;
@@ -1547,7 +1561,7 @@ export default function BTCChart() {
 				param.point.y < 0 ||
 				param.point.y > chartContainer.clientHeight
 			) {
-				updateLegendToLatest(btcData());
+				scheduleLegendUpdate();
 				lastTooltipTime = null;
 				cachedTooltipData = null;
 				return;
@@ -1714,6 +1728,15 @@ export default function BTCChart() {
 		};
 
 		handleResize();
+		let resizeObserver: ResizeObserver | undefined;
+		if (typeof ResizeObserver !== "undefined" && chartContainer) {
+			resizeObserver = new ResizeObserver(() => {
+				if (chart && chartContainer && chartContainer.clientWidth > 0) {
+					chart.applyOptions({ width: chartContainer.clientWidth });
+				}
+			});
+			resizeObserver.observe(chartContainer);
+		}
 		window.addEventListener("resize", handleResize);
 
 		const handleMouseMove = (e: MouseEvent) => {
@@ -1810,6 +1833,9 @@ export default function BTCChart() {
 			window.removeEventListener("resize", handleResize);
 			window.removeEventListener("mousemove", handleMouseMove);
 			window.removeEventListener("mouseup", handleMouseUp);
+			if (resizeObserver) resizeObserver.disconnect();
+			if (loadMoreTimer) clearTimeout(loadMoreTimer);
+			if (wsPingInterval !== undefined) window.clearInterval(wsPingInterval);
 		});
 	});
 

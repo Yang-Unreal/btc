@@ -1,605 +1,642 @@
-import { createMemo, createSignal, For, onMount, Show } from "solid-js";
+// --- START OF FILE MacroPyramidCalculator.tsx ---
+
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	onMount,
+	Show,
+} from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 
-interface PositionEntry {
-	id: number;
-	price: number;
-	size: number;
+interface LevelRow {
+	level: number;
+	customEntryPrice?: number;
+	customLeverage?: number;
 }
 
 export default function MacroPyramidCalculator() {
-	const [entries, setEntries] = createStore<PositionEntry[]>([
-		{ id: 1, price: 69600, size: 0.04 },
-		{ id: 2, price: 70100, size: 0.04 },
-		{ id: 3, price: 70600, size: 0.04 },
+	// ==========================================
+	// 1. Core State Signals (Strictly USDC-Margined for Hyperliquid)
+	// ==========================================
+	const [isShort, setIsShort] = createSignal(true); // 默认做空 (配合你的截图测试)
+	const [selectedCoin, setSelectedCoin] = createSignal("BTC");
+	const [firstEntryPrice, setFirstEntryPrice] = createSignal(70000);
+	const [initialCapital, setInitialCapital] = createSignal(1000); // Base USDC Capital
+	const [globalLeverage, setGlobalLeverage] = createSignal(20);
+
+// Hyperliquid Taker Fee Rate with Referral Discount (0.045% * 0.96 = 0.0432%)
+const TAKER_FEE_RATE = 0.000432; // 0.0432%
+
+	// ==========================================
+	// 2. Rows Matrix Configuration State
+	// ==========================================
+	const [rows, setRows] = createStore<LevelRow[]>([
+		{ level: 1 },
+		{ level: 2 },
+		{ level: 3 },
+		{ level: 4 },
+		{ level: 5 },
+		{ level: 6 },
+		{ level: 7 },
+		{ level: 8 },
+		{ level: 9 },
+		{ level: 10 },
 	]);
 
-	const [currentPrice, setCurrentPrice] = createSignal(70100);
-	const [stopLoss, setStopLoss] = createSignal(71000);
-	const [isShort, setIsShort] = createSignal(true);
-	const [showBulk, setShowBulk] = createSignal(false);
-	const [bulkInput, setBulkInput] = createSignal("");
-	const [isOpen, setIsOpen] = createSignal(false);
-	const [isLoaded, setIsLoaded] = createSignal(false);
-	const [showAveraging, setShowAveraging] = createSignal(false);
-	const [quickAdd, setQuickAdd] = createStore({
-		price: 0,
-		size: 0,
+	const coins = [
+		{ code: "BTC", name: "Bitcoin", price: 70000 },
+		{ code: "ETH", name: "Ethereum", price: 3500 },
+		{ code: "SOL", name: "Solana", price: 150 },
+		{ code: "DOGE", name: "Dogecoin", price: 0.1 },
+		{ code: "XRP", name: "Ripple", price: 0.5 },
+	];
+
+	// ==========================================
+	// 3. Reactivity and Presets Synchronization
+	// ==========================================
+	createEffect(() => {
+		const coin = coins.find((c) => c.code === selectedCoin());
+		if (coin) {
+			setFirstEntryPrice(coin.price);
+		}
 	});
 
-	const saveToDb = async () => {
-		if (!isLoaded()) return;
-		try {
-			await fetch("/api/pyramid", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					entries: entries.map((e) => ({ price: e.price, size: e.size })),
-					currentPrice: currentPrice(),
-					stopLoss: stopLoss(),
-					isShort: isShort(),
-					totalSize: totalSize(),
-					avgPrice: avgPrice(),
-					totalPnl: totalPnL(),
-					showAveraging: showAveraging(),
-					quickAdd: { price: quickAdd.price, size: quickAdd.size },
-					showBulk: showBulk(),
-					bulkInput: bulkInput(),
-				}),
-			});
-		} catch (e) {
-			console.error("Failed to save pyramid positions:", e);
-		}
-	};
+	createEffect(() => {
+		const params = {
+			selectedCoin: selectedCoin(),
+			firstEntryPrice: firstEntryPrice(),
+			initialCapital: initialCapital(),
+			globalLeverage: globalLeverage(),
+			isShort: isShort(),
+			rows: rows.map((r) => ({
+				level: r.level,
+				customEntryPrice: r.customEntryPrice,
+				customLeverage: r.customLeverage,
+			})),
+		};
+		localStorage.setItem("hyperliquid_rolling_v3", JSON.stringify(params));
+	});
 
-	let saveTimeout: any;
-	const debouncedSave = () => {
-		clearTimeout(saveTimeout);
-		saveTimeout = setTimeout(saveToDb, 500);
-	};
-
-	onMount(async () => {
+	onMount(() => {
 		try {
-			const res = await fetch("/api/pyramid");
-			if (res.ok) {
-				const data = await res.json();
-				if (data?.entries && data.entries.length > 0) {
-					const loadedEntries = data.entries.map(
-						(e: { price: number; size: number }, idx: number) => ({
-							id: idx + 1,
-							price: e.price,
-							size: e.size,
-						}),
-					);
-					setEntries(reconcile(loadedEntries));
-					setCurrentPrice(data.currentPrice);
-					setStopLoss(data.stopLoss);
-					setIsShort(data.isShort);
-					setShowAveraging(data.showAveraging || false);
-					if (data.quickAdd) setQuickAdd(data.quickAdd);
-					setShowBulk(data.showBulk || false);
-					setBulkInput(data.bulkInput || "");
-				}
+			const saved = localStorage.getItem("hyperliquid_rolling_v3");
+			if (saved) {
+				const params = JSON.parse(saved);
+				if (params.selectedCoin !== undefined)
+					setSelectedCoin(params.selectedCoin);
+				if (params.firstEntryPrice !== undefined)
+					setFirstEntryPrice(params.firstEntryPrice);
+				if (params.initialCapital !== undefined)
+					setInitialCapital(params.initialCapital);
+				if (params.globalLeverage !== undefined)
+					setGlobalLeverage(params.globalLeverage);
+				if (params.isShort !== undefined) setIsShort(params.isShort);
+				if (params.rows !== undefined) setRows(reconcile(params.rows));
 			}
 		} catch (e) {
-			console.error("Failed to load pyramid positions:", e);
+			console.error("Failed to restore parameters:", e);
 		}
-		setIsLoaded(true);
 	});
 
-	const totalSize = createMemo(() =>
-		entries.reduce((sum, e) => sum + e.size, 0),
-	);
+	const getDefaultLeverage = (index: number, baseL: number) => {
+		if (index === 0) return baseL;
+		if (index === 1) return Math.max(2, baseL - 5);
+		if (index === 2) return Math.max(2, baseL - 5);
+		if (index === 3) return Math.max(2, baseL - 10);
+		if (index === 4) return Math.max(2, baseL - 15);
+		if (index === 5) return Math.max(2, Math.round(baseL * 0.2));
+		if (index === 6) return Math.max(2, Math.round(baseL * 0.12));
+		if (index === 7) return 2;
+		if (index === 8) return 2;
+		return 2;
+	};
 
-	const avgPrice = createMemo(() => {
-		const size = totalSize();
-		if (size === 0) return 0;
-		const totalValue = entries.reduce((sum, e) => sum + e.price * e.size, 0);
-		return totalValue / size;
-	});
-
-	const totalPnL = createMemo(() => {
-		return entries.reduce((sum, e) => {
-			const diff = isShort()
-				? e.price - currentPrice()
-				: currentPrice() - e.price;
-			return sum + diff * e.size;
-		}, 0);
-	});
-
-	const pnlAtSL = createMemo(() => {
-		return entries.reduce((sum, e) => {
-			const diff = isShort() ? e.price - stopLoss() : stopLoss() - e.price;
-			return sum + diff * e.size;
-		}, 0);
-	});
-
-	const maxRisk = createMemo(() => Math.max(0, -pnlAtSL()));
-	const lockedProfit = createMemo(() => Math.max(0, pnlAtSL()));
-
-	const addEntry = () => {
-		const newId =
-			entries.length > 0 ? Math.max(...entries.map((e) => e.id)) + 1 : 1;
-		const lastEntry = entries[entries.length - 1];
-		setEntries(entries.length, {
-			id: newId,
-			price: lastEntry ? lastEntry.price + 500 : 70000,
-			size: 0.04,
+	const formatPrice = (price: number) => {
+		if (price < 1) {
+			return price.toLocaleString(undefined, {
+				minimumFractionDigits: 4,
+				maximumFractionDigits: 6,
+			});
+		}
+		return price.toLocaleString(undefined, {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
 		});
-		debouncedSave();
 	};
 
-	const removeEntry = (id: number) => {
-		setEntries(entries.filter((e) => e.id !== id));
-		debouncedSave();
-	};
+	// ==========================================
+	// 4. Main Matrix Reactive Math Engine
+	// ==========================================
+	const computedRows = createMemo(() => {
+		const result: any[] = [];
+		const startPrice = firstEntryPrice();
+		const cap = initialCapital();
+		const baseL = globalLeverage();
 
-	const updateEntry = (id: number, field: "price" | "size", value: number) => {
-		const index = entries.findIndex((e) => e.id === id);
-		if (index !== -1) {
-			setEntries(index, field, value);
+		const getHyperliquidMMR = (coin: string) => {
+			if (coin === "BTC") return 0.0125;
+			if (coin === "ETH") return 0.02;
+			if (coin === "SOL" || coin === "XRP") return 0.025;
+			if (coin === "DOGE") return 0.05;
+			return 0.025;
+		};
+		const mmr = getHyperliquidMMR(selectedCoin());
+
+		let currentEntryPrice = startPrice;
+		let currentCapital = cap;
+		let previousCapital = cap; // 用于记录上一级的起始本金，判断回撤保本线
+		let cumContractSizeTokens = 0;
+		let cumPositionValUSDC = 0;
+
+		for (let i = 0; i < rows.length; i++) {
+			const row = rows[i];
+			const level = i + 1;
+
+			let entryPrice =
+				level > 1 && row.customEntryPrice !== undefined
+					? row.customEntryPrice
+					: currentEntryPrice;
+			entryPrice = Math.round(entryPrice * 1000000) / 1000000;
+
+			const leverage =
+				row.customLeverage !== undefined
+					? row.customLeverage
+					: getDefaultLeverage(i, baseL);
+			const requiredMove = 1 / leverage;
+
+			let targetPrice = isShort()
+				? entryPrice * (1 - requiredMove)
+				: entryPrice * (1 + requiredMove);
+			targetPrice = Math.round(targetPrice * 1000000) / 1000000;
+			currentEntryPrice = targetPrice;
+
+			const holdingCapital = currentCapital;
+			const positionSizeUSDC = holdingCapital * leverage;
+			const positionSizeTokens = positionSizeUSDC / entryPrice;
+
+			cumContractSizeTokens += positionSizeTokens;
+			cumPositionValUSDC += positionSizeUSDC;
+			let avgEntryPrice = cumPositionValUSDC / cumContractSizeTokens;
+			avgEntryPrice = Math.round(avgEntryPrice * 1000000) / 1000000;
+
+			let levelProfit = 0;
+			if (isShort()) {
+				levelProfit = (entryPrice - targetPrice) * positionSizeTokens;
+			} else {
+				levelProfit = (targetPrice - entryPrice) * positionSizeTokens;
+			}
+
+			// === 修正 2：只扣除单边手续费 ===
+			// 连续滚仓到达目标价并不平仓，因此用来滚入下一级的资金只扣除开仓时的手续费损耗
+			const openFee = positionSizeUSDC * TAKER_FEE_RATE;
+			const levelFee = openFee;
+
+			const netCompletedAssetUSDC = holdingCapital + levelProfit - levelFee;
+
+			// === 修正 1：回吐上一级收益的分界线 (防守价) ===
+			let rollbackPrice = 0;
+			let rollbackPercent = 0;
+			let liquidationPrice = 0;
+
+			// 仅从第二级开始计算回吐防守线 (第一级没有上一级利润)
+			if (level > 1) {
+				// 允许亏损的最大金额 = 当前本金 - 本级开仓手续费 - 上一级的起始本金
+				const allowedLoss = holdingCapital - openFee - previousCapital;
+				if (allowedLoss > 0) {
+					if (isShort()) {
+						rollbackPrice = entryPrice + allowedLoss / positionSizeTokens;
+					} else {
+						rollbackPrice = entryPrice - allowedLoss / positionSizeTokens;
+					}
+					rollbackPercent = ((rollbackPrice - entryPrice) / entryPrice) * 100;
+				}
+			}
+
+			// 爆仓价逻辑保持绝对精确 (包含开仓手续费扣除)
+			if (isShort()) {
+				liquidationPrice =
+					(entryPrice * (1 + 1 / leverage - TAKER_FEE_RATE)) / (1 + mmr);
+			} else {
+				liquidationPrice =
+					(entryPrice * (1 - 1 / leverage + TAKER_FEE_RATE)) / (1 - mmr);
+			}
+
+			if (liquidationPrice <= 0 || !isFinite(liquidationPrice))
+				liquidationPrice = 0;
+			if (rollbackPrice <= 0 || !isFinite(rollbackPrice)) rollbackPrice = 0;
+
+			liquidationPrice = Math.round(liquidationPrice * 1000000) / 1000000;
+			rollbackPrice = Math.round(rollbackPrice * 1000000) / 1000000;
+			const liquidationPercent =
+				entryPrice > 0
+					? ((liquidationPrice - entryPrice) / entryPrice) * 100
+					: 0;
+
+			result.push({
+				level,
+				entryPrice,
+				avgEntryPrice,
+				targetPrice,
+				requiredMove: requiredMove * 100,
+				leverage,
+				holdingCapital,
+				positionSizeUSDC,
+				positionSizeTokens,
+				netCompletedAssetUSDC,
+				levelProfit,
+				levelFee,
+				rollbackPrice,
+				liquidationPrice,
+				rollbackPercent,
+				liquidationPercent,
+				customEntryPrice: row.customEntryPrice,
+				customLeverage: row.customLeverage,
+			});
+
+			// 为下一轮循环传递状态
+			previousCapital = holdingCapital; // 将本级的起始资金存为下一级的“前级资金”
+			currentCapital = netCompletedAssetUSDC; // 将滚仓后的净资产作为下一级的起始资金
 		}
-		debouncedSave();
+
+		return result;
+	});
+
+	const addLevel = () => {
+		const newLvl = rows.length + 1;
+		setRows(rows.length, { level: newLvl });
 	};
 
-	const handleBulkInput = (val: string) => {
-		setBulkInput(val);
-		const lines = val.split("\n").filter((l) => l.trim());
-		const newEntries = lines.map((line, idx) => {
-			const parts = line.split(/[\s,;]+/).filter((p) => p);
-			return {
-				id: Date.now() + idx,
-				price: parseFloat(parts[0]) || 0,
-				size: parseFloat(parts[1]) || 0.04,
-			};
-		});
-		if (newEntries.length > 0) {
-			setEntries(reconcile(newEntries));
-		}
-		debouncedSave();
+	const removeLevel = (index: number) => {
+		const newRows = rows
+			.filter((_, idx) => idx !== index)
+			.map((r, i) => ({
+				...r,
+				level: i + 1,
+			}));
+		setRows(reconcile(newRows));
 	};
 
-	const generatePyramid = (
-		start: number,
-		interval: number,
-		count: number,
-		sizePerStep: number,
+	const resetDefault = () => {
+		setRows(
+			reconcile([
+				{ level: 1 },
+				{ level: 2 },
+				{ level: 3 },
+				{ level: 4 },
+				{ level: 5 },
+				{ level: 6 },
+				{ level: 7 },
+				{ level: 8 },
+				{ level: 9 },
+				{ level: 10 },
+			]),
+		);
+	};
+
+	const updateRow = (
+		index: number,
+		field: "customEntryPrice" | "customLeverage",
+		value: number | undefined,
 	) => {
-		const newEntries = Array.from({ length: count }, (_, i) => ({
-			id: Date.now() + i,
-			// For short, scale up. For long, scale down (or follow isShort signal)
-			price: isShort() ? start + i * interval : start - i * interval,
-			size: sizePerStep,
-		}));
-		setEntries(reconcile(newEntries));
-		setShowBulk(false);
-		debouncedSave();
+		setRows(index, field, value);
 	};
-
-	const commitQuickAdd = () => {
-		if (quickAdd.price <= 0 || quickAdd.size <= 0) return;
-		const newId =
-			entries.length > 0 ? Math.max(...entries.map((e) => e.id)) + 1 : 1;
-		setEntries(entries.length, {
-			id: newId,
-			price: quickAdd.price,
-			size: quickAdd.size,
-		});
-		setQuickAdd({ price: 0, size: 0 });
-		setShowAveraging(false);
-		debouncedSave();
-	};
-
-	const newAvgAfterAdd = createMemo(() => {
-		const currentVal = entries.reduce((sum, e) => sum + e.price * e.size, 0);
-		const addedVal = quickAdd.price * quickAdd.size;
-		const newSize = totalSize() + quickAdd.size;
-		return newSize > 0 ? (currentVal + addedVal) / newSize : 0;
-	});
 
 	return (
-		<>
-			<button
-				type="button"
-				onClick={() => setIsOpen(!isOpen())}
-				class="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-60 w-12 h-12 bg-indigo-600 rounded-full shadow-2xl flex items-center justify-center text-white hover:bg-indigo-500 transition-transform hover:scale-105 active:scale-95"
-			>
-				<Show
-					when={isOpen()}
-					fallback={
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<title>Open Calculator</title>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-							/>
-						</svg>
-					}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-6 w-6"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<title>Close Calculator</title>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M6 18L18 6M6 6l12 12"
-						/>
-					</svg>
-				</Show>
-			</button>
+		<div class="min-h-screen bg-[#070b13] text-zinc-100 flex flex-col font-sans antialiased p-4 sm:p-6 md:p-8">
+			{/* Title Header */}
+			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-white/5 pb-4">
+				<div class="flex items-baseline gap-3">
+					<h1 class="text-xl sm:text-2xl font-bold text-white tracking-wide font-mono">
+						滚仓计算器
+					</h1>
+					<span class="text-zinc-500 text-xs font-mono uppercase tracking-wider">
+						Rolling Position Simulator
+					</span>
+				</div>
 
-			<Show when={isOpen()}>
-				<div class="fixed bottom-20 right-4 sm:bottom-24 sm:right-8 w-[calc(100vw-2rem)] sm:w-96 bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col max-h-[75vh] sm:max-h-[80vh]">
-					{/* Header */}
-					<div class="p-4 border-b border-white/5 bg-linear-to-r from-indigo-500/10 to-transparent flex items-center justify-between">
-						<div>
-							<h3 class="text-sm font-bold text-white tracking-widest uppercase flex items-center gap-2">
-								<span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-								Pyramid Scale V4.5
-							</h3>
-							<p class="text-[10px] text-zinc-400 font-mono mt-1">
-								WHALE HUNTER MACRO ENGINE
-							</p>
-						</div>
+				<div class="flex items-center gap-3">
+					<div class="bg-[#121824] p-1 rounded-xl border border-white/5 flex gap-1 font-mono text-xs">
 						<button
 							type="button"
-							onClick={() => {
-								setIsShort(!isShort());
-								debouncedSave();
-							}}
-							class={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${
-								isShort()
-									? "border-rose-500/50 bg-rose-500/10 text-rose-400"
-									: "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+							onClick={() => setIsShort(false)}
+							class={`px-4 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-all ${
+								!isShort()
+									? "bg-[#00c2ff] text-[#080c14] font-extrabold shadow-[0_0_15px_rgba(0,194,255,0.4)]"
+									: "text-zinc-400 hover:text-zinc-200"
 							}`}
 						>
-							{isShort() ? "SHORT (BEAR)" : "LONG (BULL)"}
+							{!isShort() && <span>✓</span>}
+							做多
+						</button>
+						<button
+							type="button"
+							onClick={() => setIsShort(true)}
+							class={`px-4 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-all ${
+								isShort()
+									? "bg-[#ff4d4d] text-white font-extrabold shadow-[0_0_15px_rgba(255,77,77,0.4)]"
+									: "text-zinc-400 hover:text-zinc-200"
+							}`}
+						>
+							{isShort() && <span>✓</span>}
+							做空
 						</button>
 					</div>
+				</div>
+			</div>
 
-					{/* Stats Summary */}
-					<div class="p-6 grid grid-cols-3 gap-2 bg-white/2">
-						<div class="space-y-1">
-							<p class="text-[9px] text-zinc-500 font-mono text-center uppercase tracking-tighter">
-								Current PnL
-							</p>
-							<p
-								class={`text-sm font-bold text-center tabular-nums ${totalPnL() >= 0 ? "text-emerald-400" : "text-rose-400"}`}
-							>
-								{totalPnL() >= 0 ? "+" : ""}
-								{totalPnL().toFixed(2)}U
-							</p>
-						</div>
-						<div class="space-y-1 border-x border-white/5">
-							<p class="text-[9px] text-zinc-500 font-mono text-center uppercase tracking-tighter">
-								Max Risk
-							</p>
-							<p
-								class={`text-sm font-bold text-center tabular-nums ${maxRisk() > 0 ? "text-rose-500" : "text-zinc-500"}`}
-							>
-								{maxRisk().toFixed(2)}U
-							</p>
-						</div>
-						<div class="space-y-1">
-							<p class="text-[9px] text-zinc-500 font-mono text-center uppercase tracking-tighter">
-								Locked Profit
-							</p>
-							<p
-								class={`text-sm font-bold text-center tabular-nums ${lockedProfit() > 0 ? "text-emerald-400" : "text-zinc-500"}`}
-							>
-								{lockedProfit().toFixed(2)}U
-							</p>
-						</div>
-						<div class="col-span-3 space-y-3 pt-2 border-t border-white/5">
-							<div class="space-y-1">
-								<div class="flex justify-between text-[10px] font-mono text-zinc-400">
-									<span>AVG ENTRY: ${avgPrice().toFixed(0)}</span>
-									<span>VOL: {totalSize().toFixed(2)} BTC</span>
-								</div>
-							</div>
-
-							<div class="space-y-2">
-								<div class="flex justify-between items-center text-[10px] font-mono">
-									<span class="text-indigo-400 uppercase tracking-tighter">
-										Target Stop Loss
-									</span>
-									<span class="text-rose-400">
-										${stopLoss().toLocaleString()}
-									</span>
-								</div>
-								<input
-									type="number"
-									value={stopLoss()}
-									onInput={(e) => {
-										setStopLoss(Number(e.currentTarget.value));
-										debouncedSave();
-									}}
-									class="w-full bg-zinc-800/50 border border-rose-500/20 rounded px-3 py-1.5 text-sm text-rose-400 focus:outline-none focus:border-rose-500/50 transition-colors font-mono"
-									placeholder="Stop price..."
-								/>
-							</div>
-
-							<div class="space-y-2 pt-1">
-								<div class="flex justify-between text-[10px] font-mono text-zinc-400">
-									<span class="uppercase tracking-tighter text-indigo-400/80">
-										Simulated Price
-									</span>
-									<span class="text-indigo-400">
-										${currentPrice().toLocaleString()}
-									</span>
-								</div>
-								<div class="grid grid-cols-5 gap-2 items-center">
-									<input
-										type="number"
-										value={currentPrice()}
-										onInput={(e) => {
-											setCurrentPrice(Number(e.currentTarget.value));
-											debouncedSave();
-										}}
-										class="col-span-2 bg-zinc-800/50 border border-indigo-500/20 rounded px-2 py-1 text-xs text-indigo-400 focus:outline-none focus:border-indigo-500/50 transition-colors font-mono"
-									/>
-									<input
-										type="range"
-										min="30000"
-										max="150000"
-										step="100"
-										value={currentPrice()}
-										onInput={(e) => {
-											setCurrentPrice(Number(e.currentTarget.value));
-											debouncedSave();
-										}}
-										class="col-span-3 accent-indigo-500 bg-zinc-800 rounded-lg appearance-none cursor-pointer h-1.5"
-									/>
-								</div>
-							</div>
-						</div>
-					</div>
-
-					{/* Position List */}
-					<div class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar border-t border-white/5">
-						<div class="flex items-center justify-between px-1 mb-2">
-							<span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-								Entry Blocks
-							</span>
-							<div class="flex gap-3">
-								<button
-									type="button"
-									onClick={() => {
-										setShowAveraging(!showAveraging());
-										setShowBulk(false);
-										if (quickAdd.price === 0) setQuickAdd("price", currentPrice());
-									}}
-									class={`text-[10px] font-bold transition-colors uppercase ${showAveraging() ? "text-indigo-400" : "text-zinc-500 hover:text-indigo-400"}`}
-								>
-									[ Averaging ]
-								</button>
-								<button
-									type="button"
-									onClick={() => {
-										setShowBulk(!showBulk());
-										setShowAveraging(false);
-									}}
-									class={`text-[10px] font-bold transition-colors uppercase ${showBulk() ? "text-indigo-400" : "text-zinc-500 hover:text-indigo-400"}`}
-								>
-									[ Bulk Mode ]
-								</button>
-								<button
-									type="button"
-									onClick={addEntry}
-									class="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase"
-								>
-									+ Add Step
-								</button>
-							</div>
-						</div>
-						
-						{showAveraging() && (
-							<div class="mb-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-								<div class="p-4 bg-indigo-500/5 rounded-xl border border-indigo-500/20 space-y-4">
-									<div class="flex items-center justify-between">
-										<span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Averaging Tool</span>
-										<span class="text-[9px] font-mono text-zinc-500 italic">Simulate addition</span>
-									</div>
-									
-									<div class="grid grid-cols-2 gap-4">
-										<div class="space-y-1.5">
-											<label class="text-[9px] font-mono text-zinc-500 uppercase">Add Price</label>
-											<input
-												type="number"
-												value={quickAdd.price}
-												onInput={(e) => setQuickAdd("price", Number(e.currentTarget.value))}
-												class="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 font-mono"
-											/>
-										</div>
-										<div class="space-y-1.5">
-											<label class="text-[9px] font-mono text-zinc-500 uppercase">Add Size</label>
-											<input
-												type="number"
-												step="0.01"
-												value={quickAdd.size}
-												onInput={(e) => setQuickAdd("size", Number(e.currentTarget.value))}
-												class="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 font-mono"
-											/>
-										</div>
-									</div>
-
-									<div class="pt-2 border-t border-white/5 flex flex-col gap-2">
-										<div class="flex justify-between items-center text-[10px] font-mono">
-											<span class="text-zinc-400">NEW AVG PRICE:</span>
-											<span class="text-indigo-400 font-bold">${newAvgAfterAdd().toFixed(2)}</span>
-										</div>
-										<div class="flex justify-between items-center text-[10px] font-mono">
-											<span class="text-zinc-400">PRICE SHIFT:</span>
-											<span class={newAvgAfterAdd() >= avgPrice() ? "text-emerald-400" : "text-rose-400"}>
-												{Math.abs(newAvgAfterAdd() - avgPrice()).toFixed(2)}U
-											</span>
-										</div>
-										<button
-											type="button"
-											onClick={commitQuickAdd}
-											class="w-full mt-2 py-2 rounded bg-indigo-600 text-white text-[10px] font-bold uppercase hover:bg-indigo-500 transition-colors shadow-lg active:scale-95"
-										>
-											Apply to Position
-										</button>
-									</div>
-								</div>
-							</div>
-						)}
-
-						{showBulk() && (
-							<div class="mb-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-								<div class="p-3 bg-indigo-500/5 rounded-xl border border-indigo-500/20">
-									<label
-										for="bulk-input-area"
-										class="text-[9px] font-mono text-indigo-400 block mb-2 uppercase tracking-tight"
-									>
-										Paste: Price, Size (one per line)
-									</label>
-									<textarea
-										id="bulk-input-area"
-										value={bulkInput()}
-										onInput={(e) => handleBulkInput(e.currentTarget.value)}
-										placeholder="69000, 0.04&#10;70000, 0.08&#10;71000, 0.12"
-										class="w-full h-32 bg-black/40 border border-white/5 rounded-lg p-2 text-[10px] font-mono text-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 resize-none no-scrollbar"
-									/>
-									<div class="mt-3 flex gap-2">
-										<button
-											type="button"
-											onClick={() =>
-												generatePyramid(
-													entries[0]?.price || 70000,
-													500,
-													5,
-													0.04,
-												)
-											}
-											class="flex-1 py-1.5 rounded bg-indigo-500/20 text-indigo-400 text-[9px] font-bold uppercase hover:bg-indigo-500/30 transition-colors border border-indigo-500/20"
-										>
-											Auto 5-Step Scale
-										</button>
-									</div>
-								</div>
-							</div>
-						)}
-
-						<For each={entries}>
-							{(entry) => (
-								<div class="p-3 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-all group">
-									<div class="flex items-center gap-3">
-										<div class="flex-1 space-y-3">
-											<div class="flex items-center gap-2">
-												<span class="text-[10px] font-mono text-zinc-500">
-													PX:
-												</span>
-												<input
-													type="number"
-													value={entry.price}
-													onInput={(e) =>
-														updateEntry(
-															entry.id,
-															"price",
-															Number(e.currentTarget.value),
-														)
-													}
-													class="bg-zinc-800/50 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 w-full"
-												/>
-											</div>
-											<div class="flex items-center gap-2">
-												<span class="text-[10px] font-mono text-zinc-500">
-													SZ:
-												</span>
-												<input
-													type="number"
-													step="0.01"
-													value={entry.size}
-													onInput={(e) =>
-														updateEntry(
-															entry.id,
-															"size",
-															Number(e.currentTarget.value),
-														)
-													}
-													class="bg-zinc-800/50 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 w-full"
-												/>
-											</div>
-										</div>
-										<div class="text-right flex flex-col justify-between h-full">
-											<p
-												class={`text-xs font-mono font-bold ${
-													(isShort()
-														? entry.price - currentPrice()
-														: currentPrice() - entry.price) *
-														entry.size >=
-													0
-														? "text-emerald-500"
-														: "text-rose-500"
-												}`}
-											>
-												{(
-													(isShort()
-														? entry.price - currentPrice()
-														: currentPrice() - entry.price) * entry.size
-												).toFixed(2)}
-												U
-											</p>
-											<button
-												type="button"
-												onClick={() => removeEntry(entry.id)}
-												class="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-600 hover:text-rose-500"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													class="h-4 w-4"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke="currentColor"
-												>
-													<title>Remove Entry</title>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-													/>
-												</svg>
-											</button>
-										</div>
-									</div>
-								</div>
+			{/* Top Parameters */}
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+				<div class="bg-[#121824] border border-white/5 p-4 rounded-xl space-y-2 flex flex-col justify-between">
+					<span class="text-zinc-500 text-[10px] font-bold block uppercase tracking-wider">
+						选择币种
+					</span>
+					<select
+						value={selectedCoin()}
+						onChange={(e) => setSelectedCoin(e.currentTarget.value)}
+						class="w-full bg-[#0b0e14] border border-white/10 hover:border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none font-bold font-mono appearance-none"
+					>
+						<For each={coins}>
+							{(coin) => (
+								<option value={coin.code}>
+									{coin.code} - {coin.name}
+								</option>
 							)}
 						</For>
-					</div>
-
-					{/* Footer Info */}
-					<div class="p-3 bg-indigo-500/5 flex items-center justify-center gap-4 border-t border-white/5">
-						<div class="flex items-center gap-1.5">
-							<span class="text-[8px] font-bold text-zinc-500 uppercase">
-								Risk Level
-							</span>
-							<div class="w-16 h-1 bg-zinc-800 rounded-full overflow-hidden">
-								<div
-									class={`h-full bg-indigo-500 transition-all duration-500`}
-									style={{ width: `${Math.min(totalSize() * 200, 100)}%` }}
-								></div>
-							</div>
-						</div>
+					</select>
+				</div>
+				<div class="bg-[#121824] border border-white/5 p-4 rounded-xl space-y-2 flex flex-col justify-between">
+					<span class="text-zinc-500 text-[10px] font-bold block uppercase tracking-wider">
+						首次开仓价格 (USDC)
+					</span>
+					<input
+						type="number"
+						step="0.000001"
+						value={firstEntryPrice()}
+						onInput={(e) => setFirstEntryPrice(Number(e.currentTarget.value))}
+						class="w-full bg-[#0b0e14] border border-white/10 hover:border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none font-bold font-mono"
+					/>
+				</div>
+				<div class="bg-[#121824] border border-white/5 p-4 rounded-xl space-y-2 flex flex-col justify-between">
+					<span class="text-zinc-500 text-[10px] font-bold block uppercase tracking-wider">
+						初始本金 (USDC)
+					</span>
+					<input
+						type="number"
+						step="1"
+						value={initialCapital()}
+						onInput={(e) => setInitialCapital(Number(e.currentTarget.value))}
+						class="w-full bg-[#0b0e14] border border-white/10 hover:border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none font-bold font-mono"
+					/>
+				</div>
+				<div class="bg-[#121824] border border-white/5 p-4 rounded-xl space-y-2 flex flex-col justify-between">
+					<span class="text-zinc-500 text-[10px] font-bold block uppercase tracking-wider">
+						首层杠杆倍数
+					</span>
+					<div class="flex items-center gap-2">
+						<input
+							type="number"
+							value={globalLeverage()}
+							onInput={(e) => setGlobalLeverage(Number(e.currentTarget.value))}
+							class="w-full bg-[#0b0e14] border border-white/10 hover:border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none font-bold font-mono"
+						/>
+						<span class="text-zinc-400 font-mono text-sm">倍</span>
 					</div>
 				</div>
-			</Show>
-		</>
+				<div class="bg-[#121824] border border-white/5 p-4 rounded-xl space-y-2 flex flex-col justify-between">
+					<span class="text-zinc-500 text-[10px] font-bold block uppercase tracking-wider">
+						合约规则 (Hyperliquid)
+					</span>
+					<div class="w-full bg-[#0b0e14]/50 border border-emerald-500/20 rounded-lg px-3 py-2 text-sm text-emerald-400 font-bold font-mono flex items-center gap-2 cursor-default">
+						<span>⚡</span> USDC-Margined
+					</div>
+					<div class="text-[9px] text-zinc-400 font-mono leading-relaxed mt-1">
+						<span>
+							开仓手续费 <span class="text-emerald-400 font-bold">0.0432%</span>
+						</span>
+						<br />
+						<span class="text-zinc-500">仅扣除单边手续费实现复利滚仓</span>
+					</div>
+				</div>
+			</div>
+
+			<div class="flex items-center justify-between mb-4">
+				<div class="flex items-center gap-2">
+					<span class="w-2.5 h-2.5 rounded-full bg-[#00c2ff] animate-pulse"></span>
+					<h3 class="text-sm font-bold text-white tracking-wide font-mono">
+						USDC本位 (全仓复利) · {isShort() ? "做空" : "做多"}
+					</h3>
+				</div>
+				<div class="flex items-center gap-2">
+					<button
+						type="button"
+						onClick={addLevel}
+						class="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500/60 rounded-lg text-xs font-bold text-emerald-400 hover:text-white transition-all font-mono"
+					>
+						+ 添加级别
+					</button>
+					<button
+						type="button"
+						onClick={resetDefault}
+						class="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-bold text-zinc-400 hover:text-white transition-all font-mono"
+					>
+						重置默认
+					</button>
+				</div>
+			</div>
+
+			{/* Main Matrix Grid */}
+			<div class="flex-1 overflow-x-auto rounded-xl border border-white/5 bg-[#121824]/30 no-scrollbar mb-8 shadow-2xl">
+				<table class="w-full text-left border-collapse font-mono text-[11px] min-w-[1450px]">
+					<thead class="bg-[#121824] text-zinc-400 uppercase tracking-wider border-b border-white/5">
+						<tr>
+							<th class="p-4 w-12 text-center">级别</th>
+							<th class="p-4">入场价格</th>
+							<th class="p-4 text-right text-sky-400 font-bold">入场均价</th>
+							<th class="p-4 text-right text-amber-500/90 font-bold">
+								目标价格
+							</th>
+							<th class="p-4 text-right">所需涨幅</th>
+							<th class="p-4 text-center">杠杆倍数</th>
+							<th class="p-4 text-right">投入本金 (USDC)</th>
+							<th class="p-4 text-right">名义仓位 (USDC)</th>
+							<th class="p-4 text-right text-amber-500 font-bold">
+								防守价 (保前级利润)
+							</th>
+							<th class="p-4 text-right text-rose-400 font-bold">
+								爆仓价 (HL MMR)
+							</th>
+							<th class="p-4 text-right text-emerald-400">
+								滚入下级资产 (USDC)
+							</th>
+							<th class="p-4 text-right text-[#00c2ff]">本级毛利</th>
+							<th class="p-4 text-right text-rose-400">单边手续费</th>
+							<th class="p-4 w-12"></th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-white/5 bg-[#121824]/10">
+						<For each={computedRows()}>
+							{(step, index) => (
+								<tr class="hover:bg-white/2 transition-colors">
+									<td class="p-4 text-center">
+										<span class="w-6 h-6 rounded-lg bg-zinc-800/80 text-zinc-400 font-bold text-xs flex items-center justify-center mx-auto">
+											{step.level}
+										</span>
+									</td>
+									<td class="p-4">
+										<Show
+											when={step.level > 1}
+											fallback={
+												<span class="font-bold text-white text-xs">
+													${formatPrice(step.entryPrice)}
+												</span>
+											}
+										>
+											<input
+												type="number"
+												step="0.000001"
+												value={
+													step.customEntryPrice !== undefined
+														? step.customEntryPrice
+														: step.entryPrice
+												}
+												onInput={(e) =>
+													updateRow(
+														index(),
+														"customEntryPrice",
+														e.currentTarget.value
+															? Number(e.currentTarget.value)
+															: undefined,
+													)
+												}
+												class="bg-[#0b0e14] border border-white/10 hover:border-white/20 rounded px-2.5 py-1 text-xs text-white focus:outline-none w-36 font-mono font-bold"
+											/>
+										</Show>
+									</td>
+									<td class="p-4 text-right text-sky-400 font-extrabold text-xs">
+										${formatPrice(step.avgEntryPrice)}
+									</td>
+									<td class="p-4 text-right font-extrabold text-[#ffa000] text-xs">
+										${formatPrice(step.targetPrice)}
+									</td>
+									<td class="p-4 text-right">
+										<span
+											class={`font-extrabold text-xs ${!isShort() ? "text-emerald-400" : "text-rose-500"}`}
+										>
+											{!isShort() ? "+" : "-"}
+											{step.requiredMove.toFixed(2)}%
+										</span>
+									</td>
+									<td class="p-4 text-center">
+										<div class="flex items-center justify-center gap-1.5">
+											<input
+												type="number"
+												value={step.leverage}
+												onInput={(e) =>
+													updateRow(
+														index(),
+														"customLeverage",
+														Number(e.currentTarget.value) > 0
+															? Number(e.currentTarget.value)
+															: undefined,
+													)
+												}
+												class="bg-[#0b0e14] border border-white/10 hover:border-[#00c2ff]/40 focus:border-[#00c2ff] rounded px-1.5 py-0.5 text-xs text-white font-extrabold text-center font-mono w-14 focus:outline-none"
+											/>
+											<span class="text-zinc-500 text-[10px] font-bold">x</span>
+										</div>
+									</td>
+									<td class="p-4 text-right text-white font-bold">
+										$
+										{step.holdingCapital.toLocaleString(undefined, {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
+										})}
+									</td>
+									<td class="p-4 text-right text-zinc-300 font-bold">
+										$
+										{step.positionSizeUSDC.toLocaleString(undefined, {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
+										})}
+										<span class="text-zinc-500 text-[9px] font-bold block mt-0.5">
+											≈{" "}
+											{step.positionSizeTokens.toLocaleString(undefined, {
+												minimumFractionDigits: 2,
+												maximumFractionDigits: 6,
+											})}{" "}
+											{selectedCoin()}
+										</span>
+									</td>
+									<td class="p-4 text-right text-[#ffb300] font-bold text-xs">
+										<Show
+											when={step.level > 1 && step.rollbackPrice > 0}
+											fallback={
+												<span class="text-zinc-700 font-normal">—</span>
+											}
+										>
+											<p>${formatPrice(step.rollbackPrice)}</p>
+											<span class="text-[#ffb300]/80 text-[9px] font-bold mt-0.5 block">
+												({step.rollbackPercent >= 0 ? "+" : ""}
+												{step.rollbackPercent.toFixed(2)}%)
+											</span>
+										</Show>
+									</td>
+									<td class="p-4 text-right text-rose-500 font-extrabold text-xs">
+										<Show
+											when={step.liquidationPrice > 0}
+											fallback={<span class="text-zinc-600">—</span>}
+										>
+											<p>${formatPrice(step.liquidationPrice)}</p>
+											<span class="text-rose-500/80 text-[9px] font-bold mt-0.5 block">
+												({step.liquidationPercent >= 0 ? "+" : ""}
+												{step.liquidationPercent.toFixed(2)}%)
+											</span>
+										</Show>
+									</td>
+									<td class="p-4 text-right text-emerald-400 font-extrabold text-xs">
+										$
+										{step.netCompletedAssetUSDC.toLocaleString(undefined, {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
+										})}
+									</td>
+									<td class="p-4 text-right">
+										<p class="text-[#00c2ff] font-extrabold text-xs">
+											+$
+											{step.levelProfit.toLocaleString(undefined, {
+												minimumFractionDigits: 2,
+												maximumFractionDigits: 2,
+											})}
+										</p>
+									</td>
+									<td class="p-4 text-right">
+										<p class="text-rose-400 font-extrabold text-xs">
+											-$
+											{step.levelFee.toLocaleString(undefined, {
+												minimumFractionDigits: 2,
+												maximumFractionDigits: 2,
+											})}
+										</p>
+									</td>
+									<td class="p-4 text-center">
+										<button
+											type="button"
+											onClick={() => removeLevel(index())}
+											class="text-zinc-600 hover:text-rose-500 transition-colors"
+										>
+											✕
+										</button>
+									</td>
+								</tr>
+							)}
+						</For>
+					</tbody>
+				</table>
+			</div>
+		</div>
 	);
 }
+
+// --- END OF FILE MacroPyramidCalculator.tsx ---
