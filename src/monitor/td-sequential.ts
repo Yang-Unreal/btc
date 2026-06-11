@@ -95,6 +95,17 @@ function intervalToMs(granularity: Granularity): number {
 	return map[granularity];
 }
 
+function getStableCandles(candles: number[][], granularity: Granularity): number[][] {
+	if (candles.length === 0) return candles;
+	const intervalMs = intervalToMs(granularity);
+	const lastCandleTime = candles[candles.length - 1][0];
+	const now = Date.now();
+	if (now < (lastCandleTime + intervalMs) * 1000) {
+		return candles.slice(0, -1);
+	}
+	return candles;
+}
+
 async function fetchCandles(granularity: Granularity): Promise<number[][]> {
 	const now = Date.now();
 	const intervalMs = intervalToMs(granularity);
@@ -239,7 +250,7 @@ function formatEventMessage(
 	price: number,
 	displayName: string,
 ): string {
-	const dt = new Date(event.time).toLocaleString("zh-CN", {
+	const dt = new Date(event.time * 1000).toLocaleString("zh-CN", {
 		timeZone: "Asia/Shanghai",
 		hour12: false,
 	});
@@ -277,7 +288,8 @@ async function runMonitorCycle(config: MonitorConfig): Promise<void> {
 	try {
 		if (!(await shouldNotify())) return;
 
-		const candles = await fetchCandles(config.granularity);
+		const fetchedCandles = await fetchCandles(config.granularity);
+		const candles = getStableCandles(fetchedCandles, config.granularity);
 		if (candles.length < 20) return;
 
 		const events = calculateTDSequentialEvents(candles, config.displayName);
