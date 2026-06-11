@@ -401,6 +401,56 @@ export default function BTCChart() {
 		},
 	];
 
+	const INTERVAL_SECONDS: Record<Interval, number> = {
+		"1m": 60,
+		"3m": 180,
+		"5m": 300,
+		"15m": 900,
+		"30m": 1800,
+		"1h": 3600,
+		"2h": 7200,
+		"4h": 14400,
+		"12h": 43200,
+		"1d": 86400,
+		"1w": 604800,
+		"1M": 0,
+		"3d": 0,
+	};
+
+	const isCandleClosed = (
+		candleTime: number,
+		intervalValue: Interval,
+		now = Date.now(),
+	) => {
+		if (intervalValue === "1M") {
+			const start = new Date(candleTime * 1000);
+			const nextMonth = new Date(
+				Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1),
+			);
+			return now >= nextMonth.getTime();
+		}
+
+		if (intervalValue === "1w") {
+			const start = new Date(candleTime * 1000);
+			const nextWeek = new Date(
+				start.getTime() + INTERVAL_SECONDS["1w"] * 1000,
+			);
+			return now >= nextWeek.getTime();
+		}
+
+		const intervalSeconds = INTERVAL_SECONDS[intervalValue];
+		if (!intervalSeconds) return true;
+		return now >= (candleTime + intervalSeconds) * 1000;
+	};
+
+	const getStableChartData = (data: BTCData[]) => {
+		if (data.length < 2) return data;
+
+		const lastTime = data[data.length - 1].time as number;
+		if (isCandleClosed(lastTime, interval())) return data;
+		return data.slice(0, -1);
+	};
+
 	const calculateTDMarkers = (data: BTCData[]) => {
 		if (!indicators().tdSeq || data.length < 5) {
 			setTdMap(new Map());
@@ -529,7 +579,8 @@ export default function BTCChart() {
 
 	const refreshAllMarkers = (data: BTCData[]) => {
 		if (!markersPrimitive) return;
-		const tdMarkers = calculateTDMarkers(data);
+		const stableData = getStableChartData(data);
+		const tdMarkers = calculateTDMarkers(stableData);
 
 		const allMarkers = [...tdMarkers].sort(
 			(a, b) => (a.time as number) - (b.time as number),
@@ -1308,7 +1359,7 @@ export default function BTCChart() {
 			);
 		},
 		staleTime: 60 * 1000 * 5, // Cache for 5 minutes for instant interval switching
-		enabled: typeof window !== "undefined", // Disable SSR fetch for relative URLs
+		enabled: typeof window !== "undefined" && settingsLoaded(), // Wait for persisted settings before loading chart history
 	}));
 
 	createEffect(() => {
