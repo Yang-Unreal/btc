@@ -5,7 +5,9 @@ import { userSettings } from "../lib/db/schema";
 assertDb();
 
 /**
- * 15 分钟 TD Sequential 监控脚本
+ * TD Sequential 监控脚本 - 多时间框架
+ *
+ * 支持的时间框架: 15m, 1h, 4h, 1d
  *
  * 触发条件：
  *  - Bullish setup 9
@@ -29,8 +31,14 @@ const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
 const CHECK_INTERVAL_MS =
 	Number(process.env.TD_SEQ_CHECK_INTERVAL_MS) || 60_000;
 const SYMBOL = "BTCUSDT";
-const GRANULARITY = "15min";
 const CANDLE_LIMIT = 200;
+
+type Granularity = "15min" | "1h" | "4h" | "1d";
+
+interface MonitorConfig {
+	granularity: Granularity;
+	displayName: string;
+}
 
 interface BitgetResponse {
 	code: string;
@@ -69,8 +77,8 @@ async function sendTelegramMessage(message: string): Promise<void> {
 	}
 }
 
-async function fetchCandles(): Promise<number[][]> {
-	const url = `https://api.bitget.com/api/v2/spot/market/candles?symbol=${SYMBOL}&granularity=${GRANULARITY}&limit=${CANDLE_LIMIT}`;
+async function fetchCandles(granularity: Granularity): Promise<number[][]> {
+	const url = `https://api.bitget.com/api/v2/spot/market/candles?symbol=${SYMBOL}&granularity=${granularity}&limit=${CANDLE_LIMIT}`;
 	const response = await fetch(url);
 	if (!response.ok) {
 		throw new Error(
@@ -95,7 +103,10 @@ async function fetchCandles(): Promise<number[][]> {
 		.sort((a, b) => a[0] - b[0]);
 }
 
-function calculateTDSequentialEvents(data: number[][]): TDSequentialEvent[] {
+function calculateTDSequentialEvents(
+	data: number[][],
+	timeframe: string = "candle",
+): TDSequentialEvent[] {
 	const events: TDSequentialEvent[] = [];
 	let buySetup = 0;
 	let sellSetup = 0;
@@ -126,8 +137,7 @@ function calculateTDSequentialEvents(data: number[][]): TDSequentialEvent[] {
 			events.push({
 				time,
 				type: "bullish-setup-9",
-				description:
-					"Bullish TD Sequential setup 9: 15m close < 4 bars ago close",
+				description: `Bullish TD Sequential setup 9: ${timeframe} close < 4 bars ago close`,
 			});
 			activeBuyCountdown = true;
 			activeSellCountdown = false;
@@ -140,8 +150,7 @@ function calculateTDSequentialEvents(data: number[][]): TDSequentialEvent[] {
 			events.push({
 				time,
 				type: "bearish-setup-9",
-				description:
-					"Bearish TD Sequential setup 9: 15m close > 4 bars ago close",
+				description: `Bearish TD Sequential setup 9: ${timeframe} close > 4 bars ago close`,
 			});
 			activeSellCountdown = true;
 			activeBuyCountdown = false;
@@ -156,8 +165,7 @@ function calculateTDSequentialEvents(data: number[][]): TDSequentialEvent[] {
 				events.push({
 					time,
 					type: "buy-countdown-13",
-					description:
-						"TD Sequential buy countdown 13: 15m close <= low 2 bars ago",
+					description: `TD Sequential buy countdown 13: ${timeframe} close <= low 2 bars ago`,
 				});
 				activeBuyCountdown = false;
 				buyCountdown = 0;
@@ -170,8 +178,7 @@ function calculateTDSequentialEvents(data: number[][]): TDSequentialEvent[] {
 				events.push({
 					time,
 					type: "sell-countdown-13",
-					description:
-						"TD Sequential sell countdown 13: 15m close >= high 2 bars ago",
+					description: `TD Sequential sell countdown 13: ${timeframe} close >= high 2 bars ago`,
 				});
 				activeSellCountdown = false;
 				sellCountdown = 0;
@@ -182,22 +189,34 @@ function calculateTDSequentialEvents(data: number[][]): TDSequentialEvent[] {
 	return events;
 }
 
-const notifiedEvents = new Set<string>();
-let lastProcessedTime = 0;
+// 为每个时间框架维护独立的追踪状态
+const monitorState: Record<
+	Granularity,
+	{ lastProcessedTime: number; notifiedEvents: Set<string> }
+> = {
+	"15min": { lastProcessedTime: 0, notifiedEvents: new Set() },
+	"1h": { lastProcessedTime: 0, notifiedEvents: new Set() },
+	"4h": { lastProcessedTime: 0, notifiedEvents: new Set() },
+	"1d": { lastProcessedTime: 0, notifiedEvents: new Set() },
+};
 
-function formatEventMessage(event: TDSequentialEvent, price: number): string {
+function formatEventMessage(
+	event: TDSequentialEvent,
+	price: number,
+	displayName: string,
+): string {
 	const dt = new Date(event.time).toLocaleString("zh-CN", {
 		timeZone: "Asia/Shanghai",
 		hour12: false,
 	});
 	const title =
 		event.type === "bullish-setup-9"
-			? "🟩 TD Sequential 15m Bullish Setup 9"
+			? `🟩 TD Sequential ${displayName} Bullish Setup 9`
 			: event.type === "bearish-setup-9"
-				? "🟥 TD Sequential 15m Bearish Setup 9"
+				? `🟥 TD Sequential ${displayName} Bearish Setup 9`
 				: event.type === "buy-countdown-13"
-					? "🟦 TD Sequential 15m Buy Countdown 13"
-					: "🟧 TD Sequential 15m Sell Countdown 13";
+					? `🟦 TD Sequential ${displayName} Buy Countdown 13`
+					: `🟧 TD Sequential ${displayName} Sell Countdown 13`;
 
 	return [
 		`${title}`,
@@ -206,7 +225,7 @@ function formatEventMessage(event: TDSequentialEvent, price: number): string {
 		`💰 当前价格: <b>$${price.toFixed(2)}</b>`,
 		`📌 触发类型: ${event.description}`,
 		"",
-		"请查看 15 分钟图表，并根据风险制定交易计划。",
+		`请查看 ${displayName} 图表，并根据风险制定交易计划。`,
 	].join("\n");
 }
 
@@ -220,40 +239,49 @@ async function shouldNotify(): Promise<boolean> {
 	return settings[0].notificationsEnabled !== "false";
 }
 
-async function runMonitorCycle(): Promise<void> {
+async function runMonitorCycle(
+	config: MonitorConfig,
+): Promise<void> {
 	try {
 		if (!(await shouldNotify())) return;
 
-		const candles = await fetchCandles();
+		const candles = await fetchCandles(config.granularity);
 		if (candles.length < 20) return;
 
-		const events = calculateTDSequentialEvents(candles);
+		const events = calculateTDSequentialEvents(candles, config.displayName);
 		if (events.length === 0) {
-			lastProcessedTime = candles[candles.length - 1][0];
+			monitorState[config.granularity].lastProcessedTime =
+				candles[candles.length - 1][0];
 			return;
 		}
 
 		const latestCandleTime = candles[candles.length - 1][0];
 		const currentPrice = candles[candles.length - 1][4];
+		const state = monitorState[config.granularity];
 
 		const newEvents = events.filter((event) => {
-			if (lastProcessedTime === 0) {
+			if (state.lastProcessedTime === 0) {
 				return event.time === latestCandleTime;
 			}
-			return event.time > lastProcessedTime;
+			return event.time > state.lastProcessedTime;
 		});
 
 		for (const event of newEvents) {
 			const eventKey = `${event.time}-${event.type}`;
-			if (notifiedEvents.has(eventKey)) continue;
+			if (state.notifiedEvents.has(eventKey)) continue;
 
-			notifiedEvents.add(eventKey);
-			await sendTelegramMessage(formatEventMessage(event, currentPrice));
+			state.notifiedEvents.add(eventKey);
+			await sendTelegramMessage(
+				formatEventMessage(event, currentPrice, config.displayName),
+			);
 		}
 
-		lastProcessedTime = latestCandleTime;
+		state.lastProcessedTime = latestCandleTime;
 	} catch (error) {
-		console.error("❌ TD Sequential 监控异常:", error);
+		console.error(
+			`❌ TD Sequential 监控异常 (${config.displayName}):`,
+			error,
+		);
 	}
 }
 
@@ -265,8 +293,26 @@ export async function startTDSequentialMonitor(): Promise<void> {
 		return;
 	}
 
-	await runMonitorCycle();
-	setInterval(runMonitorCycle, CHECK_INTERVAL_MS);
+	const configs: MonitorConfig[] = [
+		{ granularity: "15min", displayName: "15m" },
+		{ granularity: "1h", displayName: "1h" },
+		{ granularity: "4h", displayName: "4h" },
+		{ granularity: "1d", displayName: "1d" },
+	];
+
+	console.log(
+		"✅ TD Sequential Monitoring started for: 15m, 1h, 4h, 1d",
+	);
+
+	// 立即运行所有时间框架的第一次检查
+	for (const config of configs) {
+		await runMonitorCycle(config);
+	}
+
+	// 为每个时间框架设置定时检查
+	for (const config of configs) {
+		setInterval(() => runMonitorCycle(config), CHECK_INTERVAL_MS);
+	}
 }
 
 if (import.meta.url.includes(process.argv[1])) {
