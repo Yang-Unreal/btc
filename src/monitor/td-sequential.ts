@@ -30,20 +30,28 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
 const CHECK_INTERVAL_MS =
 	Number(process.env.TD_SEQ_CHECK_INTERVAL_MS) || 60_000;
-const SYMBOL = "BTCUSDT";
+const HL_API = "https://api.hyperliquid.xyz/info";
+const COIN = "BTC";
 const CANDLE_LIMIT = 200;
 
-type Granularity = "15min" | "1h" | "4h" | "1d";
+type Granularity = "15m" | "1h" | "4h" | "1d";
 
 interface MonitorConfig {
 	granularity: Granularity;
 	displayName: string;
 }
 
-interface BitgetResponse {
-	code: string;
-	msg: string;
-	data: string[][];
+interface HLCandle {
+	t: number;
+	T: number;
+	s: string;
+	i: string;
+	o: string;
+	c: string;
+	h: string;
+	l: string;
+	v: string;
+	n: number;
 }
 
 type TDSequentialEventType =
@@ -77,28 +85,54 @@ async function sendTelegramMessage(message: string): Promise<void> {
 	}
 }
 
+function intervalToMs(granularity: Granularity): number {
+	const map: Record<Granularity, number> = {
+		"15m": 900_000,
+		"1h": 3_600_000,
+		"4h": 14_400_000,
+		"1d": 86_400_000,
+	};
+	return map[granularity];
+}
+
 async function fetchCandles(granularity: Granularity): Promise<number[][]> {
-	const url = `https://api.bitget.com/api/v2/spot/market/candles?symbol=${SYMBOL}&granularity=${granularity}&limit=${CANDLE_LIMIT}`;
-	const response = await fetch(url);
+	const now = Date.now();
+	const intervalMs = intervalToMs(granularity);
+	const startTimeMs = Math.max(0, now - intervalMs * CANDLE_LIMIT);
+
+	const response = await fetch(HL_API, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			type: "candleSnapshot",
+			req: {
+				coin: COIN,
+				interval: granularity,
+				startTime: startTimeMs,
+				endTime: now,
+			},
+		}),
+	});
+
 	if (!response.ok) {
 		throw new Error(
-			`Bitget API error: ${response.status} ${response.statusText}`,
+			`Hyperliquid API error: ${response.status} ${response.statusText}`,
 		);
 	}
 
-	const data: BitgetResponse = await response.json();
-	if (data.code !== "00000") {
-		throw new Error(`Bitget API error: ${data.msg}`);
+	const data: HLCandle[] = await response.json();
+	if (!Array.isArray(data)) {
+		throw new Error("Hyperliquid API returned unexpected candle data");
 	}
 
-	return data.data
+	return data
 		.map((item) => [
-			parseInt(item[0], 10),
-			parseFloat(item[1]),
-			parseFloat(item[2]),
-			parseFloat(item[3]),
-			parseFloat(item[4]),
-			parseFloat(item[5]),
+			Math.floor(item.t / 1000),
+			parseFloat(item.o),
+			parseFloat(item.h),
+			parseFloat(item.l),
+			parseFloat(item.c),
+			parseFloat(item.v),
 		])
 		.sort((a, b) => a[0] - b[0]);
 }
@@ -194,7 +228,7 @@ const monitorState: Record<
 	Granularity,
 	{ lastProcessedTime: number; notifiedEvents: Set<string> }
 > = {
-	"15min": { lastProcessedTime: 0, notifiedEvents: new Set() },
+	"15m": { lastProcessedTime: 0, notifiedEvents: new Set() },
 	"1h": { lastProcessedTime: 0, notifiedEvents: new Set() },
 	"4h": { lastProcessedTime: 0, notifiedEvents: new Set() },
 	"1d": { lastProcessedTime: 0, notifiedEvents: new Set() },
@@ -289,7 +323,7 @@ export async function startTDSequentialMonitor(): Promise<void> {
 	}
 
 	const configs: MonitorConfig[] = [
-		{ granularity: "15min", displayName: "15m" },
+		{ granularity: "15m", displayName: "15m" },
 		{ granularity: "1h", displayName: "1h" },
 		{ granularity: "4h", displayName: "4h" },
 		{ granularity: "1d", displayName: "1d" },
