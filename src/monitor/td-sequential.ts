@@ -239,9 +239,7 @@ async function shouldNotify(): Promise<boolean> {
 	return settings[0].notificationsEnabled !== "false";
 }
 
-async function runMonitorCycle(
-	config: MonitorConfig,
-): Promise<void> {
+async function runMonitorCycle(config: MonitorConfig): Promise<void> {
 	try {
 		if (!(await shouldNotify())) return;
 
@@ -278,10 +276,7 @@ async function runMonitorCycle(
 
 		state.lastProcessedTime = latestCandleTime;
 	} catch (error) {
-		console.error(
-			`❌ TD Sequential 监控异常 (${config.displayName}):`,
-			error,
-		);
+		console.error(`❌ TD Sequential 监控异常 (${config.displayName}):`, error);
 	}
 }
 
@@ -300,9 +295,7 @@ export async function startTDSequentialMonitor(): Promise<void> {
 		{ granularity: "1d", displayName: "1d" },
 	];
 
-	console.log(
-		"✅ TD Sequential Monitoring started for: 15m, 1h, 4h, 1d",
-	);
+	console.log("✅ TD Sequential Monitoring started for: 15m, 1h, 4h, 1d");
 
 	// 立即运行所有时间框架的第一次检查
 	for (const config of configs) {
