@@ -31,7 +31,6 @@ import {
 import { formatCryptoPrice } from "../lib/format";
 import {
 	calculateATR,
-	calculateDonchianHigh,
 	calculateEMA,
 	calculateRSI,
 	calculateSMA,
@@ -65,7 +64,6 @@ interface TooltipData {
 	ma20?: string;
 	ma60?: string;
 	ma120?: string;
-	donchianHigh?: string;
 	prevHigh?: string;
 	rsi?: string;
 	atr?: string;
@@ -158,7 +156,6 @@ export default function BTCChart() {
 	let ma20Series: ISeriesApi<"Line"> | undefined;
 	let ma60Series: ISeriesApi<"Line"> | undefined;
 	let ma120Series: ISeriesApi<"Line"> | undefined;
-	let donchianHighSeries: ISeriesApi<"Line"> | undefined;
 	let prevHighSeries: ISeriesApi<"Line"> | undefined;
 	let rsiSeries: ISeriesApi<"Line"> | undefined;
 	let fngSeries: ISeriesApi<"Line"> | undefined;
@@ -976,15 +973,6 @@ export default function BTCChart() {
 		if (currentInd.ma60) updateSeries(ma60Series, calculateSMA, 60);
 		if (currentInd.ma120) updateSeries(ma120Series, calculateSMA, 120);
 
-		if (currentInd.donchianHigh && donchianHighSeries && slice.length >= 20) {
-			const highs = slice.map((d) => d.high);
-			const vals = calculateDonchianHigh(highs, 20);
-			const val = vals[vals.length - 1];
-			if (!Number.isNaN(val)) {
-				donchianHighSeries.update({ time: lastCandle.time, value: val });
-			}
-		}
-
 		if (currentInd.rsi && rsiSeries && slice.length > 20) {
 			const rsiValues = calculateRSI(closes, 14);
 			const lastRSI = rsiValues[rsiValues.length - 1];
@@ -1055,7 +1043,6 @@ export default function BTCChart() {
 		const ma20 = calculateSMA(closes, 20);
 		const ma60 = calculateSMA(closes, 60);
 		const ma120 = calculateSMA(closes, 120);
-		const donchianHigh = calculateDonchianHigh(highs, 20);
 		const lastPrevHigh = findLastSwingHigh(highs, 10, 2);
 
 		const change = lastCandle.close - lastCandle.open;
@@ -1081,7 +1068,7 @@ export default function BTCChart() {
 			ma20: formatValue(ma20[ma20.length - 1]),
 			ma60: formatValue(ma60[ma60.length - 1]),
 			ma120: formatValue(ma120[ma120.length - 1]),
-			donchianHigh: formatValue(donchianHigh[donchianHigh.length - 1]),
+
 			prevHigh: formatValue(lastPrevHigh ?? undefined),
 			rsi: !Number.isNaN(lastRSI) ? lastRSI.toFixed(1) : undefined,
 			atr: currentInd.atr
@@ -1129,7 +1116,7 @@ export default function BTCChart() {
 		ma20Series?.applyOptions({ visible: !!currentInd.ma20 });
 		ma60Series?.applyOptions({ visible: !!currentInd.ma60 });
 		ma120Series?.applyOptions({ visible: !!currentInd.ma120 });
-		donchianHighSeries?.applyOptions({ visible: !!currentInd.donchianHigh });
+
 		prevHighSeries?.applyOptions({ visible: !!currentInd.prevHigh });
 		rsiSeries?.applyOptions({ visible: !!currentInd.rsi });
 		fngSeries?.applyOptions({ visible: !!currentInd.fng });
@@ -1261,23 +1248,6 @@ export default function BTCChart() {
 		processMA(currentInd.ma20, ma20Series, 20);
 		processMA(currentInd.ma60, ma60Series, 60);
 		processMA(currentInd.ma120, ma120Series, 120);
-
-		if (
-			currentInd.donchianHigh &&
-			donchianHighSeries &&
-			currentData.length >= 20
-		) {
-			const highs = currentData.map((d) => d.high);
-			const vals = calculateDonchianHigh(highs, 20);
-			const lineData: LineData[] = [];
-			for (let i = 0; i < vals.length; i++) {
-				if (!Number.isNaN(vals[i]))
-					lineData.push({ time: currentData[i].time, value: vals[i] });
-			}
-			donchianHighSeries.setData(lineData);
-		} else if (donchianHighSeries) {
-			donchianHighSeries.setData([]);
-		}
 
 		// Prev High (Swing High)
 		if (currentInd.prevHigh && prevHighSeries && currentData.length >= 15) {
@@ -1532,7 +1502,7 @@ export default function BTCChart() {
 		ma20Series = createLineSeries("#EF4444"); // red-500
 		ma60Series = createLineSeries("#22C55E"); // green-500
 		ma120Series = createLineSeries("#2563EB"); // blue-600
-		donchianHighSeries = createLineSeries("#f43f5e"); // rose-500
+
 		prevHighSeries = createLineSeries("#f97316"); // orange-500
 
 		const oscillatorOptions = {
@@ -1663,9 +1633,7 @@ export default function BTCChart() {
 			const fngVal = fngSeries
 				? (param.seriesData.get(fngSeries) as LineData)
 				: undefined;
-			const donchianHighVal = donchianHighSeries
-				? (param.seriesData.get(donchianHighSeries) as LineData)
-				: undefined;
+
 			const prevHighVal = prevHighSeries
 				? (param.seriesData.get(prevHighSeries) as LineData)
 				: undefined;
@@ -1730,7 +1698,7 @@ export default function BTCChart() {
 				ma20: formatTooltipPrice(ma20Val?.value),
 				ma60: formatTooltipPrice(ma60Val?.value),
 				ma120: formatTooltipPrice(ma120Val?.value),
-				donchianHigh: formatTooltipPrice(donchianHighVal?.value),
+
 				prevHigh: formatTooltipPrice(prevHighVal?.value),
 				rsi:
 					rsiVal && typeof rsiVal.value === "number"
@@ -2063,7 +2031,7 @@ export default function BTCChart() {
 								</svg>
 							</button>
 							<Show when={showIntervalDropdown()}>
-								<div class="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 min-w-[140px]">
+								<div class="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 min-w-35">
 									<For each={intervals}>
 										{(opt) => (
 											<div
@@ -2355,7 +2323,7 @@ export default function BTCChart() {
 									</svg>
 								</button>
 								<Show when={showIntervalDropdown()}>
-									<div class="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 min-w-[140px]">
+									<div class="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 min-w-35">
 										<For each={intervals}>
 											{(opt) => (
 												<div
@@ -2497,7 +2465,7 @@ export default function BTCChart() {
 					</div>
 				</div>
 			</Show>
-			<div class="relative h-[450px] md:h-[550px] w-full group cursor-crosshair touch-action-none bg-[#0b0e14]">
+			<div class="relative h-112.5 md:h-137.5 w-full group cursor-crosshair touch-action-none bg-[#0b0e14]">
 				<Show when={isLoading()}>
 					<div class="absolute inset-0 z-20 flex items-center justify-center bg-[#0b0e14]/80 backdrop-blur-sm">
 						<div class="flex flex-col items-center gap-4">
@@ -2729,18 +2697,6 @@ export default function BTCChart() {
 											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
 												<span class="text-orange-400">EMA 120 close 0</span>
 												<span class="text-orange-400">{t().ema120}</span>
-											</div>
-										</Show>
-										<Show
-											when={
-												indicators().donchianHigh &&
-												t().donchianHigh &&
-												t().donchianHigh !== "—"
-											}
-										>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-rose-500">20D HIGH</span>
-												<span class="text-rose-500">{t().donchianHigh}</span>
 											</div>
 										</Show>
 										<Show

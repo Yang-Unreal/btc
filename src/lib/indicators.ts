@@ -28,23 +28,6 @@ export const calculateEMA = (data: number[], period: number): number[] => {
 	return ema;
 };
 
-export const calculateDonchianHigh = (
-	highs: number[],
-	period: number,
-): number[] => {
-	if (highs.length < period) return Array(highs.length).fill(NaN);
-	const result: number[] = [];
-	for (let i = 0; i < period - 1; i++) result.push(NaN);
-	for (let i = period - 1; i < highs.length; i++) {
-		let max = -Infinity;
-		for (let j = 0; j < period; j++) {
-			max = Math.max(max, highs[i - j]);
-		}
-		result.push(max);
-	}
-	return result;
-};
-
 export const calculateRSI = (data: number[], period = 14): number[] => {
 	if (data.length <= period) return Array(data.length).fill(NaN);
 	const rsiArray: number[] = [];
@@ -105,8 +88,6 @@ export const findLastSwingHigh = (
 	return null;
 };
 
-
-
 export const calculateATR = (
 	data: { high: number; low: number; close: number }[],
 	period = 14,
@@ -146,5 +127,3 @@ export const calculateATR = (
 	}
 	return atr;
 };
-
-
