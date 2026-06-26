@@ -95,12 +95,15 @@ function intervalToMs(granularity: Granularity): number {
 	return map[granularity];
 }
 
-function getStableCandles(candles: number[][], granularity: Granularity): number[][] {
+function getStableCandles(
+	candles: number[][],
+	granularity: Granularity,
+): number[][] {
 	if (candles.length === 0) return candles;
 	const intervalMs = intervalToMs(granularity);
-	const lastCandleTime = candles[candles.length - 1][0];
+	const lastCandleTime = candles[candles.length - 1][0] * 1000;
 	const now = Date.now();
-	if (now < (lastCandleTime + intervalMs) * 1000) {
+	if (now < lastCandleTime + intervalMs) {
 		return candles.slice(0, -1);
 	}
 	return candles;
@@ -234,17 +237,6 @@ function calculateTDSequentialEvents(
 	return events;
 }
 
-// 为每个时间框架维护独立的追踪状态
-const monitorState: Record<
-	Granularity,
-	{ lastProcessedTime: number; notifiedEvents: Set<string> }
-> = {
-	"15m": { lastProcessedTime: 0, notifiedEvents: new Set() },
-	"1h": { lastProcessedTime: 0, notifiedEvents: new Set() },
-	"4h": { lastProcessedTime: 0, notifiedEvents: new Set() },
-	"1d": { lastProcessedTime: 0, notifiedEvents: new Set() },
-};
-
 function formatEventMessage(
 	event: TDSequentialEvent,
 	price: number,
@@ -284,6 +276,17 @@ async function shouldNotify(): Promise<boolean> {
 	return settings[0].notificationsEnabled !== "false";
 }
 
+// 为每个时间框架维护独立的追踪状态
+const monitorState: Record<
+	Granularity,
+	{ lastProcessedTime: number; notifiedEvents: Set<string> }
+> = {
+	"15m": { lastProcessedTime: 0, notifiedEvents: new Set() },
+	"1h": { lastProcessedTime: 0, notifiedEvents: new Set() },
+	"4h": { lastProcessedTime: 0, notifiedEvents: new Set() },
+	"1d": { lastProcessedTime: 0, notifiedEvents: new Set() },
+};
+
 async function runMonitorCycle(config: MonitorConfig): Promise<void> {
 	try {
 		if (!(await shouldNotify())) return;
@@ -303,9 +306,11 @@ async function runMonitorCycle(config: MonitorConfig): Promise<void> {
 		const currentPrice = candles[candles.length - 1][4];
 		const state = monitorState[config.granularity];
 
+		// 每次只通知当前K线上的新事件，避免重复通知历史信号
 		const newEvents = events.filter((event) => {
 			if (state.lastProcessedTime === 0) {
-				return event.time === latestCandleTime;
+				// 首次运行：通知所有事件（当前K线上的信号）
+				return true;
 			}
 			return event.time > state.lastProcessedTime;
 		});
