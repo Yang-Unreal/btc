@@ -85,33 +85,15 @@ async function sendTelegramMessage(message: string): Promise<void> {
 	}
 }
 
-function intervalToMs(granularity: Granularity): number {
-	const map: Record<Granularity, number> = {
+async function fetchCandles(granularity: Granularity): Promise<number[][]> {
+	const intervalMap: Record<Granularity, number> = {
 		"15m": 900_000,
 		"1h": 3_600_000,
 		"4h": 14_400_000,
 		"1d": 86_400_000,
 	};
-	return map[granularity];
-}
-
-function getStableCandles(
-	candles: number[][],
-	granularity: Granularity,
-): number[][] {
-	if (candles.length === 0) return candles;
-	const intervalMs = intervalToMs(granularity);
-	const lastCandleTime = candles[candles.length - 1][0] * 1000;
 	const now = Date.now();
-	if (now < lastCandleTime + intervalMs) {
-		return candles.slice(0, -1);
-	}
-	return candles;
-}
-
-async function fetchCandles(granularity: Granularity): Promise<number[][]> {
-	const now = Date.now();
-	const intervalMs = intervalToMs(granularity);
+	const intervalMs = intervalMap[granularity];
 	const startTimeMs = Math.max(0, now - intervalMs * CANDLE_LIMIT);
 
 	const response = await fetch(HL_API, {
@@ -291,8 +273,7 @@ async function runMonitorCycle(config: MonitorConfig): Promise<void> {
 	try {
 		if (!(await shouldNotify())) return;
 
-		const fetchedCandles = await fetchCandles(config.granularity);
-		const candles = getStableCandles(fetchedCandles, config.granularity);
+		const candles = await fetchCandles(config.granularity);
 		if (candles.length < 20) return;
 
 		const events = calculateTDSequentialEvents(candles, config.displayName);
@@ -306,13 +287,9 @@ async function runMonitorCycle(config: MonitorConfig): Promise<void> {
 		const currentPrice = candles[candles.length - 1][4];
 		const state = monitorState[config.granularity];
 
-		// 每次只通知当前K线上的新事件，避免重复通知历史信号
+		// 只通知当前K线上的信号
 		const newEvents = events.filter((event) => {
-			if (state.lastProcessedTime === 0) {
-				// 首次运行：通知所有事件（当前K线上的信号）
-				return true;
-			}
-			return event.time > state.lastProcessedTime;
+			return event.time === latestCandleTime;
 		});
 
 		for (const event of newEvents) {
