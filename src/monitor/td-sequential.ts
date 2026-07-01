@@ -287,12 +287,20 @@ async function runMonitorCycle(config: MonitorConfig): Promise<void> {
 		const currentPrice = candles[candles.length - 1][4];
 		const state = monitorState[config.granularity];
 
-		// 只通知当前K线上的信号
+		// 只通知最新的信号（当前K线上或最近发生的信号）
 		const newEvents = events.filter((event) => {
-			return event.time === latestCandleTime;
+			if (state.lastProcessedTime === 0) {
+				// 首次运行：通知最近24小时内的信号
+				return event.time >= latestCandleTime - 86400;
+			}
+			return event.time > state.lastProcessedTime;
 		});
 
-		for (const event of newEvents) {
+		// 只取最新的一个信号（如果多个）
+		const eventToNotify =
+			newEvents.length > 0 ? [newEvents[newEvents.length - 1]] : [];
+
+		for (const event of eventToNotify) {
 			const eventKey = `${event.time}-${event.type}`;
 			if (state.notifiedEvents.has(eventKey)) continue;
 
