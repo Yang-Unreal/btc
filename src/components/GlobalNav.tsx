@@ -50,6 +50,18 @@ const GlobalNav: Component = () => {
 					</div>
 
 					<div class="flex gap-2 sm:gap-4 items-center">
+						{/* Trade Link */}
+						<A
+							href="/trade"
+							class="flex items-center gap-2 px-3 py-2 bg-linear-to-r from-emerald-600/20 to-teal-600/20 border border-emerald-500/30 rounded-lg hover:from-emerald-600/30 hover:to-teal-600/30 transition-all duration-200"
+							activeClass="bg-gradient-to-r from-emerald-600/40 to-teal-600/40 border-emerald-400/50 shadow-lg shadow-emerald-500/20"
+						>
+							<span class="w-2 h-2 sm:w-3 sm:h-3 bg-linear-to-r from-emerald-400 to-teal-400 rounded-full shadow-lg shadow-emerald-400/50" />
+							<span class="text-[10px] sm:text-xs font-bold text-slate-200 uppercase tracking-widest leading-none">
+								Trade
+							</span>
+						</A>
+
 						{/* Portfolio Link */}
 						<A
 							href="/profile"
