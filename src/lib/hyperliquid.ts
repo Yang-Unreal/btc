@@ -11,7 +11,7 @@ import { privateKeyToAccount } from "viem/accounts";
  * Hyperliquid network selection. Defaults to testnet per project decision.
  * Set `HL_TESTNET=false` in the environment to target mainnet (real funds).
  */
-const USE_TESTNET = (process.env.HL_TESTNET ?? "true") !== "false";
+const USE_TESTNET = (envVar("HL_TESTNET") ?? "true") !== "false";
 
 export const HL_NETWORK_LABEL = USE_TESTNET ? "Testnet" : "Mainnet";
 
@@ -54,15 +54,26 @@ function normalizePrivateKey(raw: string): `0x${string}` {
 	return `0x${body}` as `0x${string}`;
 }
 
+function envVar(name: string): string | undefined {
+	return process.env?.[name];
+}
+
 export function getHL(): HLClients {
 	if (cached) {
 		return cached;
 	}
 
-	const rawKey = process.env.HL_PRIVATE_KEY;
+	const rawKey = envVar("HL_PRIVATE_KEY");
 	if (!rawKey) {
+		const available = Object.keys(process.env)
+			.filter((k) => k.includes("HL") || k.includes("HYPERLIQUID") || k.includes("PRIVATE"))
+			.sort()
+			.join(", ");
+		const hint = available
+			? `Available HL-related env vars on this server: ${available}.`
+			: "No HL-related environment variables were found on this server.";
 		throw new Error(
-			"HL_PRIVATE_KEY is not configured on the server. Add it to your .env file.",
+			`HL_PRIVATE_KEY is not configured on the server. Add it to your .env file. ${hint}`,
 		);
 	}
 
