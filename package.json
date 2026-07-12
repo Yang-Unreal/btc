@@ -3,7 +3,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vinxi dev",
-		"build": "vinxi build",
+		"build": "echo '=== BUILD DIAG ===' && echo \"Node: $(node -v)\" && echo \"Bun: $(bun -v)\" && echo \"HL_KEY: $([ -n \"$HL_PRIVATE_KEY\" ] && echo SET || echo NOT_SET)\" && echo \"HL_KEY_LEN: ${HL_PRIVATE_KEY:-0}\" && bun run scripts/patch-noble-hashes.mjs && echo '=== PATCH DONE ===' && bun run build:app",
+		"build:app": "vinxi build",
 		"start": "vinxi start",
 		"version": "vinxi version",
 		"db:push": "drizzle-kit push",
