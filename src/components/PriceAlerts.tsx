@@ -33,12 +33,169 @@ export default function PriceAlerts() {
 
 	onMount(fetchAlerts);
 
-	let pollTimer: number | undefined;
+	const previousPrices: Record<string, number> = {};
+	let ws: WebSocket | null = null;
+	const subscribedSymbols = new Set<string>();
+
+	const sendTelegramMessage = async (message: string): Promise<void> => {
+		const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
+		const chatId = import.meta.env.VITE_TELEGRAM_CHAT_ID;
+		if (!botToken || !chatId) return;
+
+		try {
+			await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					chat_id: chatId,
+					text: message,
+					parse_mode: "HTML",
+				}),
+			});
+		} catch {
+			// ignore
+		}
+	};
+	const connectWs = (symbols: string[]) => {
+		if (ws) {
+			ws.close();
+			ws = null;
+		}
+		subscribedSymbols.clear();
+
+		const unique = [...new Set(symbols)];
+		if (unique.length === 0) return;
+
+		const newWs = new WebSocket("wss://api.hyperliquid.xyz/ws");
+		ws = newWs;
+
+		newWs.onopen = () => {
+			for (const symbol of unique) {
+				newWs.send(
+					JSON.stringify({
+						method: "subscribe",
+						subscription: { type: "trades", coin: symbol },
+					}),
+				);
+				subscribedSymbols.add(symbol);
+			}
+		};
+
+		newWs.onmessage = (event) => {
+			try {
+				const msg = JSON.parse(event.data);
+				if (msg.channel !== "trades" || !Array.isArray(msg.data)) return;
+
+				const tradesByCoin = new Map<string, number>();
+				for (const trade of msg.data) {
+					const px = parseFloat(trade.px);
+					if (!Number.isNaN(px)) tradesByCoin.set(trade.coin, px);
+				}
+
+				const currentAlerts = alerts();
+				if (currentAlerts.length === 0) return;
+
+				let changed = false;
+				const next = currentAlerts.map((alert) => {
+					const sym = alert.symbol || "BTC";
+					const px = tradesByCoin.get(sym);
+					if (!px) return alert;
+
+					const prev = previousPrices[sym] || 0;
+					previousPrices[sym] = px;
+
+					const target = Number(alert.targetPrice);
+					const exactMatch = Math.abs(px - target) <= 0.01;
+					const crossedUp =
+						prev > 0 && prev < target && px >= target;
+					const crossedDown =
+						prev > 0 && prev > target && px <= target;
+
+					if (
+						(exactMatch || crossedUp || crossedDown) &&
+						alert.triggered === "false"
+					) {
+						changed = true;
+						const timeStr = new Date().toLocaleString("zh-CN", {
+							timeZone: "Asia/Shanghai",
+						});
+						sendTelegramMessage(
+							[
+								`🔔 <b>${sym} 价格提醒触发!</b>`,
+								"",
+								`⏰ 时间: ${timeStr}`,
+								`💰 当前价格: <b>$${px.toFixed(2)}</b>`,
+								`🎯 目标价格: <b>$${target.toFixed(2)}</b>`,
+								"",
+								"🚀 价格已达到您的预设目标！",
+							].join("\n"),
+						);
+						return { ...alert, triggered: "true", enabled: "false" };
+					}
+					return alert;
+				});
+
+				if (changed) setAlerts(next);
+			} catch {
+				// ignore
+			}
+		};
+
+		newWs.onclose = () => {
+			ws = null;
+			subscribedSymbols.clear();
+		};
+
+		newWs.onerror = () => {
+			ws = null;
+			subscribedSymbols.clear();
+		};
+	};
+	const syncSubscriptions = () => {
+		const symbols = alerts().map((a) => a.symbol || "BTC");
+		const needed = new Set(symbols);
+
+		for (const sym of subscribedSymbols) {
+			if (!needed.has(sym) && ws && ws.readyState === WebSocket.OPEN) {
+				ws.send(
+					JSON.stringify({
+						method: "unsubscribe",
+						subscription: { type: "trades", coin: sym },
+					}),
+				);
+				subscribedSymbols.delete(sym);
+			}
+		}
+
+		for (const sym of needed) {
+			if (!subscribedSymbols.has(sym)) {
+				if (ws && ws.readyState === WebSocket.OPEN) {
+					ws.send(
+						JSON.stringify({
+							method: "subscribe",
+							subscription: { type: "trades", coin: sym },
+						}),
+					);
+					subscribedSymbols.add(sym);
+				} else {
+					connectWs(symbols);
+					return;
+				}
+			}
+		}
+	};
+
 	onMount(() => {
-		pollTimer = window.setInterval(fetchAlerts, 30_000);
+		const symbols = alerts().map((a) => a.symbol || "BTC");
+		connectWs(symbols);
 	});
+
 	onCleanup(() => {
-		if (pollTimer) window.clearInterval(pollTimer);
+		if (ws) {
+			ws.close();
+			ws = null;
+		}
+		subscribedSymbols.clear();
 	});
 
 	const addAlert = async (e: Event) => {
@@ -56,6 +213,7 @@ export default function PriceAlerts() {
 			});
 			setNewPrice("");
 			await fetchAlerts();
+			syncSubscriptions();
 		} finally {
 			setLoading(false);
 		}
@@ -83,6 +241,7 @@ export default function PriceAlerts() {
 				body: JSON.stringify({ type: "DELETE", id }),
 			});
 			await fetchAlerts();
+			syncSubscriptions();
 		} catch (e) {
 			console.error(e);
 		}
@@ -119,6 +278,7 @@ export default function PriceAlerts() {
 			});
 			setSelectedIds(new Set());
 			await fetchAlerts();
+			syncSubscriptions();
 		} catch (e) {
 			console.error(e);
 		}

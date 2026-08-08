@@ -1,6 +1,6 @@
 // @refresh reload
 import { createHandler, StartServer } from "@solidjs/start/server";
-import { startPriceAlertMonitor } from "./monitor/price-alerts";
+import { startPriceAlertMonitor } from "./monitor/price-alerts-ws";
 
 if (typeof window === "undefined") {
 	startPriceAlertMonitor().catch(console.error);
