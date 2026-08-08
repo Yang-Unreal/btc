@@ -17,6 +17,8 @@ export default function PriceAlerts() {
 	const [selectedSymbol, setSelectedSymbol] = createSignal("BTC");
 	const [loading, setLoading] = createSignal(false);
 	const [selectedIds, setSelectedIds] = createSignal<Set<string>>(new Set());
+	const [showAssetDropdown, setShowAssetDropdown] = createSignal(false);
+	const [assetSearchQuery, setAssetSearchQuery] = createSignal("");
 	const { currency } = globalStore;
 
 	const fetchAlerts = async () => {
@@ -155,20 +157,87 @@ export default function PriceAlerts() {
 			{/* Quick Add Form */}
 			<form onSubmit={addAlert} class="flex gap-2">
 				<div class="relative shrink-0">
-					<select
-						value={selectedSymbol()}
-						onChange={(e) => setSelectedSymbol(e.currentTarget.value)}
-						class="bg-black/40 border border-white/10 rounded-xl pl-3 pr-8 py-3 text-white text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer"
+					<button
+						type="button"
+						class="bg-black/40 border border-white/10 rounded-xl pl-3 pr-8 py-3 text-white text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer flex items-center gap-2 min-w-[110px]"
+						onClick={() => {
+							setShowAssetDropdown(!showAssetDropdown());
+							setAssetSearchQuery("");
+						}}
 					>
-						<For each={SUPPORTED_ASSETS}>
-							{(asset) => (
-								<option value={asset.symbol}>{asset.symbol}/USD</option>
-							)}
-						</For>
-					</select>
+						<span>{selectedSymbol()}/USD</span>
+					</button>
 					<span class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none">
 						▼
 					</span>
+					<Show when={showAssetDropdown()}>
+						<div class="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-white/10 shadow-2xl rounded-xl py-1 min-w-[200px]">
+							<div class="px-2 py-2">
+								<input
+									type="text"
+									placeholder="Search assets..."
+									value={assetSearchQuery()}
+									onInput={(e) => setAssetSearchQuery(e.currentTarget.value)}
+									class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-indigo-500 transition-all"
+								/>
+							</div>
+							<div class="max-h-48 overflow-y-auto no-scrollbar">
+								<For
+									each={SUPPORTED_ASSETS.filter((asset) => {
+										const q = assetSearchQuery().toLowerCase();
+										if (!q) return true;
+										return (
+											asset.symbol.toLowerCase().includes(q) ||
+											asset.name.toLowerCase().includes(q)
+										);
+									})}
+								>
+									{(asset) => (
+										<div
+											class={`w-full flex items-center gap-2 px-3 py-2 text-xs cursor-pointer transition-colors ${
+												selectedSymbol() === asset.symbol
+													? "bg-indigo-500/20 text-indigo-300"
+													: "text-slate-300 hover:bg-white/5"
+											}`}
+											onClick={() => {
+												setSelectedSymbol(asset.symbol);
+												setShowAssetDropdown(false);
+												setAssetSearchQuery("");
+											}}
+											onKeyDown={(e) => {
+												if (e.key === "Enter" || e.key === " ") {
+													setSelectedSymbol(asset.symbol);
+													setShowAssetDropdown(false);
+													setAssetSearchQuery("");
+												}
+											}}
+											role="option"
+											tabIndex={0}
+										>
+											<span class="font-bold">{asset.symbol}</span>
+											<span class="text-slate-500">{asset.name}</span>
+										</div>
+									)}
+								</For>
+								<Show
+									when={
+										SUPPORTED_ASSETS.filter((asset) => {
+											const q = assetSearchQuery().toLowerCase();
+											if (!q) return false;
+											return (
+												asset.symbol.toLowerCase().includes(q) ||
+												asset.name.toLowerCase().includes(q)
+											);
+										}).length === 0
+									}
+								>
+									<div class="px-3 py-2 text-xs text-slate-500">
+										No assets found
+									</div>
+								</Show>
+							</div>
+						</div>
+					</Show>
 				</div>
 				<div class="relative flex-1">
 					<span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono">
