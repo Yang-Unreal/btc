@@ -275,6 +275,7 @@ export default function BTCChart() {
 
 		fetch("/api/settings", {
 			method: "POST",
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				indicators: currentIndicators,
 				currency: currentCurrency.code,
@@ -291,6 +292,7 @@ export default function BTCChart() {
 
 		fetch("/api/settings", {
 			method: "POST",
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				favoriteIntervals: currentFavorites,
 			}),

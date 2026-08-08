@@ -1,4 +1,5 @@
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { SUPPORTED_ASSETS } from "../lib/constants";
 import { formatCryptoPrice } from "../lib/format";
 import { globalStore } from "../lib/store";
 
@@ -13,6 +14,7 @@ interface PriceAlert {
 export default function PriceAlerts() {
 	const [alerts, setAlerts] = createSignal<PriceAlert[]>([]);
 	const [newPrice, setNewPrice] = createSignal("");
+	const [selectedSymbol, setSelectedSymbol] = createSignal("BTC");
 	const [loading, setLoading] = createSignal(false);
 	const { currency } = globalStore;
 
@@ -28,6 +30,14 @@ export default function PriceAlerts() {
 
 	onMount(fetchAlerts);
 
+	let pollTimer: number | undefined;
+	onMount(() => {
+		pollTimer = window.setInterval(fetchAlerts, 30_000);
+	});
+	onCleanup(() => {
+		if (pollTimer) window.clearInterval(pollTimer);
+	});
+
 	const addAlert = async (e: Event) => {
 		e.preventDefault();
 		if (!newPrice() || loading()) return;
@@ -36,7 +46,10 @@ export default function PriceAlerts() {
 			await fetch("/api/alerts", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ targetPrice: newPrice() }),
+				body: JSON.stringify({
+					targetPrice: newPrice(),
+					symbol: selectedSymbol(),
+				}),
 			});
 			setNewPrice("");
 			await fetchAlerts();
@@ -76,12 +89,28 @@ export default function PriceAlerts() {
 		<div class="bg-zinc-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-6 shadow-xl space-y-6">
 			<div class="flex items-center justify-between">
 				<h3 class="text-lg font-bold text-white flex items-center gap-2">
-					<span class="text-indigo-400">🔔</span> Price Alerts (BTC)
+					<span class="text-indigo-400">🔔</span> Price Alerts
 				</h3>
 			</div>
 
 			{/* Quick Add Form */}
 			<form onSubmit={addAlert} class="flex gap-2">
+				<div class="relative shrink-0">
+					<select
+						value={selectedSymbol()}
+						onChange={(e) => setSelectedSymbol(e.currentTarget.value)}
+						class="bg-black/40 border border-white/10 rounded-xl pl-3 pr-8 py-3 text-white text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer"
+					>
+						<For each={SUPPORTED_ASSETS}>
+							{(asset) => (
+								<option value={asset.symbol}>{asset.symbol}/USD</option>
+							)}
+						</For>
+					</select>
+					<span class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none">
+						▼
+					</span>
+				</div>
 				<div class="relative flex-1">
 					<span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono">
 						$
@@ -121,6 +150,7 @@ export default function PriceAlerts() {
 									/>
 									<div>
 										<div class="text-white font-bold font-mono">
+											{alert.symbol}/USD:{" "}
 											{formatCryptoPrice(Number(alert.targetPrice), currency())}
 										</div>
 										<div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">

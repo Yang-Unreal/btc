@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { ASSET_MAP } from "../lib/constants";
 import { assertDb, db } from "../lib/db";
 import { priceAlerts, userSettings } from "../lib/db/schema";
 
@@ -108,7 +109,7 @@ function calculateATR(
 // Hyperliquid API for real-time perpetual price
 // ============================================================
 
-async function fetchHyperliquidPrice(): Promise<number> {
+async function fetchAllMids(): Promise<Record<string, string> | null> {
 	const HL_API = "https://api.hyperliquid.xyz/info";
 	try {
 		const response = await fetch(HL_API, {
@@ -116,16 +117,64 @@ async function fetchHyperliquidPrice(): Promise<number> {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ type: "allMids" }),
 		});
-		if (!response.ok) return NaN;
+		if (!response.ok) return null;
 		const data = await response.json();
-		// allMids returns { "BTC": "74277.5", ... } for perpetual contracts
-		if (data?.BTC) {
-			return parseFloat(data.BTC);
+		if (data && typeof data === "object") {
+			return data as Record<string, string>;
 		}
-		return NaN;
+		return null;
 	} catch {
-		return NaN;
+		return null;
 	}
+}
+
+async function fetchLatestPrice(symbol: string): Promise<number | null> {
+	const HL_API = "https://api.hyperliquid.xyz/info";
+	const now = Date.now();
+	const candidates = [symbol];
+	if (symbol.startsWith("xyz:")) {
+		candidates.push(symbol.slice(4));
+	} else {
+		candidates.push(`xyz:${symbol}`);
+	}
+	for (const coin of candidates) {
+		for (let attempt = 1; attempt <= 3; attempt++) {
+			try {
+				const response = await fetch(HL_API, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						type: "candleSnapshot",
+						req: {
+							coin,
+							interval: "1m",
+							startTime: now - 5 * 60 * 1000,
+							endTime: now,
+						},
+					}),
+				});
+				if (!response.ok) {
+					console.error(
+						`   candleSnapshot HTTP ${response.status} for ${coin}`,
+					);
+					continue;
+				}
+				const data = await response.json();
+				if (Array.isArray(data) && data.length > 0) {
+					const lastCandle = data[data.length - 1];
+					return parseFloat(lastCandle.c);
+				}
+				console.error(`   candleSnapshot empty data for ${coin}`);
+			} catch (e) {
+				console.error(
+					`   candleSnapshot error for ${coin} (attempt ${attempt}):`,
+					e instanceof Error ? e.message : e,
+				);
+			}
+			await new Promise((r) => setTimeout(r, 1000 * attempt));
+		}
+	}
+	return null;
 }
 
 // ============================================================
@@ -182,26 +231,44 @@ async function sendTelegramMessage(message: string): Promise<void> {
 
 	const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
 
-	try {
-		const response = await fetch(url, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				chat_id: TELEGRAM_CHAT_ID,
-				text: message,
-				parse_mode: "HTML",
-			}),
-		});
+	for (let attempt = 1; attempt <= 3; attempt++) {
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), 10_000);
+		try {
+			const response = await fetch(url, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					chat_id: TELEGRAM_CHAT_ID,
+					text: message,
+					parse_mode: "HTML",
+				}),
+				signal: controller.signal,
+			});
 
-		if (!response.ok) {
-			const errorData = await response.text();
-			console.error("❌ Telegram 发送失败:", errorData);
-		} else {
-			console.log("✅ Telegram 消息已发送");
+			clearTimeout(timeoutId);
+
+			if (!response.ok) {
+				const errorData = await response.text();
+				console.error(`❌ Telegram HTTP ${response.status}:`, errorData);
+			} else {
+				const result = await response.json();
+				if (result.ok) {
+					console.log("✅ Telegram 消息已发送");
+					return;
+				}
+				console.error("❌ Telegram API 返回错误:", result);
+			}
+		} catch (error) {
+			clearTimeout(timeoutId);
+			console.error(
+				`❌ Telegram 发送异常 (attempt ${attempt}):`,
+				error instanceof Error ? error.message : error,
+			);
 		}
-	} catch (error) {
-		console.error("❌ Telegram 发送异常:", error);
+		await new Promise((r) => setTimeout(r, 2000 * attempt));
 	}
+	console.error("❌ Telegram 发送失败，已重试 3 次");
 }
 
 // ============================================================
@@ -209,14 +276,18 @@ async function sendTelegramMessage(message: string): Promise<void> {
 // ============================================================
 
 let lastAlertTime = 0;
-let previousPrice = 0;
 
-async function checkPriceAlerts(currentPrice: number): Promise<void> {
+async function checkPriceAlerts(): Promise<void> {
 	const now = new Date();
 	const timeStr = now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 
 	try {
-		// Fetch enabled and non-triggered alerts
+		const allMids = await fetchAllMids();
+		if (!allMids) {
+			console.log(`[${timeStr}] ⚠️ fetchAllMids returned null`);
+			return;
+		}
+
 		const alerts = await db
 			.select()
 			.from(priceAlerts)
@@ -227,23 +298,65 @@ async function checkPriceAlerts(currentPrice: number): Promise<void> {
 				),
 			);
 
+		console.log(`[${timeStr}] 📋 Checking ${alerts.length} active alerts...`);
+
 		for (const alert of alerts) {
+			const symbol = alert.symbol || "BTC";
+			const hlKey = ASSET_MAP[symbol]?.hlSymbol || symbol;
+			let mid = allMids[hlKey];
+			let currentPrice: number | null = null;
+
+			if (mid) {
+				currentPrice = parseFloat(mid);
+				console.log(
+					`[${timeStr}] ✅ ${symbol}: mid price = ${currentPrice} (from allMids[${hlKey}])`,
+				);
+			} else {
+				mid = allMids[symbol];
+				if (mid) {
+					currentPrice = parseFloat(mid);
+					console.log(
+						`[${timeStr}] ✅ ${symbol}: mid price = ${currentPrice} (from allMids[${symbol}])`,
+					);
+				} else {
+					console.log(
+						`[${timeStr}] ⚠️ ${symbol}: not in allMids, trying candleSnapshot...`,
+					);
+					currentPrice = await fetchLatestPrice(hlKey);
+					if (!currentPrice) {
+						console.log(
+							`[${timeStr}] ⚠️ ${symbol}: no price data available, skipping`,
+						);
+						continue;
+					}
+					console.log(
+						`[${timeStr}] ✅ ${symbol}: candleSnapshot price = ${currentPrice}`,
+					);
+				}
+			}
+
 			const target = Number(alert.targetPrice);
 
-			// Check for crossing: price crossed target from either direction
+			const previousPrice = previousPrices[symbol] || 0;
+			previousPrices[symbol] = currentPrice;
+
 			const crossedUp =
 				previousPrice > 0 && previousPrice < target && currentPrice >= target;
 			const crossedDown =
 				previousPrice > 0 && previousPrice > target && currentPrice <= target;
-
-			// Also trigger if currently within $50 of target (for when alert was created after crossing)
 			const withinMargin = Math.abs(currentPrice - target) <= 50;
 
+			console.log(
+				`[${timeStr}] 🔍 ${symbol}: price=${currentPrice}, target=${target}, prev=${previousPrice}, crossedUp=${crossedUp}, crossedDown=${crossedDown}, withinMargin=${withinMargin}`,
+			);
+
 			if (crossedUp || crossedDown || withinMargin) {
-				// TRIGGER!
+				console.log(
+					`[${timeStr}] 🚀 ${symbol} alert condition met, sending Telegram...`,
+				);
 				await sendTelegramMessage(
 					[
-						"🔔 <b>BTC 价格提醒触发</b> 🔔",
+						`🔔 <b>${symbol} 价格提醒触发</b> 🔔`,
 						"",
 						`⏰ 时间: ${timeStr}`,
 						`💰 当前价格: <b>$${currentPrice.toFixed(2)}</b>`,
@@ -253,51 +366,52 @@ async function checkPriceAlerts(currentPrice: number): Promise<void> {
 					].join("\n"),
 				);
 
-				// Mark as triggered and disable to avoid spam
+				console.log(`[${timeStr}] 💾 Updating DB for alert ${alert.id}...`);
 				await db
 					.update(priceAlerts)
 					.set({ triggered: "true", enabled: "false", updatedAt: new Date() })
 					.where(eq(priceAlerts.id, alert.id));
 
-				console.log(`[${timeStr}] 🔔 价格提醒触发: $${target}`);
+				console.log(`[${timeStr}] 🔔 价格提醒触发: ${symbol} $${target}`);
 			}
 		}
-
-		// Update previous price for next cycle
-		previousPrice = currentPrice;
 	} catch (e) {
 		console.error("Failed to check price alerts:", e);
 	}
 }
 
+const previousPrices: Record<string, number> = {};
+
 async function runMonitorCycle() {
+	const timeStr = new Date().toLocaleString("zh-CN", {
+		timeZone: "Asia/Shanghai",
+	});
+
 	try {
-		// Get real-time price from Hyperliquid for price alerts
-		const hlPrice = await fetchHyperliquidPrice();
-		const hasRealTimePrice = !Number.isNaN(hlPrice);
-
-		// Get candle data for MA convergence
 		const candles = await fetchCandles();
-		if (candles.length < 120) {
-			return;
+		if (candles.length >= 120) {
+			const highs = candles.map((c) => c[2]);
+			const lows = candles.map((c) => c[3]);
+			const closes = candles.map((c) => c[4]);
+			await processMAConvergence(
+				highs,
+				lows,
+				closes,
+				closes[closes.length - 1],
+			);
+		} else {
+			console.log(
+				`[${timeStr}] ⚠️  K线数据不足 (${candles.length}/120)，跳过均线分析`,
+			);
 		}
-
-		const highs = candles.map((c) => c[2]);
-		const lows = candles.map((c) => c[3]);
-		const closes = candles.map((c) => c[4]);
-		// Use Hyperliquid real-time price if available, otherwise fall back to candle close
-		const currentPrice = hasRealTimePrice ? hlPrice : closes[closes.length - 1];
-
-		// 1. Check MA Convergence (always uses candle data)
-		await processMAConvergence(highs, lows, closes, closes[closes.length - 1]);
-
-		// 2. Check Price Alerts (uses real-time price)
-		await checkPriceAlerts(currentPrice);
 	} catch (e) {
-		const timeStr = new Date().toLocaleString("zh-CN", {
-			timeZone: "Asia/Shanghai",
-		});
-		console.error(`[${timeStr}] ❌ 监控周期异常:`, e);
+		console.error(`[${timeStr}] ❌ 均线分析异常:`, e);
+	}
+
+	try {
+		await checkPriceAlerts();
+	} catch (e) {
+		console.error(`[${timeStr}] ❌ 价格提醒检查异常:`, e);
 	}
 }
 
@@ -405,6 +519,20 @@ export async function startMAMonitor() {
 	await runMonitorCycle();
 	// 设置循环
 	setInterval(runMonitorCycle, CHECK_INTERVAL_MS);
+}
+
+export async function startPriceAlertMonitor() {
+	if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+		console.log(
+			"⚠️  Price alert monitoring NOT started: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is missing.",
+		);
+		return;
+	}
+
+	// 立即执行一次
+	await checkPriceAlerts();
+	// 设置循环（价格提醒更频繁一些）
+	setInterval(checkPriceAlerts, Math.min(CHECK_INTERVAL_MS, 60_000));
 }
 
 // 兼容直接运行和模块导入
