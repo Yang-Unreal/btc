@@ -16,6 +16,7 @@ export default function PriceAlerts() {
 	const [newPrice, setNewPrice] = createSignal("");
 	const [selectedSymbol, setSelectedSymbol] = createSignal("BTC");
 	const [loading, setLoading] = createSignal(false);
+	const [selectedIds, setSelectedIds] = createSignal<Set<string>>(new Set());
 	const { currency } = globalStore;
 
 	const fetchAlerts = async () => {
@@ -85,12 +86,70 @@ export default function PriceAlerts() {
 		}
 	};
 
+	const toggleSelect = (id: string) => {
+		setSelectedIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+	};
+
+	const toggleSelectAll = () => {
+		const allIds = alerts().map((a) => a.id);
+		const current = selectedIds();
+		if (current.size === allIds.length && allIds.length > 0) {
+			setSelectedIds(new Set());
+		} else {
+			setSelectedIds(new Set(allIds));
+		}
+	};
+
+	const deleteSelectedAlerts = async () => {
+		const ids = Array.from(selectedIds());
+		if (ids.length === 0) return;
+		if (!confirm(`Delete ${ids.length} selected alert(s)?`)) return;
+		try {
+			await fetch("/api/alerts", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ type: "DELETE_BATCH", ids }),
+			});
+			setSelectedIds(new Set());
+			await fetchAlerts();
+		} catch (e) {
+			console.error(e);
+		}
+	};
+
 	return (
 		<div class="bg-zinc-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-6 shadow-xl space-y-6">
 			<div class="flex items-center justify-between">
 				<h3 class="text-lg font-bold text-white flex items-center gap-2">
 					<span class="text-indigo-400">🔔</span> Price Alerts
 				</h3>
+				<div class="flex items-center gap-3">
+					<Show when={alerts().length > 0}>
+						<label class="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+							<input
+								type="checkbox"
+								checked={selectedIds().size === alerts().length}
+								onChange={toggleSelectAll}
+								class="w-3.5 h-3.5 rounded border-white/20 bg-black/40 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
+							/>
+							<span>Select All</span>
+						</label>
+					</Show>
+					<Show when={selectedIds().size > 0}>
+						<button
+							type="button"
+							onClick={deleteSelectedAlerts}
+							class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all active:scale-95"
+						>
+							Delete ({selectedIds().size})
+						</button>
+					</Show>
+				</div>
 			</div>
 
 			{/* Quick Add Form */}
@@ -139,12 +198,19 @@ export default function PriceAlerts() {
 					{(alert) => {
 						const isEnabled = alert.enabled === "true";
 						const isTriggered = alert.triggered === "true";
+						const isSelected = selectedIds().has(alert.id);
 
 						return (
 							<div
-								class={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isEnabled ? "bg-white/5 border-white/10" : "bg-black/20 border-white/5 opacity-60"}`}
+								class={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isSelected ? "bg-indigo-500/10 border-indigo-500/30" : isEnabled ? "bg-white/5 border-white/10" : "bg-black/20 border-white/5 opacity-60"}`}
 							>
 								<div class="flex items-center gap-4">
+									<input
+										type="checkbox"
+										checked={isSelected}
+										onChange={() => toggleSelect(alert.id)}
+										class="w-4 h-4 rounded border-white/20 bg-black/40 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer shrink-0"
+									/>
 									<div
 										class={`w-2 h-2 rounded-full ${isEnabled ? (isTriggered ? "bg-amber-400" : "bg-emerald-400") : "bg-slate-600"}`}
 									/>

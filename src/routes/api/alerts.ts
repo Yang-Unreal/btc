@@ -1,5 +1,5 @@
 import { json } from "@solidjs/router";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { priceAlerts } from "../../lib/db/schema";
 
@@ -25,6 +25,15 @@ export async function POST({ request }: { request: Request }) {
 		if (type === "DELETE") {
 			if (!id) return json({ error: "ID required" }, { status: 400 });
 			await db.delete(priceAlerts).where(eq(priceAlerts.id, id));
+			return json({ success: true });
+		}
+
+		if (type === "DELETE_BATCH") {
+			const ids = body.ids;
+			if (!ids || !Array.isArray(ids) || ids.length === 0) {
+				return json({ error: "IDs array required" }, { status: 400 });
+			}
+			await db.delete(priceAlerts).where(inArray(priceAlerts.id, ids));
 			return json({ success: true });
 		}
 
