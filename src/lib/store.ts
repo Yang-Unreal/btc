@@ -9,8 +9,6 @@ interface AssetHolding {
 
 function createGlobalStore() {
 	const [currency, setCurrency] = createSignal<"USD" | "EUR">("USD");
-	const [notificationsEnabled, setNotificationsEnabled] = createSignal(true);
-	const [fourHAlertEnabled, setFourHAlertEnabled] = createSignal(false);
 	const [loaded, setLoaded] = createSignal(false);
 	const [portfolio, setPortfolio] = createSignal<Record<string, AssetHolding>>(
 		{},
@@ -23,16 +21,9 @@ function createGlobalStore() {
 			const data = await res.json();
 			if (data.currency && data.currency !== currency()) {
 				setCurrency(data.currency);
-				localStorage.setItem("currency", data.currency);
-			}
-			if (typeof data.notificationsEnabled === "boolean") {
-				setNotificationsEnabled(data.notificationsEnabled);
-			}
-			if (typeof data.fourHAlertEnabled === "boolean") {
-				setFourHAlertEnabled(data.fourHAlertEnabled);
-			}
-		} catch (e) {
-			// On error, load from localStorage
+			localStorage.setItem("currency", data.currency);
+		}
+	} catch {
 			const stored =
 				typeof localStorage !== "undefined"
 					? localStorage.getItem("currency")
@@ -40,7 +31,6 @@ function createGlobalStore() {
 			if (stored === "USD" || stored === "EUR") {
 				setCurrency(stored);
 			}
-			console.error("Failed to load settings:", e);
 		} finally {
 			setLoaded(true);
 		}
@@ -74,39 +64,9 @@ function createGlobalStore() {
 		}
 	};
 
-	const saveNotificationsEnabled = async (enabled: boolean) => {
-		setNotificationsEnabled(enabled);
-		try {
-			await fetch("/api/settings", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ notificationsEnabled: enabled }),
-			});
-		} catch (e) {
-			console.error("Failed to save notification settings:", e);
-		}
-	};
-
-	const saveFourHAlertEnabled = async (enabled: boolean) => {
-		setFourHAlertEnabled(enabled);
-		try {
-			await fetch("/api/settings", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ fourHAlertEnabled: enabled }),
-			});
-		} catch (e) {
-			console.error("Failed to save 4H alert settings:", e);
-		}
-	};
-
 	return {
 		currency,
 		setCurrency: saveCurrency,
-		notificationsEnabled,
-		setNotificationsEnabled: saveNotificationsEnabled,
-		fourHAlertEnabled,
-		setFourHAlertEnabled: saveFourHAlertEnabled,
 		loadSettings,
 		loaded,
 		portfolio,

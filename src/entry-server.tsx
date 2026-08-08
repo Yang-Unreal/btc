@@ -1,9 +1,9 @@
 // @refresh reload
 import { createHandler, StartServer } from "@solidjs/start/server";
-import { start4HMonitor } from "./monitor/4h-entanglement";
+import { startPriceAlertMonitor } from "./monitor/price-alerts";
 
 if (typeof window === "undefined") {
-	start4HMonitor().catch(console.error);
+	startPriceAlertMonitor().catch(console.error);
 }
 
 export default createHandler(() => {

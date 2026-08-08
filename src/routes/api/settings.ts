@@ -24,8 +24,6 @@ export async function GET() {
 			favoriteIntervals: settings[0].favoriteIntervals
 				? JSON.parse(settings[0].favoriteIntervals)
 				: ["4h"],
-			notificationsEnabled: settings[0].notificationsEnabled === "true",
-			fourHAlertEnabled: settings[0].fourHAlertEnabled === "true",
 			indicators: settings[0].indicators
 				? JSON.parse(settings[0].indicators)
 				: null,
@@ -50,8 +48,6 @@ export async function POST({ request }: { request: Request }) {
 			favoriteIntervals,
 			indicators,
 			indicatorHeights,
-			notificationsEnabled,
-			fourHAlertEnabled,
 			accountBalance,
 			leverage,
 		} = body;
@@ -76,12 +72,6 @@ export async function POST({ request }: { request: Request }) {
 		}
 		if (indicatorHeights) {
 			updateData.indicatorHeights = JSON.stringify(indicatorHeights);
-		}
-		if (typeof notificationsEnabled === "boolean") {
-			updateData.notificationsEnabled = notificationsEnabled ? "true" : "false";
-		}
-		if (typeof fourHAlertEnabled === "boolean") {
-			updateData.fourHAlertEnabled = fourHAlertEnabled ? "true" : "false";
 		}
 		if (accountBalance && !Number.isNaN(Number(accountBalance))) {
 			updateData.accountBalance = String(accountBalance);
