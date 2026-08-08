@@ -337,15 +337,20 @@ async function checkPriceAlerts(): Promise<void> {
 
 			const target = Number(alert.targetPrice);
 
+			const previousPrice = previousPrices[symbol] || 0;
 			previousPrices[symbol] = currentPrice;
 
 			const exactMatch = Math.abs(currentPrice - target) <= 0.01;
+			const crossedUp =
+				previousPrice > 0 && previousPrice < target && currentPrice >= target;
+			const crossedDown =
+				previousPrice > 0 && previousPrice > target && currentPrice <= target;
 
 			console.log(
-				`[${timeStr}] 🔍 ${symbol}: price=${currentPrice}, target=${target}, exactMatch=${exactMatch}`,
+				`[${timeStr}] 🔍 ${symbol}: price=${currentPrice}, target=${target}, prev=${previousPrice}, crossedUp=${crossedUp}, crossedDown=${crossedDown}, exactMatch=${exactMatch}`,
 			);
 
-			if (exactMatch) {
+			if (exactMatch || crossedUp || crossedDown) {
 				console.log(
 					`[${timeStr}] 🚀 ${symbol} alert condition met, sending Telegram...`,
 				);
