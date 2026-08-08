@@ -26,6 +26,8 @@ export default function PriceAlerts() {
 			const res = await fetch("/api/alerts");
 			const data = await res.json();
 			setAlerts(data);
+			const symbols = data.map((a) => a.symbol || "BTC");
+			connectWs(symbols);
 		} catch (e) {
 			console.error("Failed to fetch alerts", e);
 		}
@@ -36,6 +38,7 @@ export default function PriceAlerts() {
 	const previousPrices: Record<string, number> = {};
 	let ws: WebSocket | null = null;
 	const subscribedSymbols = new Set<string>();
+	let connecting = false;
 
 	const sendTelegramMessage = async (message: string): Promise<void> => {
 		const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
@@ -57,6 +60,7 @@ export default function PriceAlerts() {
 		}
 	};
 	const connectWs = (symbols: string[]) => {
+		if (connecting) return;
 		if (ws) {
 			ws.close();
 			ws = null;
@@ -66,10 +70,12 @@ export default function PriceAlerts() {
 		const unique = [...new Set(symbols)];
 		if (unique.length === 0) return;
 
+		connecting = true;
 		const newWs = new WebSocket("wss://api.hyperliquid.xyz/ws");
 		ws = newWs;
 
 		newWs.onopen = () => {
+			connecting = false;
 			for (const symbol of unique) {
 				newWs.send(
 					JSON.stringify({
@@ -142,11 +148,13 @@ export default function PriceAlerts() {
 		};
 
 		newWs.onclose = () => {
+			connecting = false;
 			ws = null;
 			subscribedSymbols.clear();
 		};
 
 		newWs.onerror = () => {
+			connecting = false;
 			ws = null;
 			subscribedSymbols.clear();
 		};
@@ -182,15 +190,10 @@ export default function PriceAlerts() {
 					return;
 				}
 			}
-		}
-	};
+	}
+};
 
-	onMount(() => {
-		const symbols = alerts().map((a) => a.symbol || "BTC");
-		connectWs(symbols);
-	});
-
-	onCleanup(() => {
+onCleanup(() => {
 		if (ws) {
 			ws.close();
 			ws = null;

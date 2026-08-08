@@ -18,6 +18,7 @@ const state = {
 	reconnectTimer: null as number | null,
 	subscriptions: new Map<string, Subscription>(),
 	previousPrices: {} as Record<string, number>,
+	connecting: false,
 };
 
 async function fetchActiveAlerts() {
@@ -138,20 +139,25 @@ async function handleTrade(data: any[]) {
 }
 
 function connect() {
+	if (state.connecting) return;
 	if (state.ws && state.ws.readyState === WebSocket.OPEN) return;
 
-	state.ws = new WebSocket(HL_WS);
+	state.connecting = true;
 
-	state.ws.onopen = async () => {
-		await syncSubscriptions(state.ws!);
+	const ws = new WebSocket(HL_WS);
+	state.ws = ws;
+
+	ws.onopen = async () => {
+		state.connecting = false;
+		await syncSubscriptions(ws);
 
 		state.pingTimer = setInterval(() => {
-			if (state.ws?.readyState === WebSocket.OPEN)
-				state.ws!.send(JSON.stringify({ method: "ping" }));
+			if (ws.readyState === WebSocket.OPEN)
+				ws.send(JSON.stringify({ method: "ping" }));
 		}, 30_000);
 	};
 
-	state.ws.onmessage = async (event) => {
+	ws.onmessage = async (event) => {
 		try {
 			const msg = JSON.parse(event.data);
 			if (
@@ -169,16 +175,20 @@ function connect() {
 		}
 	};
 
-	state.ws.onclose = () => {
+	ws.onclose = () => {
 		if (state.pingTimer !== null) {
 			clearInterval(state.pingTimer);
 			state.pingTimer = null;
 		}
+		state.connecting = false;
+		state.ws = null;
+		state.subscriptions.clear();
 		state.reconnectTimer = setTimeout(connect, 2000);
 	};
 
-	state.ws.onerror = () => {
-		state.ws?.close();
+	ws.onerror = () => {
+		state.connecting = false;
+		ws.close();
 	};
 }
 
