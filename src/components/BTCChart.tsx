@@ -649,7 +649,7 @@ export default function BTCChart() {
 			const olderData = await fetchHistoricalData(
 				interval(),
 				activeCurrency().code,
-				activeAsset().symbol,
+				activeAsset().hlSymbol || activeAsset().symbol,
 				earliestTimeMs,
 			);
 
@@ -725,7 +725,7 @@ export default function BTCChart() {
 		activeInterval: Interval,
 		assetConfig: AssetConfig,
 	) => {
-		const coin = assetConfig.symbol; // HL uses plain coin symbol e.g. "BTC"
+		const coin = assetConfig.hlSymbol || assetConfig.symbol;
 		const hlIntervalMapping = HL_INTERVAL_MAP[activeInterval] || "1h";
 		const isAggregated = activeInterval === "1w" || activeInterval === "1M";
 		const newInterval = isAggregated ? "1d" : hlIntervalMapping;
@@ -1325,7 +1325,7 @@ export default function BTCChart() {
 			return await fetchHistoricalData(
 				interval(),
 				activeCurrency().code,
-				activeAsset().symbol,
+				activeAsset().hlSymbol || activeAsset().symbol,
 			);
 		},
 		staleTime: 60 * 1000 * 5, // Cache for 5 minutes for instant interval switching

@@ -26,4 +26,5 @@ export interface AssetConfig {
 	symbol: string;
 	name: string;
 	krakenId: string; // Used for WS pair construction
+	hlSymbol?: string; // Override for Hyperliquid API symbol (e.g. "xyz:SNDK" for stocks)
 }

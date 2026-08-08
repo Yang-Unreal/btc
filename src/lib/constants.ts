@@ -96,6 +96,7 @@ export const SUPPORTED_ASSETS: AssetConfig[] = [
 	{ symbol: "MORPHO", name: "Morpho", krakenId: "MORPHO" },
 	{ symbol: "BDX", name: "Beldex", krakenId: "BDX" },
 	{ symbol: "GHO", name: "GHO", krakenId: "GHO" },
+	{ symbol: "SNDK", name: "SNDK", krakenId: "SNDK", hlSymbol: "xyz:SNDK" },
 ];
 
 // Map asset symbol to AssetConfig
