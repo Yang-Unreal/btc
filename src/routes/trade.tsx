@@ -288,7 +288,7 @@ export default function Trade() {
 							<input
 								type="range"
 								min="1"
-								max="50"
+								max="40"
 								class="mt-2 w-full accent-indigo-500"
 								value={leverage()}
 								onInput={(e) => setLeverage(e.currentTarget.value)}
