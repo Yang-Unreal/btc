@@ -13,9 +13,6 @@ assertDb();
  * 3. 无序交叉法则 (The Spaghetti Test): 它们不能呈完美的多头/空头排列
  */
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
-// Alternatively, check more frequently, e.g., every 5 mins, since 4H close changes
 const ACTUAL_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 mins
 const COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours cooldown after alert
 
@@ -145,29 +142,6 @@ async function fetchCandles(): Promise<number[][]> {
 }
 
 // ============================================================
-// Telegram Notification
-// ============================================================
-
-async function sendTelegramMessage(message: string): Promise<void> {
-	if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
-
-	const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-	try {
-		await fetch(url, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				chat_id: TELEGRAM_CHAT_ID,
-				text: message,
-				parse_mode: "HTML",
-			}),
-		});
-	} catch (error) {
-		console.error("❌ Telegram 发送异常:", error);
-	}
-}
-
-// ============================================================
 // Core Logic
 // ============================================================
 
@@ -175,7 +149,6 @@ let lastAlertTime = 0;
 
 async function runMonitorCycle() {
 	try {
-		// 先检查配置是否开启
 		const settings = await db
 			.select()
 			.from(userSettings)
@@ -185,7 +158,6 @@ async function runMonitorCycle() {
 			return;
 		}
 
-		// Get real-time price from Hyperliquid
 		const hlPrice = await fetchHyperliquidPrice();
 		const hasRealTimePrice = !Number.isNaN(hlPrice);
 
@@ -195,7 +167,6 @@ async function runMonitorCycle() {
 		const highs = candles.map((c) => c[2]);
 		const lows = candles.map((c) => c[3]);
 		const closes = candles.map((c) => c[4]);
-		// Use Hyperliquid real-time price if available, otherwise fall back to candle close
 		const currentPrice = hasRealTimePrice ? hlPrice : closes[closes.length - 1];
 
 		const sma20 = calculateSMA(closes, 20);
@@ -214,15 +185,11 @@ async function runMonitorCycle() {
 		const minMa = Math.min(...values);
 		const spread = maxMa - minMa;
 
-		// Iron Rule 1: The 1.5% Rule
 		const spreadPercent = (spread / currentPrice) * 100;
 		const passedRule1 = spreadPercent <= 1.5;
 
-		// Iron Rule 2: The ATR Filter
 		const passedRule2 = spread <= 1.5 * atr;
 
-		// Iron Rule 3: The Spaghetti Test
-		// Not ordered perfectly bullish or bearish
 		const isBullishOrdered =
 			Math.min(sma20, ema20) > Math.max(sma60, ema60) &&
 			Math.min(sma60, ema60) > Math.max(sma120, ema120);
@@ -237,7 +204,7 @@ async function runMonitorCycle() {
 
 			lastAlertTime = nowMs;
 
-			await sendTelegramMessage(
+			console.log(
 				[
 					"🚨 <b>4H 均线绝对纠缠触发!</b> 🚨",
 					"",
@@ -263,13 +230,6 @@ async function runMonitorCycle() {
 }
 
 export async function start4HMonitor() {
-	if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-		console.log(
-			"⚠️ 4H Monitoring NOT started: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID missing.",
-		);
-		return;
-	}
-
 	await runMonitorCycle();
 	setInterval(runMonitorCycle, ACTUAL_CHECK_INTERVAL_MS);
 }

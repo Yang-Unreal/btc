@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { ASSET_MAP } from "../lib/constants";
 import { assertDb, db } from "../lib/db";
-import { priceAlerts, userSettings } from "../lib/db/schema";
+import { priceAlerts } from "../lib/db/schema";
 
 assertDb();
 
@@ -12,7 +12,7 @@ assertDb();
  * - SMA 20, 60, 120
  * - EMA 20, 60, 120
  *
- *  当符合以下三大“铁律”时，通过 Telegram Bot 发送提醒：
+ * 当符合以下三大“铁律”时，记录日志：
  * 1. 极值法: 差值 <= 1.5% * 当前价格
  * 2. ATR测算法: 差值 <= 1.5 * 当前15m的ATR(14)
  * 3. 无序交叉法: 均线未处于完美多头或空头排列
@@ -21,8 +21,6 @@ assertDb();
  *   bun run src/monitor/ma-convergence.ts
  *
  * 环境变量（在 .env 中配置）：
- *   TELEGRAM_BOT_TOKEN=你的bot token
- *   TELEGRAM_CHAT_ID=你的chat id
  *   CHECK_INTERVAL_MS=60000   (可选，默认60秒检查一次)
  */
 
@@ -30,8 +28,6 @@ assertDb();
 // Configuration
 // ============================================================
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
 const CHECK_INTERVAL_MS = Number(process.env.CHECK_INTERVAL_MS) || 60_000; // 60s
 const COOLDOWN_MS = 15 * 60 * 1000; // 15分钟冷却，避免重复提醒
 
@@ -218,60 +214,6 @@ async function fetchCandles(): Promise<number[][]> {
 }
 
 // ============================================================
-// Telegram Notification
-// ============================================================
-
-async function sendTelegramMessage(message: string): Promise<void> {
-	if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-		console.error(
-			"❌ Telegram 配置缺失！请设置 TELEGRAM_BOT_TOKEN 和 TELEGRAM_CHAT_ID",
-		);
-		return;
-	}
-
-	const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-
-	for (let attempt = 1; attempt <= 3; attempt++) {
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), 10_000);
-		try {
-			const response = await fetch(url, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					chat_id: TELEGRAM_CHAT_ID,
-					text: message,
-					parse_mode: "HTML",
-				}),
-				signal: controller.signal,
-			});
-
-			clearTimeout(timeoutId);
-
-			if (!response.ok) {
-				const errorData = await response.text();
-				console.error(`❌ Telegram HTTP ${response.status}:`, errorData);
-			} else {
-				const result = await response.json();
-				if (result.ok) {
-					console.log("✅ Telegram 消息已发送");
-					return;
-				}
-				console.error("❌ Telegram API 返回错误:", result);
-			}
-		} catch (error) {
-			clearTimeout(timeoutId);
-			console.error(
-				`❌ Telegram 发送异常 (attempt ${attempt}):`,
-				error instanceof Error ? error.message : error,
-			);
-		}
-		await new Promise((r) => setTimeout(r, 2000 * attempt));
-	}
-	console.error("❌ Telegram 发送失败，已重试 3 次");
-}
-
-// ============================================================
 // Core Monitor Logic
 // ============================================================
 
@@ -352,21 +294,8 @@ async function checkPriceAlerts(): Promise<void> {
 
 			if (exactMatch || crossedUp || crossedDown) {
 				console.log(
-					`[${timeStr}] 🚀 ${symbol} alert condition met, sending Telegram...`,
+					`[${timeStr}] 🚀 ${symbol} alert condition met, updating DB...`,
 				);
-				await sendTelegramMessage(
-					[
-						`🔔 <b>${symbol} 价格提醒触发</b> 🔔`,
-						"",
-						`⏰ 时间: ${timeStr}`,
-						`💰 当前价格: <b>$${currentPrice.toFixed(2)}</b>`,
-						`🎯 目标价格: <b>$${target.toFixed(2)}</b>`,
-						"",
-						"🚀 价格已达到您的预设目标！",
-					].join("\n"),
-				);
-
-				console.log(`[${timeStr}] 💾 Updating DB for alert ${alert.id}...`);
 				await db
 					.update(priceAlerts)
 					.set({ triggered: "true", enabled: "false", updatedAt: new Date() })
@@ -467,21 +396,13 @@ async function processMAConvergence(
 		const nowMs = Date.now();
 		if (nowMs - lastAlertTime < COOLDOWN_MS) return;
 
-		// Check if global notifications are enabled
-		const settings = await db
-			.select()
-			.from(userSettings)
-			.where(eq(userSettings.id, "default"));
-		if (settings.length > 0 && settings[0].notificationsEnabled === "false")
-			return;
-
 		lastAlertTime = nowMs;
 		const maDetails = maValues
 			.sort((a, b) => b.value - a.value)
 			.map((m) => `  ${m.name}: $${m.value.toFixed(2)}`)
 			.join("\n");
 
-		await sendTelegramMessage(
+		console.log(
 			[
 				"🚨 <b>15分钟 均线绝对纠缠触发!</b> 🚨",
 				"",
@@ -508,13 +429,6 @@ async function processMAConvergence(
 // ============================================================
 
 export async function startMAMonitor() {
-	if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-		console.log(
-			"⚠️  Monitoring NOT started: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is missing.",
-		);
-		return;
-	}
-
 	// 立即执行一次
 	await runMonitorCycle();
 	// 设置循环
@@ -522,13 +436,6 @@ export async function startMAMonitor() {
 }
 
 export async function startPriceAlertMonitor() {
-	if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-		console.log(
-			"⚠️  Price alert monitoring NOT started: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is missing.",
-		);
-		return;
-	}
-
 	// 立即执行一次
 	await checkPriceAlerts();
 	// 设置循环（价格提醒更频繁一些）

@@ -1,23 +1,9 @@
 // @refresh reload
 import { createHandler, StartServer } from "@solidjs/start/server";
 import { start4HMonitor } from "./monitor/4h-entanglement";
-import { startMAMonitor } from "./monitor/ma-convergence";
-import { startTDSequentialMonitor } from "./monitor/td-sequential";
 
-// 确保在服务器环境下只启动一次监控
-type GlobalWithMonitor = typeof globalThis & {
-	__MA_MONITOR_STARTED__?: boolean;
-};
-
-const globalWithMonitor = globalThis as GlobalWithMonitor;
-if (
-	typeof window === "undefined" &&
-	!globalWithMonitor.__MA_MONITOR_STARTED__
-) {
-	globalWithMonitor.__MA_MONITOR_STARTED__ = true;
-	startMAMonitor().catch(console.error);
+if (typeof window === "undefined") {
 	start4HMonitor().catch(console.error);
-	startTDSequentialMonitor().catch(console.error);
 }
 
 export default createHandler(() => {

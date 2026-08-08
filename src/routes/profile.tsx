@@ -165,7 +165,6 @@ function ProfileContent() {
 		saveCalcTimeout = setTimeout(savePositionCalcToDb, 500);
 	};
 
-
 	onMount(async () => {
 		try {
 			// Fetch position calculator data first
@@ -269,7 +268,8 @@ function ProfileContent() {
 				...prev.entries,
 				{
 					id: crypto.randomUUID(),
-					price: prev.orderType === "market" ? prev.entries[0]?.price || "" : "",
+					price:
+						prev.orderType === "market" ? prev.entries[0]?.price || "" : "",
 					size: "0.1",
 				},
 			],
@@ -295,7 +295,9 @@ function ProfileContent() {
 	) => {
 		setPositionCalc((prev) => ({
 			...prev,
-			entries: prev.entries.map((e) => (e.id === id ? { ...e, [field]: value } : e)),
+			entries: prev.entries.map((e) =>
+				e.id === id ? { ...e, [field]: value } : e,
+			),
 		}));
 		debouncedSavePositionCalc();
 	};
@@ -417,16 +419,19 @@ function ProfileContent() {
 		const calc = positionCalc();
 		const balance = parseFloat(calc.balance) || 0;
 		const leverage = parseFloat(calc.leverage) || 1;
-		
+
 		// Calculate total size and average entry price from all entries
-		const totalSize = calc.entries.reduce((sum, e) => sum + (parseFloat(e.size) || 0), 0);
+		const totalSize = calc.entries.reduce(
+			(sum, e) => sum + (parseFloat(e.size) || 0),
+			0,
+		);
 		const totalValue = calc.entries.reduce((sum, e) => {
 			const p = parseFloat(e.price) || 0;
 			const s = parseFloat(e.size) || 0;
 			return sum + p * s;
 		}, 0);
 		const entryPrice = totalSize > 0 ? totalValue / totalSize : 0;
-		
+
 		const feeRate = (parseFloat(calc.feeRate) || 0) / 100;
 		const direction = calc.direction;
 		const isLong = direction === "long";
@@ -497,7 +502,7 @@ function ProfileContent() {
 			fee,
 			riskPercent,
 			entryPrice, // Add averaged entry price to results
-			totalSize,  // Add total size to results
+			totalSize, // Add total size to results
 			stopLossUSDC: totalStopLossUSDC,
 			takeProfitUSDC: totalTakeProfitUSDC,
 			stopLossOrders: stopLossOrdersWithPnl,
@@ -515,16 +520,23 @@ function ProfileContent() {
 		]);
 		setPortfolioData(portfolioDataResult);
 		globalStore.setPortfolio(portfolioDataResult.holdings);
-		
+
 		// Unify state: prioritize position-calc data, fallback to settingsResult
 		if (calcData) {
 			setPositionCalc((prev) => ({
 				...prev,
 				balance: calcData.balance || settingsResult.accountBalance || "10000",
 				leverage: calcData.leverage || settingsResult.leverage || "10",
-				entries: calcData.entries ||
+				entries:
+					calcData.entries ||
 					(calcData.positionSize
-						? [{ id: crypto.randomUUID(), price: calcData.entryPrice || "", size: calcData.positionSize }]
+						? [
+								{
+									id: crypto.randomUUID(),
+									price: calcData.entryPrice || "",
+									size: calcData.positionSize,
+								},
+							]
 						: [{ id: crypto.randomUUID(), price: "", size: "0.1" }]),
 				feeRate: calcData.feeRate || "0.0432",
 				orderType: calcData.orderType || "market",
@@ -534,10 +546,15 @@ function ProfileContent() {
 				showAveraging: calcData.showAveraging || false,
 			}));
 		} else if (settingsResult) {
-			if (settingsResult.accountBalance) setPositionCalc(p => ({ ...p, balance: settingsResult.accountBalance }));
-			if (settingsResult.leverage) setPositionCalc(p => ({ ...p, leverage: settingsResult.leverage }));
+			if (settingsResult.accountBalance)
+				setPositionCalc((p) => ({
+					...p,
+					balance: settingsResult.accountBalance,
+				}));
+			if (settingsResult.leverage)
+				setPositionCalc((p) => ({ ...p, leverage: settingsResult.leverage }));
 		}
-		
+
 		setIsFetching(false);
 	};
 
@@ -706,38 +723,6 @@ function ProfileContent() {
 					</p>
 				</div>
 				<div class="flex items-center gap-2 sm:gap-3">
-					<div class="flex-1 sm:flex-none flex items-center gap-2 bg-zinc-900/80 p-1 rounded-xl border border-white/10">
-						<button
-							type="button"
-							onClick={() =>
-								globalStore.setNotificationsEnabled(
-									!globalStore.notificationsEnabled(),
-								)
-							}
-							class={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-2 ${globalStore.notificationsEnabled() ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}
-						>
-							<div
-								class={`w-2 h-2 rounded-full ${globalStore.notificationsEnabled() ? "bg-emerald-400 animate-pulse" : "bg-rose-400"}`}
-							/>
-							15M System {globalStore.notificationsEnabled() ? "ON" : "OFF"}
-						</button>
-
-						<button
-							type="button"
-							onClick={() =>
-								globalStore.setFourHAlertEnabled(
-									!globalStore.fourHAlertEnabled(),
-								)
-							}
-							class={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-2 ${globalStore.fourHAlertEnabled() ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}
-						>
-							<div
-								class={`w-2 h-2 rounded-full ${globalStore.fourHAlertEnabled() ? "bg-emerald-400 animate-pulse" : "bg-rose-400"}`}
-							/>
-							4H System {globalStore.fourHAlertEnabled() ? "ON" : "OFF"}
-						</button>
-					</div>
-
 					<button
 						type="button"
 						onClick={() => setShowModal(true)}
@@ -813,16 +798,24 @@ function ProfileContent() {
 									type="button"
 									onClick={() => {
 										const newVal = !positionCalc().showAveraging;
-										setPositionCalc(prev => ({ ...prev, showAveraging: newVal }));
+										setPositionCalc((prev) => ({
+											...prev,
+											showAveraging: newVal,
+										}));
 										debouncedSavePositionCalc();
 									}}
-									class={`text-xs px-2 py-1 transition-colors ${positionCalc().showAveraging ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-indigo-400'}`}
+									class={`text-xs px-2 py-1 transition-colors ${positionCalc().showAveraging ? "text-indigo-400 font-bold" : "text-slate-500 hover:text-indigo-400"}`}
 								>
 									{positionCalc().showAveraging ? "收起加仓" : "+ 加仓"}
 								</button>
 							</div>
-							
-							<Show when={positionCalc().showAveraging || positionCalc().entries.length > 1}>
+
+							<Show
+								when={
+									positionCalc().showAveraging ||
+									positionCalc().entries.length > 1
+								}
+							>
 								<div class="space-y-2">
 									<Index each={positionCalc().entries}>
 										{(entry, idx) => (
@@ -834,8 +827,17 @@ function ProfileContent() {
 															inputmode="decimal"
 															placeholder="价格"
 															value={entry().price}
-															onInput={(e) => updatePositionEntry(entry().id, "price", e.currentTarget.value)}
-															readOnly={positionCalc().orderType === "market" && idx === 0}
+															onInput={(e) =>
+																updatePositionEntry(
+																	entry().id,
+																	"price",
+																	e.currentTarget.value,
+																)
+															}
+															readOnly={
+																positionCalc().orderType === "market" &&
+																idx === 0
+															}
 															class={`w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs ${positionCalc().orderType === "market" && idx === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
 														/>
 													</div>
@@ -845,7 +847,13 @@ function ProfileContent() {
 															inputmode="decimal"
 															placeholder="数量 (BTC)"
 															value={entry().size}
-															onInput={(e) => updatePositionEntry(entry().id, "size", e.currentTarget.value)}
+															onInput={(e) =>
+																updatePositionEntry(
+																	entry().id,
+																	"size",
+																	e.currentTarget.value,
+																)
+															}
 															class="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs"
 														/>
 													</div>
@@ -862,7 +870,7 @@ function ProfileContent() {
 											</div>
 										)}
 									</Index>
-									
+
 									<Show when={positionCalc().showAveraging}>
 										<button
 											type="button"
@@ -874,15 +882,26 @@ function ProfileContent() {
 									</Show>
 								</div>
 							</Show>
-							
-							<Show when={!positionCalc().showAveraging && positionCalc().entries.length === 1}>
+
+							<Show
+								when={
+									!positionCalc().showAveraging &&
+									positionCalc().entries.length === 1
+								}
+							>
 								<div class="grid grid-cols-2 gap-2">
 									<input
 										type="text"
 										inputmode="decimal"
 										placeholder="开仓价格"
 										value={positionCalc().entries[0].price}
-										onInput={(e) => updatePositionEntry(positionCalc().entries[0].id, "price", e.currentTarget.value)}
+										onInput={(e) =>
+											updatePositionEntry(
+												positionCalc().entries[0].id,
+												"price",
+												e.currentTarget.value,
+											)
+										}
 										readOnly={positionCalc().orderType === "market"}
 										class={`w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-sm ${positionCalc().orderType === "market" ? "opacity-50 cursor-not-allowed" : ""}`}
 									/>
@@ -891,7 +910,13 @@ function ProfileContent() {
 										inputmode="decimal"
 										placeholder="数量"
 										value={positionCalc().entries[0].size}
-										onInput={(e) => updatePositionEntry(positionCalc().entries[0].id, "size", e.currentTarget.value)}
+										onInput={(e) =>
+											updatePositionEntry(
+												positionCalc().entries[0].id,
+												"size",
+												e.currentTarget.value,
+											)
+										}
 										class="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-sm"
 									/>
 								</div>
@@ -900,7 +925,9 @@ function ProfileContent() {
 							<Show when={positionCalc().entries.length > 1}>
 								<div class="flex justify-between items-center px-3 py-2 bg-indigo-500/5 border border-indigo-500/10 rounded-lg text-[10px] font-mono">
 									<span class="text-indigo-300 uppercase">平均开仓价:</span>
-									<span class="text-white text-xs">${positionCalcResults()?.entryPrice.toFixed(2)}</span>
+									<span class="text-white text-xs">
+										${positionCalcResults()?.entryPrice.toFixed(2)}
+									</span>
 								</div>
 							</Show>
 						</div>
@@ -1005,10 +1032,8 @@ function ProfileContent() {
 														)
 															return undefined;
 														return isLong
-															? (price - currentPrice) *
-																	Number(btcSize)
-															: (currentPrice - price) *
-																	Number(btcSize);
+															? (price - currentPrice) * Number(btcSize)
+															: (currentPrice - price) * Number(btcSize);
 													})();
 										return (
 											<div class="flex flex-wrap items-center gap-1.5 sm:gap-2 p-2 bg-black/30 rounded-lg">
@@ -1119,10 +1144,8 @@ function ProfileContent() {
 														)
 															return undefined;
 														return isLong
-															? (price - currentPrice) *
-																	Number(btcSize)
-															: (currentPrice - price) *
-																	Number(btcSize);
+															? (price - currentPrice) * Number(btcSize)
+															: (currentPrice - price) * Number(btcSize);
 													})();
 										return (
 											<div class="flex flex-wrap items-center gap-1.5 sm:gap-2 p-2 bg-black/30 rounded-lg">
