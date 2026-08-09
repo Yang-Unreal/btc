@@ -111,7 +111,7 @@ async function handleTrade(data: any[]) {
 		else bySymbol.set(sym, [alert]);
 	}
 
-	console.log("[price-alerts-ws] handleTrade, alerts:", bySymbol.size, "coins:", data.map(t => t.coin));
+	const processedAlertIds = new Set<string>();
 
 	for (const trade of data) {
 		const coin = trade.coin;
@@ -129,6 +129,8 @@ async function handleTrade(data: any[]) {
 		state.previousPrices[sym] = px;
 
 		for (const alert of list) {
+			if (processedAlertIds.has(alert.id)) continue;
+
 			const target = Number(alert.targetPrice);
 			const exactMatch = Math.abs(px - target) <= 0.01;
 			const crossedUp = prev > 0 && prev < target && px >= target;
@@ -137,6 +139,8 @@ async function handleTrade(data: any[]) {
 			console.log("[price-alerts-ws]", sym, "px=", px, "target=", target, "prev=", prev, "match=", exactMatch || crossedUp || crossedDown, "triggered=", alert.triggered);
 
 			if (exactMatch || crossedUp || crossedDown) {
+				processedAlertIds.add(alert.id);
+
 				await db
 					.update(priceAlerts)
 					.set({ triggered: "true", enabled: "false", updatedAt: new Date() })
