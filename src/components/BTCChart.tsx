@@ -145,6 +145,7 @@ export default function BTCChart() {
 	let candlestickSeries: ISeriesApi<"Candlestick"> | undefined;
 	let volumeSeries: ISeriesApi<"Histogram"> | undefined;
 	let markersPrimitive: ISeriesMarkersPrimitive | undefined;
+	let chartDisposed = false;
 
 	// Indicator Series Refs
 	let ema20Series: ISeriesApi<"Line"> | undefined;
@@ -1500,6 +1501,17 @@ export default function BTCChart() {
 	onMount(() => {
 		if (!chartContainer) return;
 
+		const handler = (e: ErrorEvent) => {
+			if (
+				e instanceof ErrorEvent &&
+				e.message === "Object is disposed"
+			) {
+				e.preventDefault();
+				e.stopPropagation();
+			}
+		};
+		window.addEventListener("error", handler);
+
 		chart = createChart(chartContainer, {
 			layout: {
 				background: { color: "#0b0a1a" },
@@ -1935,19 +1947,31 @@ export default function BTCChart() {
 		window.addEventListener("mouseup", handleMouseUp);
 
 		onCleanup(() => {
+			chartDisposed = true;
 			if (ws) ws.close();
-			if (chart) {
-				chart.remove();
-				chart = undefined;
-				candlestickSeries = undefined;
-			}
 			window.removeEventListener("resize", handleResize);
 			window.removeEventListener("mousemove", handleMouseMove);
 			window.removeEventListener("mouseup", handleMouseUp);
+			window.removeEventListener("error", handler);
 			if (resizeObserver) resizeObserver.disconnect();
 			if (loadMoreTimer) clearTimeout(loadMoreTimer);
 			if (wsPingInterval !== undefined) window.clearInterval(wsPingInterval);
 			if (favoriteSaveTimer) window.clearTimeout(favoriteSaveTimer);
+			if (chart) {
+				try {
+					chart.remove();
+				} catch (e) {
+					if (
+						e instanceof Error &&
+						e.message === "Object is disposed"
+					) {
+						return;
+					}
+					throw e;
+				}
+				chart = undefined;
+				candlestickSeries = undefined;
+			}
 		});
 
 		setChartReady(true);

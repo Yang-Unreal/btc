@@ -180,6 +180,38 @@ export default function PriceAlerts() {
 	const [selectedIds, setSelectedIds] = createSignal<Set<string>>(new Set());
 	const [showAssetDropdown, setShowAssetDropdown] = createSignal(false);
 	const [assetSearchQuery, setAssetSearchQuery] = createSignal("");
+	const [favoriteAssets, setFavoriteAssets] = createSignal<string[]>([]);
+
+	const loadFavorites = async () => {
+		try {
+			const res = await fetch("/api/favorites");
+			if (res.ok) {
+				const data = await res.json();
+				if (Array.isArray(data.favorites)) {
+					setFavoriteAssets(data.favorites);
+				}
+			}
+		} catch (e) {
+			console.error("Failed to load favorites:", e);
+		}
+	};
+
+	const toggleFavorite = async (symbol: string) => {
+		const current = favoriteAssets();
+		const next = current.includes(symbol)
+			? current.filter((s) => s !== symbol)
+			: [...current, symbol];
+		setFavoriteAssets(next);
+		try {
+			await fetch("/api/favorites", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ symbols: next }),
+			});
+		} catch (e) {
+			console.error("Failed to save favorite:", e);
+		}
+	};
 
 	const fetchAlerts = async () => {
 		try {
@@ -194,6 +226,7 @@ export default function PriceAlerts() {
 	};
 
 	onMount(fetchAlerts);
+	onMount(loadFavorites);
 
 	let pollTimer: number | null = null;
 	onMount(() => {
@@ -356,6 +389,61 @@ export default function PriceAlerts() {
 									class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-indigo-500 transition-all"
 								/>
 							</div>
+							<Show
+								when={
+									!assetSearchQuery() &&
+									favoriteAssets().length > 0
+								}
+							>
+								<div class="px-2 py-1 border-b border-white/5">
+									<span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">
+										Favorites
+									</span>
+								</div>
+								<div class="max-h-32 overflow-y-auto no-scrollbar">
+									<For
+										each={favoriteAssets()}
+									>
+										{(favSymbol) => {
+											const asset = ASSET_MAP[favSymbol];
+											if (!asset) return null;
+											return (
+												<div
+													class={`w-full flex items-center gap-2 px-3 py-2 text-xs cursor-pointer transition-colors ${
+														selectedSymbol() === asset.symbol
+															? "bg-indigo-500/20 text-indigo-300"
+															: "text-slate-300 hover:bg-white/5"
+													}`}
+													onClick={() => {
+														setSelectedSymbol(asset.symbol);
+														setShowAssetDropdown(false);
+														setAssetSearchQuery("");
+													}}
+												>
+													<span class="font-bold">{asset.symbol}</span>
+													<span class="text-slate-500">{asset.name}</span>
+													<button
+														type="button"
+														onClick={(e) => {
+															e.stopPropagation();
+															toggleFavorite(asset.symbol);
+														}}
+														class="ml-auto p-0.5 hover:bg-white/10 rounded transition-colors"
+													>
+														<svg
+															class="w-3.5 h-3.5 text-amber-400"
+															fill="currentColor"
+															viewBox="0 0 20 20"
+														>
+															<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+														</svg>
+													</button>
+												</div>
+											);
+										}}
+									</For>
+								</div>
+							</Show>
 							<div class="max-h-48 overflow-y-auto no-scrollbar">
 								<For
 									each={SUPPORTED_ASSETS.filter((asset) => {
@@ -391,6 +479,26 @@ export default function PriceAlerts() {
 										>
 											<span class="font-bold">{asset.symbol}</span>
 											<span class="text-slate-500">{asset.name}</span>
+											<button
+												type="button"
+												onClick={(e) => {
+													e.stopPropagation();
+													toggleFavorite(asset.symbol);
+												}}
+												class="ml-auto p-0.5 hover:bg-white/10 rounded transition-colors"
+											>
+												<svg
+													class={`w-3.5 h-3.5 ${
+														favoriteAssets().includes(asset.symbol)
+															? "text-amber-400"
+															: "text-slate-600 hover:text-slate-400"
+													}`}
+													fill="currentColor"
+													viewBox="0 0 20 20"
+												>
+													<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+												</svg>
+											</button>
 										</div>
 									)}
 								</For>
