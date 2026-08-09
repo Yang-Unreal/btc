@@ -19,6 +19,7 @@ const state = {
 	subscriptions: new Map<string, Subscription>(),
 	previousPrices: {} as Record<string, number>,
 	connecting: false,
+	recentlyTriggered: new Set<string>(),
 };
 
 const HL_COIN_TO_SYMBOL: Record<string, string> = {};
@@ -105,13 +106,12 @@ async function handleTrade(data: any[]) {
 
 	const bySymbol = new Map<string, typeof alerts>();
 	for (const alert of alerts) {
+		if (state.recentlyTriggered.has(alert.id)) continue;
 		const sym = alert.symbol || "BTC";
 		const arr = bySymbol.get(sym);
 		if (arr) arr.push(alert);
 		else bySymbol.set(sym, [alert]);
 	}
-
-	const processedAlertIds = new Set<string>();
 
 	for (const trade of data) {
 		const coin = trade.coin;
@@ -129,16 +129,14 @@ async function handleTrade(data: any[]) {
 		state.previousPrices[sym] = px;
 
 		for (const alert of list) {
-			if (processedAlertIds.has(alert.id)) continue;
+			const target = Number(alert.targetPrice);
+			const crossedUp = prev > 0 && prev < target && px >= target;
+			const crossedDown = prev > 0 && prev > target && px <= target;
 
-		const target = Number(alert.targetPrice);
-		const crossedUp = prev > 0 && prev < target && px >= target;
-		const crossedDown = prev > 0 && prev > target && px <= target;
+			console.log("[price-alerts-ws]", sym, "px=", px, "target=", target, "prev=", prev, "match=", crossedUp || crossedDown, "triggered=", alert.triggered);
 
-		console.log("[price-alerts-ws]", sym, "px=", px, "target=", target, "prev=", prev, "match=", crossedUp || crossedDown, "triggered=", alert.triggered);
-
-		if (crossedUp || crossedDown) {
-				processedAlertIds.add(alert.id);
+			if (crossedUp || crossedDown) {
+				state.recentlyTriggered.add(alert.id);
 
 				await db
 					.update(priceAlerts)
@@ -227,4 +225,7 @@ export async function startPriceAlertMonitor() {
 			await syncSubscriptions(state.ws);
 		}
 	}, CHECK_INTERVAL_MS);
+	setInterval(() => {
+		state.recentlyTriggered.clear();
+	}, 5 * 60 * 1000);
 }
