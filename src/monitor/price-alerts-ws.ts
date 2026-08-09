@@ -21,6 +21,11 @@ const state = {
 	connecting: false,
 };
 
+const HL_COIN_TO_SYMBOL: Record<string, string> = {};
+for (const [sym, cfg] of Object.entries(ASSET_MAP)) {
+	if (cfg.hlSymbol) HL_COIN_TO_SYMBOL[cfg.hlSymbol] = sym;
+}
+
 async function fetchActiveAlerts() {
 	return db
 		.select()
@@ -31,11 +36,15 @@ async function fetchActiveAlerts() {
 }
 
 async function sendTelegramMessage(message: string): Promise<void> {
-	if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+	if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+		console.log("[price-alerts-ws] Telegram not configured, skipping");
+		return;
+	}
 
 	const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
 	try {
-		await fetch(url, {
+		console.log("[price-alerts-ws] Sending Telegram message...");
+		const res = await fetch(url, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -44,8 +53,10 @@ async function sendTelegramMessage(message: string): Promise<void> {
 				parse_mode: "HTML",
 			}),
 		});
-	} catch {
-		// ignore
+		const text = await res.text();
+		console.log("[price-alerts-ws] Telegram response:", res.status, text.slice(0, 200));
+	} catch (e) {
+		console.error("[price-alerts-ws] Telegram error:", e);
 	}
 }
 
@@ -53,6 +64,7 @@ function subscribe(ws: WebSocket, coin: string) {
 	if (state.subscriptions.has(coin)) return;
 	const hlKey = ASSET_MAP[coin]?.hlSymbol || coin;
 	state.subscriptions.set(coin, { coin, hlKey });
+	console.log("[price-alerts-ws] subscribing to trades for", coin, "-> hlKey:", hlKey);
 	ws.send(
 		JSON.stringify({
 			method: "subscribe",
@@ -65,6 +77,7 @@ function unsubscribe(ws: WebSocket, coin: string) {
 	const sub = state.subscriptions.get(coin);
 	if (!sub) return;
 	state.subscriptions.delete(coin);
+	console.log("[price-alerts-ws] unsubscribing trades for", coin, "-> hlKey:", sub.hlKey);
 	ws.send(
 		JSON.stringify({
 			method: "unsubscribe",
@@ -76,6 +89,7 @@ function unsubscribe(ws: WebSocket, coin: string) {
 async function syncSubscriptions(ws: WebSocket) {
 	const alerts = await fetchActiveAlerts();
 	const needed = new Set(alerts.map((a) => a.symbol || "BTC"));
+	console.log("[price-alerts-ws] syncSubscriptions, active alerts:", alerts.length, "symbols:", [...needed]);
 
 	for (const [coin] of state.subscriptions) {
 		if (!needed.has(coin)) unsubscribe(ws, coin);
@@ -97,22 +111,30 @@ async function handleTrade(data: any[]) {
 		else bySymbol.set(sym, [alert]);
 	}
 
+	console.log("[price-alerts-ws] handleTrade, alerts:", bySymbol.size, "coins:", data.map(t => t.coin));
+
 	for (const trade of data) {
 		const coin = trade.coin;
 		const px = parseFloat(trade.px);
 		if (!coin || Number.isNaN(px)) continue;
 
-		const list = bySymbol.get(coin) || bySymbol.get(trade.coin);
-		if (!list) continue;
+		const sym = HL_COIN_TO_SYMBOL[coin] || coin;
+		const list = bySymbol.get(sym);
+		if (!list) {
+			console.log("[price-alerts-ws] no alert for coin:", coin, "-> sym:", sym, "available:", [...bySymbol.keys()]);
+			continue;
+		}
 
-		const prev = state.previousPrices[coin] || 0;
-		state.previousPrices[coin] = px;
+		const prev = state.previousPrices[sym] || 0;
+		state.previousPrices[sym] = px;
 
 		for (const alert of list) {
 			const target = Number(alert.targetPrice);
 			const exactMatch = Math.abs(px - target) <= 0.01;
 			const crossedUp = prev > 0 && prev < target && px >= target;
 			const crossedDown = prev > 0 && prev > target && px <= target;
+
+			console.log("[price-alerts-ws]", sym, "px=", px, "target=", target, "prev=", prev, "match=", exactMatch || crossedUp || crossedDown, "triggered=", alert.triggered);
 
 			if (exactMatch || crossedUp || crossedDown) {
 				await db
@@ -125,7 +147,7 @@ async function handleTrade(data: any[]) {
 				});
 				await sendTelegramMessage(
 					[
-						`🔔 <b>${coin} 价格提醒触发!</b>`,
+						`🔔 <b>${sym} 价格提醒触发!</b>`,
 						"",
 						`⏰ 时间: ${timeStr}`,
 						`💰 当前价格: <b>$${px.toFixed(2)}</b>`,
@@ -150,6 +172,7 @@ function connect() {
 
 	ws.onopen = async () => {
 		state.connecting = false;
+		console.log("[price-alerts-ws] WS connected, syncing subscriptions...");
 		await syncSubscriptions(ws);
 
 		state.pingTimer = setInterval(() => {
@@ -169,6 +192,7 @@ function connect() {
 				return;
 
 			if (msg.channel === "trades" && Array.isArray(msg.data)) {
+				console.log("[price-alerts-ws] trades received, count:", msg.data.length, "coins:", msg.data.map(t => t.coin));
 				await handleTrade(msg.data);
 			}
 		} catch {
