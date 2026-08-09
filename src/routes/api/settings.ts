@@ -32,6 +32,7 @@ export async function GET() {
 				: null,
 			accountBalance: settings[0].accountBalance || "10000",
 			leverage: settings[0].leverage || "10",
+			activeAsset: settings[0].activeAsset || "BTC",
 		});
 	} catch (e) {
 		console.error(e);
@@ -50,6 +51,7 @@ export async function POST({ request }: { request: Request }) {
 			indicatorHeights,
 			accountBalance,
 			leverage,
+			activeAsset,
 		} = body;
 
 		const updateData: Partial<NewUserSettings> = { updatedAt: new Date() };
@@ -78,6 +80,9 @@ export async function POST({ request }: { request: Request }) {
 		}
 		if (leverage && !Number.isNaN(Number(leverage))) {
 			updateData.leverage = String(leverage);
+		}
+		if (activeAsset && typeof activeAsset === "string") {
+			updateData.activeAsset = activeAsset;
 		}
 
 		if (Object.keys(updateData).length <= 1) {

@@ -23,6 +23,7 @@ export const userSettings = pgTable("user_settings", {
 	fourHAlertEnabled: text("four_h_alert_enabled").notNull().default("false"), // "true" or "false"
 	accountBalance: numeric("account_balance").notNull().default("10000"),
 	leverage: text("leverage").notNull().default("10"),
+	activeAsset: text("active_asset").notNull().default("BTC"),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

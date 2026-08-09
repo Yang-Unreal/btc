@@ -154,8 +154,8 @@ const connectWs = (
 
 		if (!event.wasClean) {
 			reconnectTimer = window.setTimeout(() => {
-				const symbols = alerts().map((a) => a.symbol || "BTC");
-				connectWs(symbols, setAlerts, alerts);
+				const symbols = getAlerts().map((a) => a.symbol || "BTC");
+				connectWs(symbols, setAlerts, getAlerts);
 			}, 2000);
 		}
 	};

@@ -182,9 +182,21 @@ export default function BTCChart() {
 	const [activeCurrency, setActiveCurrency] = createSignal<CurrencyConfig>(
 		CURRENCIES[0],
 	);
-	const [activeAsset, setActiveAsset] = createSignal<AssetConfig>(
-		SUPPORTED_ASSETS[0],
-	);
+	const [activeAsset, setActiveAsset] = createSignal<AssetConfig>(() => {
+		try {
+			const saved = localStorage.getItem("btc_active_asset");
+			if (saved) {
+				const parsed = JSON.parse(saved);
+				const found = SUPPORTED_ASSETS.find(
+					(a) => a.symbol === parsed.symbol,
+				);
+				if (found) return found;
+			}
+		} catch {
+			// ignore
+		}
+		return SUPPORTED_ASSETS[0];
+	});
 
 	const [isMobile, setIsMobile] = createSignal(false);
 
@@ -196,6 +208,7 @@ export default function BTCChart() {
 
 	// const [tooltip, setTooltip] = createSignal<TooltipData | null>(null);
 	const [currentPrice, setCurrentPrice] = createSignal<number>(0);
+	const [chartReady, setChartReady] = createSignal(false);
 
 	const [indicators, setIndicators] = createSignal<Record<string, boolean>>({
 		ma20: false,
@@ -239,11 +252,15 @@ export default function BTCChart() {
 			if (data.indicators) {
 				setIndicators(data.indicators);
 			}
-			if (data.currency) {
-				const currency = CURRENCIES.find((c) => c.code === data.currency);
-				if (currency) setActiveCurrency(currency);
-			}
-			if (data.interval) {
+		if (data.currency) {
+			const currency = CURRENCIES.find((c) => c.code === data.currency);
+			if (currency) setActiveCurrency(currency);
+		}
+		if (data.activeAsset) {
+			const asset = SUPPORTED_ASSETS.find((a) => a.symbol === data.activeAsset);
+			if (asset) setActiveAsset(asset);
+		}
+		if (data.interval) {
 				const validInterval = intervals.find((i) => i.value === data.interval);
 				if (validInterval) setInterval(validInterval.value as Interval);
 			}
@@ -265,13 +282,14 @@ export default function BTCChart() {
 		}
 	});
 
-	// Persistence: Save settings when changed (only after loading is complete)
+		// Persistence: Save settings when changed (only after loading is complete)
 	createEffect(() => {
 		if (!settingsLoaded()) return;
 		const currentIndicators = indicators();
 		const currentCurrency = activeCurrency();
 		const currentIndHeights = indicatorHeights();
 		const currentInterval = interval();
+		const currentAsset = activeAsset();
 
 		fetch("/api/settings", {
 			method: "POST",
@@ -281,6 +299,7 @@ export default function BTCChart() {
 				currency: currentCurrency.code,
 				indicatorHeights: currentIndHeights,
 				interval: currentInterval,
+				activeAsset: currentAsset.symbol,
 			}),
 		}).catch((err) => console.error("Failed to save settings", err));
 	});
@@ -1331,7 +1350,6 @@ export default function BTCChart() {
 			);
 		},
 		staleTime: 60 * 1000 * 5, // Cache for 5 minutes for instant interval switching
-		enabled: typeof window !== "undefined" && settingsLoaded(), // Wait for persisted settings before loading chart history
 	}));
 
 	createEffect(() => {
@@ -1350,6 +1368,7 @@ export default function BTCChart() {
 		const historyData = historyQuery.data;
 		const isFetching = historyQuery.isFetching;
 		const fetchError = historyQuery.error;
+		const ready = chartReady();
 
 		untrack(() => {
 			if (!historyData) {
@@ -1359,7 +1378,7 @@ export default function BTCChart() {
 				return;
 			}
 
-			if (!candlestickSeries) return;
+			if (!ready || !candlestickSeries) return;
 
 			setIsLoading(false);
 			setError(
@@ -1743,7 +1762,10 @@ export default function BTCChart() {
 
 		const handleResize = () => {
 			if (chart && chartContainer) {
-				chart.applyOptions({ width: chartContainer.clientWidth });
+				chart.applyOptions({
+					width: chartContainer.clientWidth,
+					height: chartContainer.clientHeight,
+				});
 			}
 			setIsMobile(window.innerWidth < 640);
 		};
@@ -1752,8 +1774,11 @@ export default function BTCChart() {
 		let resizeObserver: ResizeObserver | undefined;
 		if (typeof ResizeObserver !== "undefined" && chartContainer) {
 			resizeObserver = new ResizeObserver(() => {
-				if (chart && chartContainer && chartContainer.clientWidth > 0) {
-					chart.applyOptions({ width: chartContainer.clientWidth });
+				if (chart && chartContainer && chartContainer.clientWidth > 0 && chartContainer.clientHeight > 0) {
+					chart.applyOptions({
+						width: chartContainer.clientWidth,
+						height: chartContainer.clientHeight,
+					});
 				}
 			});
 			resizeObserver.observe(chartContainer);
@@ -1858,9 +1883,11 @@ export default function BTCChart() {
 			if (loadMoreTimer) clearTimeout(loadMoreTimer);
 			if (wsPingInterval !== undefined) window.clearInterval(wsPingInterval);
 		});
+
+		setChartReady(true);
 	});
 
-	// --- Layout & Indicator Effect (Optimized) ---
+		// --- Layout & Indicator Effect (Optimized) ---
 	createEffect(() => {
 		// Track indicators changes only
 		indicators();
@@ -1969,10 +1996,10 @@ export default function BTCChart() {
 								{formatCryptoPrice(currentPrice(), activeCurrency().code)}
 							</div>
 						</div>
-						{/* Connection indicator */}
-						<div class="flex items-center">
-							{wsConnected() ? <IconPulse /> : <IconWifiOff />}
-						</div>
+					{/* Connection indicator */}
+					<div class="flex items-center">
+						{wsConnected() ? <IconPulse /> : <IconWifiOff />}
+					</div>
 					</div>
 
 					{/* Row 2: Favorite intervals + dropdown with all intervals */}
@@ -2458,16 +2485,16 @@ export default function BTCChart() {
 						</div>
 					</div>
 
-					<div class="flex items-center gap-2">
-						<div class="flex items-center gap-2 px-2 border-l border-white/5">
-							<div class="flex items-center">
-								{wsConnected() ? <IconPulse /> : <IconWifiOff />}
-							</div>
+				<div class="flex items-center gap-2">
+					<div class="flex items-center gap-2 px-2 border-l border-white/5">
+						<div class="flex items-center">
+							{wsConnected() ? <IconPulse /> : <IconWifiOff />}
 						</div>
 					</div>
 				</div>
+				</div>
 			</Show>
-			<div class="relative h-112.5 md:h-137.5 w-full group cursor-crosshair touch-action-none bg-[#0b0e14]">
+			<div class="relative w-full h-[calc(100vh-10rem)] group cursor-crosshair touch-action-none bg-[#0b0e14]">
 				<Show when={isLoading()}>
 					<div class="absolute inset-0 z-20 flex items-center justify-center bg-[#0b0e14]/80 backdrop-blur-sm">
 						<div class="flex flex-col items-center gap-4">
@@ -2487,9 +2514,9 @@ export default function BTCChart() {
 					</div>
 				</Show>
 
-				<div ref={chartContainer} class="w-full h-full opacity-90" />
+			<div ref={chartContainer} class="w-full h-full opacity-90" />
 
-				{/* Indicator Resize Handles */}
+			{/* Indicator Resize Handles */}
 				<Show
 					when={
 						Object.values(indicators()).some((v) => v) &&

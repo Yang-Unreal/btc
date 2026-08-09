@@ -36,6 +36,13 @@
       "when": 1786156658089,
       "tag": "0004_misty_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786271409200,
+      "tag": "0005_add_active_asset",
+      "breakpoints": true
     }
   ]
 }

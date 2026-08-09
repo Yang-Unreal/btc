@@ -1,0 +1,1 @@
+ALTER TABLE "user_settings" ADD COLUMN "active_asset" text DEFAULT 'BTC' NOT NULL;
