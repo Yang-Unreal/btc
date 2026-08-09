@@ -296,6 +296,25 @@ export default function BTCChart() {
 		"4h",
 	]);
 	const [showIntervalDropdown, setShowIntervalDropdown] = createSignal(false);
+	let intervalDropdownRef: HTMLDivElement | undefined;
+
+	const IntervalDropdown = (props: { children: JSX.Element }) => {
+		onMount(() => {
+			const handler = (e: MouseEvent) => {
+				if (
+					intervalDropdownRef &&
+					!intervalDropdownRef.contains(e.target as Node)
+				) {
+					setShowIntervalDropdown(false);
+				}
+			};
+			document.addEventListener("mousedown", handler);
+			onCleanup(() => {
+				document.removeEventListener("mousedown", handler);
+			});
+		});
+		return props.children;
+	};
 
 	// Persistence: Fetch initial indicators
 	onMount(async () => {
@@ -2125,7 +2144,7 @@ export default function BTCChart() {
 							}}
 						</For>
 						{/* Dropdown with all intervals */}
-						<div class="relative shrink-0">
+						<div class="relative shrink-0" ref={intervalDropdownRef}>
 							<button
 								type="button"
 								class="flex items-center gap-1 px-3 py-1.5 text-[12px] font-bold rounded-md bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200 transition-all"
@@ -2160,7 +2179,8 @@ export default function BTCChart() {
 									/>
 								</svg>
 							</button>
-							<Show when={showIntervalDropdown()}>
+						<Show when={showIntervalDropdown()}>
+							<IntervalDropdown>
 								<div class="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 min-w-35">
 									<For each={intervals}>
 										{(opt) => (
@@ -2225,11 +2245,12 @@ export default function BTCChart() {
 														<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
 													</svg>
 												</button>
-												<span>{opt.label.toUpperCase()}</span>
-											</div>
-										)}
-									</For>
-								</div>
+													<span>{opt.label.toUpperCase()}</span>
+												</div>
+											)}
+										</For>
+									</div>
+								</IntervalDropdown>
 							</Show>
 						</div>
 					</div>
@@ -2498,7 +2519,7 @@ export default function BTCChart() {
 								}}
 							</For>
 							{/* Dropdown with all intervals */}
-							<div class="relative">
+							<div class="relative" ref={intervalDropdownRef}>
 								<button
 									type="button"
 									class="p-1 text-slate-500 hover:text-white"
@@ -2521,7 +2542,8 @@ export default function BTCChart() {
 										/>
 									</svg>
 								</button>
-								<Show when={showIntervalDropdown()}>
+							<Show when={showIntervalDropdown()}>
+								<IntervalDropdown>
 									<div class="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 min-w-35">
 										<For each={intervals}>
 											{(opt) => (
@@ -2591,8 +2613,9 @@ export default function BTCChart() {
 											)}
 										</For>
 									</div>
-								</Show>
-							</div>
+								</IntervalDropdown>
+							</Show>
+						</div>
 						</div>
 
 						<div class="relative">
@@ -2739,10 +2762,10 @@ export default function BTCChart() {
 								setDraggingArea("middle");
 							}}
 						>
-							<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-white/5 group-hover/handle:bg-indigo-500/50" />
-						</div>
-					</Show>
+						<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-white/5 group-hover/handle:bg-indigo-500/50" />
+					</div>
 				</Show>
+			</Show>
 
 				{/* Bitget-style Legend Overlay */}
 				<div class="absolute top-1 left-2 z-30 pointer-events-none flex flex-col gap-0.5 select-none transition-all duration-200 overflow-hidden max-w-[calc(100%-20px)]">
