@@ -1,5 +1,5 @@
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
-import { SUPPORTED_ASSETS } from "../lib/constants";
+import { SUPPORTED_ASSETS, ASSET_MAP } from "../lib/constants";
 import { formatCryptoPrice } from "../lib/format";
 import { globalStore } from "../lib/store";
 
@@ -10,6 +10,156 @@ interface PriceAlert {
 	enabled: string;
 	triggered: string;
 }
+
+const previousPrices: Record<string, number> = {};
+let ws: WebSocket | null = null;
+const subscribedSymbols = new Set<string>();
+let connecting = false;
+
+const sendTelegramMessage = async (message: string): Promise<void> => {
+	const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
+	const chatId = import.meta.env.VITE_TELEGRAM_CHAT_ID;
+	if (!botToken || !chatId) return;
+
+	try {
+		await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				chat_id: chatId,
+				text: message,
+				parse_mode: "HTML",
+			}),
+		});
+	} catch {
+		// ignore
+	}
+};
+
+const connectWs = (
+	symbols: string[],
+	setAlerts: (v: PriceAlert[] | ((prev: PriceAlert[]) => PriceAlert[])) => void,
+	getAlerts: () => PriceAlert[],
+) => {
+	if (connecting) return;
+	if (ws) {
+		ws.close();
+		ws = null;
+	}
+	subscribedSymbols.clear();
+
+	const unique = [...new Set(symbols)];
+	if (unique.length === 0) return;
+
+	connecting = true;
+	const newWs = new WebSocket("wss://api.hyperliquid.xyz/ws");
+	ws = newWs;
+
+	newWs.onopen = () => {
+		connecting = false;
+		console.log("[PriceAlerts] WS connected, state:", newWs.readyState, " subscribing to", unique);
+		for (const symbol of unique) {
+			const coin = ASSET_MAP[symbol]?.hlSymbol || symbol;
+			try {
+				newWs.send(
+					JSON.stringify({
+						method: "subscribe",
+						subscription: { type: "trades", coin },
+					}),
+				);
+				console.log("[PriceAlerts] subscribed to", coin, "for symbol", symbol);
+			} catch (e) {
+				console.error("[PriceAlerts] subscribe error for", symbol, e);
+			}
+			subscribedSymbols.add(symbol);
+		}
+	};
+
+	newWs.onmessage = (event) => {
+		try {
+			const msg = JSON.parse(event.data);
+			console.log("[PriceAlerts] WS message:", msg.channel, msg.data?.length || 1);
+			if (msg.channel !== "trades" || !Array.isArray(msg.data)) return;
+
+			const tradesByCoin = new Map<string, number>();
+			for (const trade of msg.data) {
+				const px = parseFloat(trade.px);
+				if (!Number.isNaN(px)) tradesByCoin.set(trade.coin, px);
+			}
+			console.log("[PriceAlerts] prices received:", [...tradesByCoin.entries()]);
+
+			const currentAlerts = getAlerts();
+			if (currentAlerts.length === 0) return;
+
+			let changed = false;
+			const next = currentAlerts.map((alert) => {
+				const sym = alert.symbol || "BTC";
+				const coin = ASSET_MAP[sym]?.hlSymbol || sym;
+				const px = tradesByCoin.get(coin) || tradesByCoin.get(sym);
+				if (!px) {
+					console.log("[PriceAlerts] no price for", sym, "(coin:", coin, ") available:", [...tradesByCoin.keys()]);
+					return alert;
+				}
+
+				const prev = previousPrices[sym] || 0;
+				previousPrices[sym] = px;
+
+				const target = Number(alert.targetPrice);
+				const exactMatch = Math.abs(px - target) <= 0.01;
+				const crossedUp =
+					prev > 0 && prev < target && px >= target;
+				const crossedDown =
+					prev > 0 && prev > target && px <= target;
+
+				console.log("[PriceAlerts]", sym, "px=", px, "target=", target, "prev=", prev, "match=", exactMatch || crossedUp || crossedDown, "triggered=", alert.triggered);
+
+				if (
+					(exactMatch || crossedUp || crossedDown) &&
+					alert.triggered === "false"
+				) {
+					changed = true;
+					const timeStr = new Date().toLocaleString("zh-CN", {
+						timeZone: "Asia/Shanghai",
+					});
+					sendTelegramMessage(
+						[
+							`🔔 <b>${sym} 价格提醒触发!</b>`,
+							"",
+							`⏰ 时间: ${timeStr}`,
+							`💰 当前价格: <b>$${px.toFixed(2)}</b>`,
+							`🎯 目标价格: <b>$${target.toFixed(2)}</b>`,
+							"",
+							"🚀 价格已达到您的预设目标！",
+						].join("\n"),
+					);
+					return { ...alert, triggered: "true", enabled: "false" };
+				}
+				return alert;
+			});
+
+			if (changed) {
+				console.log("[PriceAlerts] updating UI, alerts count:", next.length);
+				setAlerts(next);
+			}
+		} catch (e) {
+			console.error("[PriceAlerts] onmessage error", e);
+		}
+	};
+
+	newWs.onclose = (event) => {
+		connecting = false;
+		ws = null;
+		subscribedSymbols.clear();
+		console.log("[PriceAlerts] WS disconnected, code:", event.code, "reason:", event.reason, "wasClean:", event.wasClean);
+	};
+
+	newWs.onerror = (event) => {
+		connecting = false;
+		ws = null;
+		subscribedSymbols.clear();
+		console.log("[PriceAlerts] WS error event:", event);
+	};
+};
 
 export default function PriceAlerts() {
 	const [alerts, setAlerts] = createSignal<PriceAlert[]>([]);
@@ -27,7 +177,7 @@ export default function PriceAlerts() {
 			const data = await res.json();
 			setAlerts(data);
 			const symbols = data.map((a) => a.symbol || "BTC");
-			connectWs(symbols);
+			connectWs(symbols, setAlerts, alerts);
 		} catch (e) {
 			console.error("Failed to fetch alerts", e);
 		}
@@ -35,165 +185,7 @@ export default function PriceAlerts() {
 
 	onMount(fetchAlerts);
 
-	const previousPrices: Record<string, number> = {};
-	let ws: WebSocket | null = null;
-	const subscribedSymbols = new Set<string>();
-	let connecting = false;
-
-	const sendTelegramMessage = async (message: string): Promise<void> => {
-		const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
-		const chatId = import.meta.env.VITE_TELEGRAM_CHAT_ID;
-		if (!botToken || !chatId) return;
-
-		try {
-			await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					chat_id: chatId,
-					text: message,
-					parse_mode: "HTML",
-				}),
-			});
-		} catch {
-			// ignore
-		}
-	};
-	const connectWs = (symbols: string[]) => {
-		if (connecting) return;
-		if (ws) {
-			ws.close();
-			ws = null;
-		}
-		subscribedSymbols.clear();
-
-		const unique = [...new Set(symbols)];
-		if (unique.length === 0) return;
-
-		connecting = true;
-		const newWs = new WebSocket("wss://api.hyperliquid.xyz/ws");
-		ws = newWs;
-
-		newWs.onopen = () => {
-			connecting = false;
-			for (const symbol of unique) {
-				newWs.send(
-					JSON.stringify({
-						method: "subscribe",
-						subscription: { type: "trades", coin: symbol },
-					}),
-				);
-				subscribedSymbols.add(symbol);
-			}
-		};
-
-		newWs.onmessage = (event) => {
-			try {
-				const msg = JSON.parse(event.data);
-				if (msg.channel !== "trades" || !Array.isArray(msg.data)) return;
-
-				const tradesByCoin = new Map<string, number>();
-				for (const trade of msg.data) {
-					const px = parseFloat(trade.px);
-					if (!Number.isNaN(px)) tradesByCoin.set(trade.coin, px);
-				}
-
-				const currentAlerts = alerts();
-				if (currentAlerts.length === 0) return;
-
-				let changed = false;
-				const next = currentAlerts.map((alert) => {
-					const sym = alert.symbol || "BTC";
-					const px = tradesByCoin.get(sym);
-					if (!px) return alert;
-
-					const prev = previousPrices[sym] || 0;
-					previousPrices[sym] = px;
-
-					const target = Number(alert.targetPrice);
-					const exactMatch = Math.abs(px - target) <= 0.01;
-					const crossedUp =
-						prev > 0 && prev < target && px >= target;
-					const crossedDown =
-						prev > 0 && prev > target && px <= target;
-
-					if (
-						(exactMatch || crossedUp || crossedDown) &&
-						alert.triggered === "false"
-					) {
-						changed = true;
-						const timeStr = new Date().toLocaleString("zh-CN", {
-							timeZone: "Asia/Shanghai",
-						});
-						sendTelegramMessage(
-							[
-								`🔔 <b>${sym} 价格提醒触发!</b>`,
-								"",
-								`⏰ 时间: ${timeStr}`,
-								`💰 当前价格: <b>$${px.toFixed(2)}</b>`,
-								`🎯 目标价格: <b>$${target.toFixed(2)}</b>`,
-								"",
-								"🚀 价格已达到您的预设目标！",
-							].join("\n"),
-						);
-						return { ...alert, triggered: "true", enabled: "false" };
-					}
-					return alert;
-				});
-
-				if (changed) setAlerts(next);
-			} catch {
-				// ignore
-			}
-		};
-
-		newWs.onclose = () => {
-			connecting = false;
-			ws = null;
-			subscribedSymbols.clear();
-		};
-
-		newWs.onerror = () => {
-			connecting = false;
-			ws = null;
-			subscribedSymbols.clear();
-		};
-	};
-	const syncSubscriptions = () => {
-		const symbols = alerts().map((a) => a.symbol || "BTC");
-		const needed = new Set(symbols);
-
-		for (const sym of subscribedSymbols) {
-			if (!needed.has(sym) && ws && ws.readyState === WebSocket.OPEN) {
-				ws.send(
-					JSON.stringify({
-						method: "unsubscribe",
-						subscription: { type: "trades", coin: sym },
-					}),
-				);
-				subscribedSymbols.delete(sym);
-			}
-		}
-
-		for (const sym of needed) {
-			if (!subscribedSymbols.has(sym)) {
-				if (ws && ws.readyState === WebSocket.OPEN) {
-					ws.send(
-						JSON.stringify({
-							method: "subscribe",
-							subscription: { type: "trades", coin: sym },
-						}),
-					);
-					subscribedSymbols.add(sym);
-				} else {
-					connectWs(symbols);
-					return;
-				}
-			}
-	}
-};
-
-onCleanup(() => {
+	onCleanup(() => {
 		if (ws) {
 			ws.close();
 			ws = null;
@@ -216,7 +208,6 @@ onCleanup(() => {
 			});
 			setNewPrice("");
 			await fetchAlerts();
-			syncSubscriptions();
 		} finally {
 			setLoading(false);
 		}
@@ -244,7 +235,6 @@ onCleanup(() => {
 				body: JSON.stringify({ type: "DELETE", id }),
 			});
 			await fetchAlerts();
-			syncSubscriptions();
 		} catch (e) {
 			console.error(e);
 		}
@@ -281,7 +271,6 @@ onCleanup(() => {
 			});
 			setSelectedIds(new Set());
 			await fetchAlerts();
-			syncSubscriptions();
 		} catch (e) {
 			console.error(e);
 		}

@@ -56,18 +56,19 @@ function subscribe(ws: WebSocket, coin: string) {
 	ws.send(
 		JSON.stringify({
 			method: "subscribe",
-			subscription: { type: "trades", coin },
+			subscription: { type: "trades", coin: hlKey },
 		}),
 	);
 }
 
 function unsubscribe(ws: WebSocket, coin: string) {
-	if (!state.subscriptions.has(coin)) return;
+	const sub = state.subscriptions.get(coin);
+	if (!sub) return;
 	state.subscriptions.delete(coin);
 	ws.send(
 		JSON.stringify({
 			method: "unsubscribe",
-			subscription: { type: "trades", coin },
+			subscription: { type: "trades", coin: sub.hlKey },
 		}),
 	);
 }
@@ -101,7 +102,7 @@ async function handleTrade(data: any[]) {
 		const px = parseFloat(trade.px);
 		if (!coin || Number.isNaN(px)) continue;
 
-		const list = bySymbol.get(coin);
+		const list = bySymbol.get(coin) || bySymbol.get(trade.coin);
 		if (!list) continue;
 
 		const prev = state.previousPrices[coin] || 0;
