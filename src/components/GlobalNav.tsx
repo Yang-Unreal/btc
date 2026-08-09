@@ -73,17 +73,6 @@ const GlobalNav: Component = () => {
 							</span>
 						</A>
 
-						{/* Live Indicator */}
-						<div class="flex items-center px-3 sm:px-4 py-2 bg-linear-to-r from-emerald-600/20 to-emerald-700/20 text-emerald-300 border border-emerald-500/30 rounded-lg shadow-inner text-[10px] sm:text-xs font-bold uppercase tracking-widest gap-2 sm:gap-3">
-							<span class="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
-								<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-								<span class="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500 shadow-lg shadow-emerald-500/50" />
-							</span>
-							<span class="hidden md:inline text-emerald-200">
-								Live Operations
-							</span>
-							<span class="md:hidden text-emerald-200">Live</span>
-						</div>
 					</div>
 				</div>
 			</div>
