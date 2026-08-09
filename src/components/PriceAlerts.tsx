@@ -55,11 +55,24 @@ const connectWs = (
 	const newWs = new WebSocket("wss://api.hyperliquid.xyz/ws");
 	ws = newWs;
 
+	let pingTimer: number | null = null;
 	newWs.onopen = () => {
 		connecting = false;
 		console.log("[PriceAlerts] WS connected, state:", newWs.readyState, " subscribing to", unique);
+
+		pingTimer = window.setInterval(() => {
+			if (newWs.readyState === WebSocket.OPEN) {
+				newWs.send(JSON.stringify({ method: "ping" }));
+			}
+		}, 30_000);
+
 		for (const symbol of unique) {
-			const coin = ASSET_MAP[symbol]?.hlSymbol || symbol;
+			const asset = ASSET_MAP[symbol];
+			if (!asset?.hlSymbol) {
+				console.warn("[PriceAlerts] skip unknown symbol:", symbol);
+				continue;
+			}
+			const coin = asset.hlSymbol;
 			try {
 				newWs.send(
 					JSON.stringify({
@@ -68,10 +81,10 @@ const connectWs = (
 					}),
 				);
 				console.log("[PriceAlerts] subscribed to", coin, "for symbol", symbol);
+				subscribedSymbols.add(symbol);
 			} catch (e) {
 				console.error("[PriceAlerts] subscribe error for", symbol, e);
 			}
-			subscribedSymbols.add(symbol);
 		}
 	};
 
@@ -94,7 +107,8 @@ const connectWs = (
 			let changed = false;
 			const next = currentAlerts.map((alert) => {
 				const sym = alert.symbol || "BTC";
-				const coin = ASSET_MAP[sym]?.hlSymbol || sym;
+				const asset = ASSET_MAP[sym];
+				const coin = asset?.hlSymbol || sym;
 				const px = tradesByCoin.get(coin) || tradesByCoin.get(sym);
 				if (!px) {
 					console.log("[PriceAlerts] no price for", sym, "(coin:", coin, ") available:", [...tradesByCoin.keys()]);
@@ -118,20 +132,6 @@ const connectWs = (
 					alert.triggered === "false"
 				) {
 					changed = true;
-					const timeStr = new Date().toLocaleString("zh-CN", {
-						timeZone: "Asia/Shanghai",
-					});
-					sendTelegramMessage(
-						[
-							`🔔 <b>${sym} 价格提醒触发!</b>`,
-							"",
-							`⏰ 时间: ${timeStr}`,
-							`💰 当前价格: <b>$${px.toFixed(2)}</b>`,
-							`🎯 目标价格: <b>$${target.toFixed(2)}</b>`,
-							"",
-							"🚀 价格已达到您的预设目标！",
-						].join("\n"),
-					);
 					return { ...alert, triggered: "true", enabled: "false" };
 				}
 				return alert;
@@ -148,6 +148,10 @@ const connectWs = (
 
 	newWs.onclose = (event) => {
 		connecting = false;
+		if (pingTimer !== null) {
+			window.clearInterval(pingTimer);
+			pingTimer = null;
+		}
 		ws = null;
 		subscribedSymbols.clear();
 		console.log("[PriceAlerts] WS disconnected, code:", event.code, "reason:", event.reason, "wasClean:", event.wasClean);
@@ -155,6 +159,10 @@ const connectWs = (
 
 	newWs.onerror = (event) => {
 		connecting = false;
+		if (pingTimer !== null) {
+			window.clearInterval(pingTimer);
+			pingTimer = null;
+		}
 		ws = null;
 		subscribedSymbols.clear();
 		console.log("[PriceAlerts] WS error event:", event);
