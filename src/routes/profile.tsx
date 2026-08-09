@@ -81,7 +81,7 @@ export default function Profile() {
 }
 
 function ProfileContent() {
-	const { currency, loaded } = globalStore;
+	const { loaded } = globalStore;
 
 	// State
 	const [portfolioData, setPortfolioData] =
@@ -180,7 +180,7 @@ function ProfileContent() {
 		const allTickers = Array.from(
 			new Set([...Object.keys(data.holdings), ...data.favorites]),
 		);
-		if (allTickers.length > 0) fetchPrices(currency(), allTickers);
+		if (allTickers.length > 0) fetchPrices(USD, allTickers);
 	});
 
 	onMount(() => {
@@ -190,7 +190,7 @@ function ProfileContent() {
 			const allTickers = Array.from(
 				new Set([...Object.keys(data.holdings), ...data.favorites]),
 			);
-			fetchPrices(currency(), allTickers);
+			fetchPrices(USD, allTickers);
 		}, 30000);
 		onCleanup(() => clearInterval(interval));
 	});
@@ -289,7 +289,7 @@ function ProfileContent() {
 							when={!isLoading()}
 							fallback={<Skeleton class="h-6 w-full sm:h-10 sm:w-40" />}
 						>
-							{formatCryptoPrice(totalBalance(), currency())}
+							{formatCryptoPrice(totalBalance(), USD)}
 						</Show>
 					</div>
 				</Card>
@@ -309,7 +309,7 @@ function ProfileContent() {
 								}
 							>
 								{totalProfit() >= 0 ? "+" : ""}
-								{formatCryptoPrice(totalProfit(), currency())}
+								{formatCryptoPrice(totalProfit(), USD)}
 							</span>
 						</Show>
 					</div>
@@ -379,13 +379,13 @@ function ProfileContent() {
 											</div>
 											<div class="text-right">
 												<div class="text-sm font-bold text-white font-mono">
-													{formatCryptoPrice(getValue(), currency())}
+													{formatCryptoPrice(getValue(), USD)}
 												</div>
 												<div
 													class={`text-[10px] font-mono ${getPnlVal() >= 0 ? "text-emerald-400" : "text-rose-400"}`}
 												>
 													{getPnlVal() >= 0 ? "+" : ""}
-													{formatCryptoPrice(getPnlVal(), currency())}
+													{formatCryptoPrice(getPnlVal(), USD)}
 												</div>
 											</div>
 										</div>
@@ -444,7 +444,7 @@ function ProfileContent() {
 														{(() => {
 															const p = getPrice();
 															return p !== undefined
-																? formatCryptoPrice(p, currency())
+																? formatCryptoPrice(p, USD)
 																: "---";
 														})()}
 													</td>
@@ -453,13 +453,13 @@ function ProfileContent() {
 														{(() => {
 															const v = getValue();
 															return v !== null
-																? formatCryptoPrice(v, currency())
+																? formatCryptoPrice(v, USD)
 																: "--";
 														})()}
 													</td>
 
 													<td class="p-4 text-right font-mono text-slate-400">
-														{formatCryptoPrice(h.averageBuyPrice, currency())}
+														{formatCryptoPrice(h.averageBuyPrice, USD)}
 													</td>
 
 													<td
@@ -468,7 +468,7 @@ function ProfileContent() {
 														{(() => {
 															const pnl = getPnL();
 															return pnl !== null
-																? formatCryptoPrice(pnl, currency())
+																? formatCryptoPrice(pnl, USD)
 																: "--";
 														})()}
 													</td>
@@ -516,7 +516,7 @@ function ProfileContent() {
 												{tx.amount}
 											</div>
 											<div class="text-[10px] text-slate-500 font-mono">
-												{formatCryptoPrice(tx.price, currency())}
+												{formatCryptoPrice(tx.price, USD)}
 											</div>
 										</div>
 									</div>

@@ -24,7 +24,6 @@ import {
 	untrack,
 } from "solid-js";
 import {
-	CURRENCIES,
 	HL_INTERVAL_MAP,
 	SUPPORTED_ASSETS,
 } from "../lib/constants";
@@ -38,8 +37,6 @@ import {
 } from "../lib/indicators";
 import type {
 	AssetConfig,
-	CurrencyCode,
-	CurrencyConfig,
 	Interval,
 } from "../lib/types";
 
@@ -178,10 +175,6 @@ export default function BTCChart() {
 
 	const [interval, setInterval] = createSignal<Interval>("4h");
 
-	// NEW: Currency State
-	const [activeCurrency, setActiveCurrency] = createSignal<CurrencyConfig>(
-		CURRENCIES[0],
-	);
 	const [activeAsset, setActiveAsset] = createSignal<AssetConfig>(() => {
 		try {
 			const saved = localStorage.getItem("btc_active_asset");
@@ -314,18 +307,14 @@ export default function BTCChart() {
 			]);
 			const settingsData = await settingsRes.json();
 
-			if (settingsData.indicators) {
-				setIndicators(settingsData.indicators);
-			}
-			if (settingsData.currency) {
-				const currency = CURRENCIES.find((c) => c.code === settingsData.currency);
-				if (currency) setActiveCurrency(currency);
-			}
-			if (settingsData.activeAsset) {
-				const asset = SUPPORTED_ASSETS.find((a) => a.symbol === settingsData.activeAsset);
-				if (asset) setActiveAsset(asset);
-			}
-			if (settingsData.interval) {
+		if (settingsData.indicators) {
+			setIndicators(settingsData.indicators);
+		}
+		if (settingsData.activeAsset) {
+			const asset = SUPPORTED_ASSETS.find((a) => a.symbol === settingsData.activeAsset);
+			if (asset) setActiveAsset(asset);
+		}
+		if (settingsData.interval) {
 				const validInterval = intervals.find((i) => i.value === settingsData.interval);
 				if (validInterval) setInterval(validInterval.value as Interval);
 			}
@@ -358,7 +347,6 @@ export default function BTCChart() {
 	createEffect(() => {
 		if (!settingsLoaded()) return;
 		const currentIndicators = indicators();
-		const currentCurrency = activeCurrency();
 		const currentIndHeights = indicatorHeights();
 		const currentInterval = interval();
 		const currentAsset = activeAsset();
@@ -368,7 +356,6 @@ export default function BTCChart() {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				indicators: currentIndicators,
-				currency: currentCurrency.code,
 				indicatorHeights: currentIndHeights,
 				interval: currentInterval,
 				activeAsset: currentAsset.symbol,
@@ -688,7 +675,7 @@ export default function BTCChart() {
 	// --- Modified Fetch History ---
 	const fetchHistoricalData = async (
 		activeInterval: Interval,
-		currency: CurrencyCode,
+		currency: string,
 		assetSymbol: string,
 		toTimestamp?: number,
 	): Promise<BTCData[]> => {
@@ -746,12 +733,12 @@ export default function BTCChart() {
 
 		setIsLoadingMore(true);
 		try {
-			const olderData = await fetchHistoricalData(
-				interval(),
-				activeCurrency().code,
-				activeAsset().hlSymbol || activeAsset().symbol,
-				earliestTimeMs,
-			);
+		const olderData = await fetchHistoricalData(
+			interval(),
+			"USD",
+			activeAsset().hlSymbol || activeAsset().symbol,
+			earliestTimeMs,
+		);
 
 			if (olderData.length === 0) {
 				setIsLoadingMore(false);
@@ -1118,7 +1105,7 @@ export default function BTCChart() {
 
 		const formatValue = (val: number | undefined) => {
 			if (val === undefined || val === null || Number.isNaN(val)) return "—";
-			return formatCryptoPrice(val, activeCurrency().code);
+			return formatCryptoPrice(val, "USD");
 		};
 
 		const volumeVal = lastCandle.volume;
@@ -1157,7 +1144,7 @@ export default function BTCChart() {
 			changeVal: `${change >= 0 ? "+" : ""}${formatValue(change)}`,
 			changePct: `${change >= 0 ? "+" : ""}${changePct.toFixed(2)}%`,
 			volume: formattedVolume,
-			currencySymbol: activeCurrency().symbol,
+			currencySymbol: "$",
 			changeColor:
 				lastCandle.close >= lastCandle.open
 					? "text-emerald-500"
@@ -1418,13 +1405,12 @@ export default function BTCChart() {
 		queryKey: [
 			"history",
 			interval(),
-			activeCurrency().code,
 			activeAsset().symbol,
 		],
 		queryFn: async () => {
 			return await fetchHistoricalData(
 				interval(),
-				activeCurrency().code,
+				"USD",
 				activeAsset().hlSymbol || activeAsset().symbol,
 			);
 		},
@@ -1437,7 +1423,7 @@ export default function BTCChart() {
 				priceFormat: {
 					type: "custom",
 					formatter: (price: number) =>
-						formatCryptoPrice(price, activeCurrency().code),
+						formatCryptoPrice(price, "USD"),
 				},
 			});
 		}
@@ -1557,7 +1543,7 @@ export default function BTCChart() {
 			priceFormat: {
 				type: "custom",
 				formatter: (price: number) =>
-					formatCryptoPrice(price, activeCurrency().code),
+					formatCryptoPrice(price, "USD"),
 				minMove: 0.00000001,
 			},
 		});
@@ -1717,7 +1703,7 @@ export default function BTCChart() {
 
 			const formatTooltipPrice = (val: number | undefined) => {
 				if (val === undefined || val === null || Number.isNaN(val)) return "—";
-				return formatCryptoPrice(val, activeCurrency().code); // Includes symbol
+				return formatCryptoPrice(val, "USD"); // Includes symbol
 			};
 
 			const volumeVal = volumeSeries
@@ -1789,7 +1775,7 @@ export default function BTCChart() {
 				changeVal: `${candle.close - candle.open >= 0 ? "+" : ""}${formatTooltipPrice(candle.close - candle.open)}`,
 				changePct: `${((candle.close - candle.open) / candle.open) * 100 >= 0 ? "+" : ""}${(((candle.close - candle.open) / candle.open) * 100).toFixed(2)}%`,
 				volume: formattedVolume,
-				currencySymbol: activeCurrency().symbol,
+			currencySymbol: "$",
 				changeColor:
 					candle.close >= candle.open ? "text-emerald-600" : "text-rose-500",
 				ema20: formatTooltipPrice(ema20Val?.value),
@@ -2082,10 +2068,10 @@ export default function BTCChart() {
 									</div>
 								</Show>
 							</div>
-							{/* Large price */}
-							<div class="text-[22px] font-mono font-black text-emerald-400 leading-tight mt-0.5">
-								{formatCryptoPrice(currentPrice(), activeCurrency().code)}
-							</div>
+						{/* Large price */}
+						<div class="text-[22px] font-mono font-black text-emerald-400 leading-tight mt-0.5">
+							{formatCryptoPrice(currentPrice(), "USD")}
+						</div>
 						</div>
 					{/* Connection indicator */}
 					<div class="flex items-center">
@@ -2462,7 +2448,7 @@ export default function BTCChart() {
 								</div>
 							</Show>
 							<div class="text-[14px] font-mono font-bold text-emerald-500 ml-2">
-								{formatCryptoPrice(currentPrice(), activeCurrency().code)}
+								{formatCryptoPrice(currentPrice(), "USD")}
 							</div>
 						</div>
 
@@ -2764,9 +2750,9 @@ export default function BTCChart() {
 												liveChange >= 0 ? "text-emerald-500" : "text-rose-500";
 											const closePriceStr = formatCryptoPrice(
 												closePrice,
-												activeCurrency().code,
+												"USD",
 											);
-											const liveChangeStr = `${liveChange >= 0 ? "+" : ""}${formatCryptoPrice(liveChange, activeCurrency().code)}`;
+											const liveChangeStr = `${liveChange >= 0 ? "+" : ""}${formatCryptoPrice(liveChange, "USD")}`;
 											const liveChangePctStr = `${liveChangePct >= 0 ? "+" : ""}${liveChangePct.toFixed(2)}%`;
 											return (
 												<div class="flex items-center gap-1">
@@ -2803,9 +2789,9 @@ export default function BTCChart() {
 												liveChange >= 0 ? "text-emerald-500" : "text-rose-500";
 											const closePriceStr = formatCryptoPrice(
 												closePrice,
-												activeCurrency().code,
+												"USD",
 											);
-											const liveChangeStr = `${liveChange >= 0 ? "+" : ""}${formatCryptoPrice(liveChange, activeCurrency().code)}`;
+											const liveChangeStr = `${liveChange >= 0 ? "+" : ""}${formatCryptoPrice(liveChange, "USD")}`;
 											const liveChangePctStr = `${liveChangePct >= 0 ? "+" : ""}${liveChangePct.toFixed(2)}%`;
 											return (
 												<div class="flex items-center gap-1.5 ml-1 scale-90 origin-left">

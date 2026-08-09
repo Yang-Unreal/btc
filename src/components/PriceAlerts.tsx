@@ -180,7 +180,6 @@ export default function PriceAlerts() {
 	const [selectedIds, setSelectedIds] = createSignal<Set<string>>(new Set());
 	const [showAssetDropdown, setShowAssetDropdown] = createSignal(false);
 	const [assetSearchQuery, setAssetSearchQuery] = createSignal("");
-	const { currency } = globalStore;
 
 	const fetchAlerts = async () => {
 		try {
@@ -462,7 +461,7 @@ export default function PriceAlerts() {
 									<div>
 										<div class="text-white font-bold font-mono">
 											{alert.symbol}/USD:{" "}
-											{formatCryptoPrice(Number(alert.targetPrice), currency())}
+											{formatCryptoPrice(Number(alert.targetPrice), USD)}
 										</div>
 										<div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
 											{isTriggered ? "Triggered" : "Active"}

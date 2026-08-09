@@ -1,10 +1,4 @@
-import type { AssetConfig, CurrencyConfig, Interval } from "./types";
-
-export const CURRENCIES: CurrencyConfig[] = [
-	{ code: "USD", symbol: "$", wsPair: "BTC/USDC", locale: "en-US" },
-	{ code: "EUR", symbol: "€", wsPair: "BTC/USDC", locale: "de-DE" },
-	{ code: "GBP", symbol: "£", wsPair: "BTC/USDC", locale: "en-GB" },
-];
+import type { AssetConfig, Interval } from "./types";
 
 export const SUPPORTED_ASSETS: AssetConfig[] = [
 	{ symbol: "BTC", name: "Bitcoin", krakenId: "XBT" },

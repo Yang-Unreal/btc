@@ -162,7 +162,7 @@ const fetchHistory = async (
 };
 
 export default function TitanTriggers() {
-	const { currency, portfolio } = globalStore;
+	const { portfolio } = globalStore;
 
 	const [assetData, setAssetData] = createSignal<
 		Record<string, CandlestickData[]>
@@ -173,7 +173,7 @@ export default function TitanTriggers() {
 
 	// Reactive Data Fetcher
 	createEffect(async () => {
-		const cur = currency();
+		const cur = "USD";
 		const initialMap: Record<string, boolean> = {};
 		for (const a of TITAN_ASSETS) {
 			initialMap[a.ticker] = true;
@@ -182,9 +182,7 @@ export default function TitanTriggers() {
 
 		// Parallel Fetching
 		const promises = TITAN_ASSETS.map(async (asset) => {
-			if (currency() !== cur) return; // Abort if currency changed
 			const data = await fetchHistory(asset.ticker, asset.interval, cur);
-			if (currency() !== cur) return;
 
 			setAssetData((prev) => ({ ...prev, [asset.ticker]: data }));
 			setLoadingMap((prev) => ({ ...prev, [asset.ticker]: false }));

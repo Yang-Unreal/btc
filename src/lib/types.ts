@@ -13,15 +13,6 @@ export type Interval =
 	| "1w"
 	| "1M";
 
-export type CurrencyCode = "USD" | "EUR" | "GBP";
-
-export interface CurrencyConfig {
-	code: CurrencyCode;
-	symbol: string;
-	wsPair: string; // Kraken WS uses "XBT/USD", "XBT/EUR"
-	locale: string;
-}
-
 export interface AssetConfig {
 	symbol: string;
 	name: string;

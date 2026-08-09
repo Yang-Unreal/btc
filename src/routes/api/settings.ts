@@ -19,7 +19,6 @@ export async function GET() {
 				.where(eq(userSettings.id, "default"));
 		}
 		return json({
-			currency: settings[0].currency,
 			interval: settings[0].interval,
 			favoriteIntervals: settings[0].favoriteIntervals
 				? JSON.parse(settings[0].favoriteIntervals)
@@ -44,7 +43,6 @@ export async function POST({ request }: { request: Request }) {
 	try {
 		const body = await request.json();
 		const {
-			currency,
 			interval,
 			favoriteIntervals,
 			indicators,
@@ -55,9 +53,6 @@ export async function POST({ request }: { request: Request }) {
 		} = body;
 
 		const updateData: Partial<NewUserSettings> = { updatedAt: new Date() };
-		if (currency && ["USD", "EUR", "GBP"].includes(currency)) {
-			updateData.currency = currency;
-		}
 		if (
 			interval &&
 			["1m", "5m", "15m", "30m", "1h", "4h", "12h", "1d", "1w", "1M"].includes(

@@ -20,8 +20,7 @@ const IconTerminal: Component<{ class?: string }> = (props) => (
 );
 
 const GlobalNav: Component = () => {
-	const { currency, setCurrency, loadSettings, loadPortfolio, loaded } =
-		globalStore;
+	const { loadSettings, loadPortfolio, loaded } = globalStore;
 
 	onMount(() => {
 		loadSettings();
@@ -73,32 +72,6 @@ const GlobalNav: Component = () => {
 								Portfolio
 							</span>
 						</A>
-
-						{/* Global Currency Toggle */}
-						<div class="flex items-center bg-linear-to-r from-slate-800/50 to-slate-900/50 rounded-xl border border-white/10 shadow-inner">
-							<button
-								type="button"
-								onClick={() => setCurrency("USD")}
-								class={`px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold rounded-lg transition-all duration-200 ${
-									loaded() && currency() === "USD"
-										? "bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
-										: "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-								}`}
-							>
-								USD
-							</button>
-							<button
-								type="button"
-								onClick={() => setCurrency("EUR")}
-								class={`px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold rounded-lg transition-all duration-200 ${
-									loaded() && currency() === "EUR"
-										? "bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
-										: "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-								}`}
-							>
-								EUR
-							</button>
-						</div>
 
 						{/* Live Indicator */}
 						<div class="flex items-center px-3 sm:px-4 py-2 bg-linear-to-r from-emerald-600/20 to-emerald-700/20 text-emerald-300 border border-emerald-500/30 rounded-lg shadow-inner text-[10px] sm:text-xs font-bold uppercase tracking-widest gap-2 sm:gap-3">

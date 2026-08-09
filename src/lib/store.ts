@@ -8,7 +8,6 @@ interface AssetHolding {
 }
 
 function createGlobalStore() {
-	const [currency, setCurrency] = createSignal<"USD" | "EUR">("USD");
 	const [loaded, setLoaded] = createSignal(false);
 	const [portfolio, setPortfolio] = createSignal<Record<string, AssetHolding>>(
 		{},
@@ -17,20 +16,9 @@ function createGlobalStore() {
 
 	const loadSettings = async () => {
 		try {
-			const res = await fetch("/api/settings");
-			const data = await res.json();
-			if (data.currency && data.currency !== currency()) {
-				setCurrency(data.currency);
-			localStorage.setItem("currency", data.currency);
-		}
-	} catch {
-			const stored =
-				typeof localStorage !== "undefined"
-					? localStorage.getItem("currency")
-					: null;
-			if (stored === "USD" || stored === "EUR") {
-				setCurrency(stored);
-			}
+			await fetch("/api/settings");
+		} catch {
+			// ignore
 		} finally {
 			setLoaded(true);
 		}
@@ -50,23 +38,7 @@ function createGlobalStore() {
 		}
 	};
 
-	const saveCurrency = async (newCurrency: "USD" | "EUR") => {
-		setCurrency(newCurrency);
-		localStorage.setItem("currency", newCurrency);
-		try {
-			await fetch("/api/settings", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ currency: newCurrency }),
-			});
-		} catch (e) {
-			console.error("Failed to save currency:", e);
-		}
-	};
-
 	return {
-		currency,
-		setCurrency: saveCurrency,
 		loadSettings,
 		loaded,
 		portfolio,
