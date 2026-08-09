@@ -206,6 +206,68 @@ export default function BTCChart() {
 	const [assetSearchQuery, setAssetSearchQuery] = createSignal("");
 	const [showIndicatorMenu, setShowIndicatorMenu] = createSignal(false);
 
+	const [favoriteAssets, setFavoriteAssets] = createSignal<string[]>(() => {
+		try {
+			if (typeof localStorage !== "undefined") {
+				const saved = localStorage.getItem("btc_favorite_assets");
+				if (saved) {
+					const parsed = JSON.parse(saved);
+					if (Array.isArray(parsed)) return parsed;
+				}
+			}
+		} catch {
+			// ignore
+		}
+		return ["BTC", "ETH", "SOL"];
+	});
+
+	const getFavoriteAssets = (): string[] => {
+		const raw = favoriteAssets();
+		return Array.isArray(raw) ? raw : [];
+	};
+
+	const toggleFavorite = (symbol: string) => {
+		setFavoriteAssets((prev) => {
+			const list = Array.isArray(prev) ? prev : [];
+			const next = list.includes(symbol)
+				? list.filter((s) => s !== symbol)
+				: [...list, symbol];
+			try {
+				if (typeof localStorage !== "undefined") {
+					localStorage.setItem(
+						"btc_favorite_assets",
+						JSON.stringify(next),
+					);
+				}
+			} catch {
+				// ignore
+			}
+			return next;
+		});
+	};
+
+	let favoriteSaveTimer: number | undefined;
+	const saveFavoritesToDb = (symbols: string[]) => {
+		try {
+			if (typeof localStorage !== "undefined") {
+				localStorage.setItem(
+					"btc_favorite_assets",
+					JSON.stringify(symbols),
+				);
+			}
+		} catch {
+			// ignore
+		}
+		if (favoriteSaveTimer) window.clearTimeout(favoriteSaveTimer);
+		favoriteSaveTimer = window.setTimeout(() => {
+			fetch("/api/favorites", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ symbols }),
+			}).catch((err) => console.error("Failed to save favorites", err));
+		}, 300);
+	};
+
 	// const [tooltip, setTooltip] = createSignal<TooltipData | null>(null);
 	const [currentPrice, setCurrentPrice] = createSignal<number>(0);
 	const [chartReady, setChartReady] = createSignal(false);
@@ -243,41 +305,51 @@ export default function BTCChart() {
 
 	// Persistence: Fetch initial indicators
 	onMount(async () => {
-		// Always set loading to false initially to show skeleton
 		setSettingsLoaded(false);
 
 		try {
-			const res = await fetch("/api/settings");
-			const data = await res.json();
-			if (data.indicators) {
-				setIndicators(data.indicators);
+			const [settingsRes, favoritesRes] = await Promise.all([
+				fetch("/api/settings"),
+				fetch("/api/favorites").catch(() => null),
+			]);
+			const settingsData = await settingsRes.json();
+
+			if (settingsData.indicators) {
+				setIndicators(settingsData.indicators);
 			}
-		if (data.currency) {
-			const currency = CURRENCIES.find((c) => c.code === data.currency);
-			if (currency) setActiveCurrency(currency);
-		}
-		if (data.activeAsset) {
-			const asset = SUPPORTED_ASSETS.find((a) => a.symbol === data.activeAsset);
-			if (asset) setActiveAsset(asset);
-		}
-		if (data.interval) {
-				const validInterval = intervals.find((i) => i.value === data.interval);
+			if (settingsData.currency) {
+				const currency = CURRENCIES.find((c) => c.code === settingsData.currency);
+				if (currency) setActiveCurrency(currency);
+			}
+			if (settingsData.activeAsset) {
+				const asset = SUPPORTED_ASSETS.find((a) => a.symbol === settingsData.activeAsset);
+				if (asset) setActiveAsset(asset);
+			}
+			if (settingsData.interval) {
+				const validInterval = intervals.find((i) => i.value === settingsData.interval);
 				if (validInterval) setInterval(validInterval.value as Interval);
 			}
-			if (data.indicatorHeights) {
-				setIndicatorHeights(data.indicatorHeights);
-			} else if (data.indicatorHeight) {
+			if (settingsData.indicatorHeights) {
+				setIndicatorHeights(settingsData.indicatorHeights);
+			} else if (settingsData.indicatorHeight) {
 				setIndicatorHeights({
-					oscillators: data.indicatorHeight / 2,
-					atr: data.indicatorHeight / 2,
+					oscillators: settingsData.indicatorHeight / 2,
+					atr: settingsData.indicatorHeight / 2,
 				});
 			}
-			if (data.favoriteIntervals && Array.isArray(data.favoriteIntervals)) {
-				setFavoriteIntervals(data.favoriteIntervals as Interval[]);
+			if (settingsData.favoriteIntervals && Array.isArray(settingsData.favoriteIntervals)) {
+				setFavoriteIntervals(settingsData.favoriteIntervals as Interval[]);
+			}
+
+			if (favoritesRes && favoritesRes.ok) {
+				const favData = await favoritesRes.json();
+				if (Array.isArray(favData.favorites) && favData.favorites.length > 0) {
+					setFavoriteAssets(favData.favorites);
+				}
 			}
 			setSettingsLoaded(true);
 		} catch (e) {
-			console.error("Failed to load indicators from DB", e);
+			console.error("Failed to load settings from DB", e);
 			setSettingsLoaded(true);
 		}
 	});
@@ -316,6 +388,13 @@ export default function BTCChart() {
 				favoriteIntervals: currentFavorites,
 			}),
 		}).catch((err) => console.error("Failed to save favorite intervals", err));
+	});
+
+	// Persistence: Save favorite assets when changed
+	createEffect(() => {
+		const symbols = getFavoriteAssets();
+		if (symbols.length === 0) return;
+		saveFavoritesToDb(symbols);
 	});
 
 	const [btcData, setBtcData] = createSignal<BTCData[]>([]);
@@ -1882,6 +1961,7 @@ export default function BTCChart() {
 			if (resizeObserver) resizeObserver.disconnect();
 			if (loadMoreTimer) clearTimeout(loadMoreTimer);
 			if (wsPingInterval !== undefined) window.clearInterval(wsPingInterval);
+			if (favoriteSaveTimer) window.clearTimeout(favoriteSaveTimer);
 		});
 
 		setChartReady(true);
@@ -1981,9 +2061,20 @@ export default function BTCChart() {
 															</span>
 															<span class="text-slate-500">/USDC</span>
 														</div>
-														<span class="font-mono text-[9px] opacity-40 shrink-0 uppercase">
-															{asset.name}
-														</span>
+														<div
+															onClick={(e) => {
+																e.stopPropagation();
+																toggleFavorite(asset.symbol);
+															}}
+															class="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+															role="button"
+															tabIndex={0}
+														>
+															<svg class="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+																<title>Remove from favorites</title>
+																<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+															</svg>
+														</div>
 													</button>
 												)}
 											</For>
@@ -2256,8 +2347,61 @@ export default function BTCChart() {
 										/>
 									</div>
 									<div class="max-h-80 overflow-y-auto no-scrollbar py-1">
-										<div class="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 mb-1">
-											Spot Pairs
+										<Show when={!assetSearchQuery() && getFavoriteAssets().length > 0}>
+											<div class="px-3 py-1.5 text-[9px] font-bold text-amber-400 uppercase tracking-widest border-b border-white/5 mb-1 flex items-center gap-1">
+												<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+													<title>Favorites</title>
+													<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+												</svg>
+												Favorites
+											</div>
+											<For each={SUPPORTED_ASSETS.filter((a) => getFavoriteAssets().includes(a.symbol) && (a.name.toLowerCase().includes(assetSearchQuery().toLowerCase()) || a.symbol.toLowerCase().includes(assetSearchQuery().toLowerCase())))}>
+												{(asset) => (
+													<button
+														type="button"
+														class={`w-full text-left px-3 py-2.5 text-[11px] font-bold hover:bg-white/5 flex items-center justify-between transition-colors border-l-2 ${activeAsset().symbol === asset.symbol ? "border-indigo-500 bg-white/5 text-white" : "border-transparent text-slate-400"}`}
+														onClick={() => {
+															setActiveAsset(asset);
+															setShowAssetMenu(false);
+															setAssetSearchQuery("");
+														}}
+													>
+													<div class="flex items-center gap-2">
+														<span
+															class={
+																activeAsset().symbol === asset.symbol
+																	? "text-white"
+																	: "text-slate-200"
+															}
+														>
+															{asset.symbol}
+														</span>
+														<span class="text-slate-500">/USDC</span>
+													</div>
+													<div
+														onClick={(e) => {
+															e.stopPropagation();
+															toggleFavorite(asset.symbol);
+														}}
+														class="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+														role="button"
+														tabIndex={0}
+													>
+														<svg class="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+															<title>Remove from favorites</title>
+															<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+														</svg>
+													</div>
+												</button>
+												)}
+											</For>
+										</Show>
+										<div class="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 mb-1 flex items-center gap-1">
+											<svg class="w-3 h-3" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+												<title>All assets</title>
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+											</svg>
+											All Assets
 										</div>
 										<For
 											each={SUPPORTED_ASSETS.filter(
@@ -2292,10 +2436,26 @@ export default function BTCChart() {
 														</span>
 														<span class="text-slate-500">/USDC</span>
 													</div>
+												<div class="flex items-center gap-1">
 													<span class="font-mono text-[9px] opacity-40 shrink-0 uppercase">
 														{asset.name}
 													</span>
-												</button>
+													<div
+														onClick={(e) => {
+															e.stopPropagation();
+															toggleFavorite(asset.symbol);
+														}}
+														class="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+														role="button"
+														tabIndex={0}
+													>
+<svg class={`w-3.5 h-3.5 ${getFavoriteAssets().includes(asset.symbol) ? "text-amber-400" : "text-slate-600 hover:text-slate-400"}`} fill="currentColor" viewBox="0 0 20 20">
+    <title>{getFavoriteAssets().includes(asset.symbol) ? "Remove from favorites" : "Add to favorites"}</title>
+															<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+														</svg>
+													</div>
+												</div>
+											</button>
 											)}
 										</For>
 									</div>
