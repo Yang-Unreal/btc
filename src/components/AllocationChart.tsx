@@ -210,7 +210,7 @@ export default function AllocationChart(props: AllocationChartProps) {
 									{allocations().total > 0
 										? formatCryptoPrice(
 												allocations().total,
-												USD,
+												"USD",
 											)
 										: "$0.00"}
 								</span>
@@ -223,7 +223,7 @@ export default function AllocationChart(props: AllocationChartProps) {
 									{hovered().label}
 								</span>
 								<span class="font-bold text-white text-lg font-mono">
-									{formatCryptoPrice(hovered().value, USD)}
+									{formatCryptoPrice(hovered().value, "USD")}
 								</span>
 								<span class="text-xs text-indigo-400 font-mono font-bold">
 									{hovered().subLabel}
@@ -274,7 +274,7 @@ export default function AllocationChart(props: AllocationChartProps) {
 										{slice.percentage.toFixed(1)}%
 									</div>
 									<div class="font-mono text-[10px] text-slate-500">
-										{formatCryptoPrice(slice.value, USD)}
+										{formatCryptoPrice(slice.value, "USD")}
 									</div>
 								</div>
 							</div>

@@ -461,7 +461,7 @@ export default function PriceAlerts() {
 									<div>
 										<div class="text-white font-bold font-mono">
 											{alert.symbol}/USD:{" "}
-											{formatCryptoPrice(Number(alert.targetPrice), USD)}
+											{formatCryptoPrice(Number(alert.targetPrice), "USD")}
 										</div>
 										<div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
 											{isTriggered ? "Triggered" : "Active"}
