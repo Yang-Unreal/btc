@@ -68,11 +68,7 @@ const connectWs = (
 
 		for (const symbol of unique) {
 			const asset = ASSET_MAP[symbol];
-			if (!asset?.hlSymbol) {
-				console.warn("[PriceAlerts] skip unknown symbol:", symbol);
-				continue;
-			}
-			const coin = asset.hlSymbol;
+			const coin = asset?.hlSymbol || symbol;
 			try {
 				newWs.send(
 					JSON.stringify({
