@@ -131,14 +131,13 @@ async function handleTrade(data: any[]) {
 		for (const alert of list) {
 			if (processedAlertIds.has(alert.id)) continue;
 
-			const target = Number(alert.targetPrice);
-			const exactMatch = Math.abs(px - target) <= 0.01;
-			const crossedUp = prev > 0 && prev < target && px >= target;
-			const crossedDown = prev > 0 && prev > target && px <= target;
+		const target = Number(alert.targetPrice);
+		const crossedUp = prev > 0 && prev < target && px >= target;
+		const crossedDown = prev > 0 && prev > target && px <= target;
 
-			console.log("[price-alerts-ws]", sym, "px=", px, "target=", target, "prev=", prev, "match=", exactMatch || crossedUp || crossedDown, "triggered=", alert.triggered);
+		console.log("[price-alerts-ws]", sym, "px=", px, "target=", target, "prev=", prev, "match=", crossedUp || crossedDown, "triggered=", alert.triggered);
 
-			if (exactMatch || crossedUp || crossedDown) {
+		if (crossedUp || crossedDown) {
 				processedAlertIds.add(alert.id);
 
 				await db

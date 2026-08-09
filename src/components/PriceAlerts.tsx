@@ -115,16 +115,15 @@ const connectWs = (
 				previousPrices[sym] = px;
 
 				const target = Number(alert.targetPrice);
-				const exactMatch = Math.abs(px - target) <= 0.01;
 				const crossedUp =
 					prev > 0 && prev < target && px >= target;
 				const crossedDown =
 					prev > 0 && prev > target && px <= target;
 
-				console.log("[PriceAlerts]", sym, "px=", px, "target=", target, "prev=", prev, "match=", exactMatch || crossedUp || crossedDown, "triggered=", alert.triggered);
+				console.log("[PriceAlerts]", sym, "px=", px, "target=", target, "prev=", prev, "match=", crossedUp || crossedDown, "triggered=", alert.triggered);
 
 				if (
-					(exactMatch || crossedUp || crossedDown) &&
+					(crossedUp || crossedDown) &&
 					alert.triggered === "false"
 				) {
 					changed = true;
