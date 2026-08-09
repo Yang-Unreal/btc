@@ -12,9 +12,10 @@ interface PriceAlert {
 }
 
 const previousPrices: Record<string, number> = {};
-let ws: WebSocket | null = null;
-const subscribedSymbols = new Set<string>();
-let connecting = false;
+	let ws: WebSocket | null = null;
+	const subscribedSymbols = new Set<string>();
+	let connecting = false;
+	let reconnectTimer: number | null = null;
 
 const sendTelegramMessage = async (message: string): Promise<void> => {
 	const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
@@ -133,8 +134,8 @@ const connectWs = (
 			});
 
 			if (changed) {
-				console.log("[PriceAlerts] updating UI, alerts count:", next.length);
 				setAlerts(next);
+				fetchAlerts();
 			}
 		} catch (e) {
 			console.error("[PriceAlerts] onmessage error", e);
@@ -150,6 +151,13 @@ const connectWs = (
 		ws = null;
 		subscribedSymbols.clear();
 		console.log("[PriceAlerts] WS disconnected, code:", event.code, "reason:", event.reason, "wasClean:", event.wasClean);
+
+		if (!event.wasClean) {
+			reconnectTimer = window.setTimeout(() => {
+				const symbols = alerts().map((a) => a.symbol || "BTC");
+				connectWs(symbols, setAlerts, alerts);
+			}, 2000);
+		}
 	};
 
 	newWs.onerror = (event) => {
@@ -188,7 +196,20 @@ export default function PriceAlerts() {
 
 	onMount(fetchAlerts);
 
+	let pollTimer: number | null = null;
+	onMount(() => {
+		pollTimer = window.setInterval(fetchAlerts, 30_000);
+	});
+
 	onCleanup(() => {
+		if (reconnectTimer !== null) {
+			window.clearTimeout(reconnectTimer);
+			reconnectTimer = null;
+		}
+		if (pollTimer !== null) {
+			window.clearInterval(pollTimer);
+			pollTimer = null;
+		}
 		if (ws) {
 			ws.close();
 			ws = null;
