@@ -16,6 +16,11 @@ const previousPrices: Record<string, number> = {};
 	const subscribedSymbols = new Set<string>();
 	let connecting = false;
 	let reconnectTimer: number | null = null;
+	const recentlyTriggered = new Set<string>();
+
+	const clearRecentlyTriggered = () => {
+		recentlyTriggered.clear();
+	};
 
 const sendTelegramMessage = async (message: string): Promise<void> => {
 	const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
@@ -102,6 +107,7 @@ const connectWs = (
 			if (currentAlerts.length === 0) return;
 
 			let changed = false;
+			const triggeredIds: string[] = [];
 			const next = currentAlerts.map((alert) => {
 				const sym = alert.symbol || "BTC";
 				const asset = ASSET_MAP[sym];
@@ -125,9 +131,12 @@ const connectWs = (
 
 				if (
 					(crossedUp || crossedDown) &&
-					alert.triggered === "false"
+					alert.triggered === "false" &&
+					!recentlyTriggered.has(alert.id)
 				) {
 					changed = true;
+					triggeredIds.push(alert.id);
+					recentlyTriggered.add(alert.id);
 					return { ...alert, triggered: "true", enabled: "false" };
 				}
 				return alert;
@@ -135,7 +144,13 @@ const connectWs = (
 
 			if (changed) {
 				setAlerts(next);
-				fetchAlerts();
+				for (const id of triggeredIds) {
+					fetch("/api/alerts", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ type: "TRIGGER", id }),
+					}).catch((err) => console.error("Failed to persist trigger", err));
+				}
 			}
 		} catch (e) {
 			console.error("[PriceAlerts] onmessage error", e);
@@ -247,6 +262,7 @@ export default function PriceAlerts() {
 			ws = null;
 		}
 		subscribedSymbols.clear();
+		recentlyTriggered.clear();
 	});
 
 	const addAlert = async (e: Event) => {
@@ -276,6 +292,7 @@ export default function PriceAlerts() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ type: "TOGGLE", id, enabled: !currentEnabled }),
 			});
+			recentlyTriggered.delete(id);
 			await fetchAlerts();
 		} catch (e) {
 			console.error(e);

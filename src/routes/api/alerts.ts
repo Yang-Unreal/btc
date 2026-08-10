@@ -57,6 +57,20 @@ export async function POST({ request }: { request: Request }) {
 			return json({ success: true });
 		}
 
+		if (type === "TRIGGER") {
+			if (!id) return json({ error: "ID required" }, { status: 400 });
+
+			await db
+				.update(priceAlerts)
+				.set({
+					triggered: "true",
+					enabled: "false",
+					updatedAt: new Date(),
+				})
+				.where(eq(priceAlerts.id, id));
+			return json({ success: true });
+		}
+
 		// Add new alert
 		if (!targetPrice)
 			return json({ error: "Target price required" }, { status: 400 });
