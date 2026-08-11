@@ -8,7 +8,6 @@ import {
 	HistogramSeries,
 	type IChartApi,
 	type ISeriesApi,
-	type LineData,
 	LineSeries,
 	type MouseEventParams,
 	type SeriesMarker,
@@ -23,18 +22,10 @@ import {
 	Show,
 	untrack,
 } from "solid-js";
-import {
-	HL_INTERVAL_MAP,
-	SUPPORTED_ASSETS,
-} from "../lib/constants";
+import type { JSX } from "solid-js";
+import { HL_INTERVAL_MAP, SUPPORTED_ASSETS } from "../lib/constants";
 import { formatCryptoPrice } from "../lib/format";
-import {
-	findLastSwingHigh,
-} from "../lib/indicators";
-import type {
-	AssetConfig,
-	Interval,
-} from "../lib/types";
+import type { AssetConfig, Interval } from "../lib/types";
 
 type BTCData = CandlestickData<UTCTimestamp> & {
 	volume?: number;
@@ -123,7 +114,7 @@ export default function BTCChart() {
 	let candlestickSeries: ISeriesApi<"Candlestick"> | undefined;
 	let volumeSeries: ISeriesApi<"Histogram"> | undefined;
 	let markersPrimitive: ISeriesMarkersPrimitive | undefined;
-	let chartDisposed = false;
+	let _chartDisposed = false;
 
 	// Indicator Series Refs
 
@@ -144,21 +135,21 @@ export default function BTCChart() {
 
 	const [interval, setInterval] = createSignal<Interval>("4h");
 
-	const [activeAsset, setActiveAsset] = createSignal<AssetConfig>(() => {
+	const initialAsset: AssetConfig = (() => {
 		try {
 			const saved = localStorage.getItem("btc_active_asset");
 			if (saved) {
 				const parsed = JSON.parse(saved);
-				const found = SUPPORTED_ASSETS.find(
-					(a) => a.symbol === parsed.symbol,
-				);
+				const found = SUPPORTED_ASSETS.find((a) => a.symbol === parsed.symbol);
 				if (found) return found;
 			}
 		} catch {
 			// ignore
 		}
 		return SUPPORTED_ASSETS[0];
-	});
+	})();
+
+	const [activeAsset, setActiveAsset] = createSignal<AssetConfig>(initialAsset);
 
 	const [isMobile, setIsMobile] = createSignal(false);
 
@@ -168,7 +159,7 @@ export default function BTCChart() {
 	const [assetSearchQuery, setAssetSearchQuery] = createSignal("");
 	const [showIndicatorMenu, setShowIndicatorMenu] = createSignal(false);
 
-	const [favoriteAssets, setFavoriteAssets] = createSignal<string[]>(() => {
+	const initialFavorites: string[] = (() => {
 		try {
 			if (typeof localStorage !== "undefined") {
 				const saved = localStorage.getItem("btc_favorite_assets");
@@ -181,7 +172,9 @@ export default function BTCChart() {
 			// ignore
 		}
 		return ["BTC", "ETH", "SOL"];
-	});
+	})();
+
+	const [favoriteAssets, setFavoriteAssets] = createSignal<string[]>(initialFavorites);
 
 	const getFavoriteAssets = (): string[] => {
 		const raw = favoriteAssets();
@@ -196,10 +189,7 @@ export default function BTCChart() {
 				: [...list, symbol];
 			try {
 				if (typeof localStorage !== "undefined") {
-					localStorage.setItem(
-						"btc_favorite_assets",
-						JSON.stringify(next),
-					);
+					localStorage.setItem("btc_favorite_assets", JSON.stringify(next));
 				}
 			} catch {
 				// ignore
@@ -212,10 +202,7 @@ export default function BTCChart() {
 	const saveFavoritesToDb = (symbols: string[]) => {
 		try {
 			if (typeof localStorage !== "undefined") {
-				localStorage.setItem(
-					"btc_favorite_assets",
-					JSON.stringify(symbols),
-				);
+				localStorage.setItem("btc_favorite_assets", JSON.stringify(symbols));
 			}
 		} catch {
 			// ignore
@@ -278,22 +265,29 @@ export default function BTCChart() {
 			]);
 			const settingsData = await settingsRes.json();
 
-		if (settingsData.indicators) {
-			setIndicators(settingsData.indicators);
-		}
-		if (settingsData.activeAsset) {
-			const asset = SUPPORTED_ASSETS.find((a) => a.symbol === settingsData.activeAsset);
-			if (asset) setActiveAsset(asset);
-		}
-		if (settingsData.interval) {
-				const validInterval = intervals.find((i) => i.value === settingsData.interval);
+			if (settingsData.indicators) {
+				setIndicators(settingsData.indicators);
+			}
+			if (settingsData.activeAsset) {
+				const asset = SUPPORTED_ASSETS.find(
+					(a) => a.symbol === settingsData.activeAsset,
+				);
+				if (asset) setActiveAsset(asset);
+			}
+			if (settingsData.interval) {
+				const validInterval = intervals.find(
+					(i) => i.value === settingsData.interval,
+				);
 				if (validInterval) setInterval(validInterval.value as Interval);
 			}
-			if (settingsData.favoriteIntervals && Array.isArray(settingsData.favoriteIntervals)) {
+			if (
+				settingsData.favoriteIntervals &&
+				Array.isArray(settingsData.favoriteIntervals)
+			) {
 				setFavoriteIntervals(settingsData.favoriteIntervals as Interval[]);
 			}
 
-			if (favoritesRes && favoritesRes.ok) {
+			if (favoritesRes?.ok) {
 				const favData = await favoritesRes.json();
 				if (Array.isArray(favData.favorites) && favData.favorites.length > 0) {
 					setFavoriteAssets(favData.favorites);
@@ -306,7 +300,7 @@ export default function BTCChart() {
 		}
 	});
 
-		// Persistence: Save settings when changed (only after loading is complete)
+	// Persistence: Save settings when changed (only after loading is complete)
 	createEffect(() => {
 		if (!settingsLoaded()) return;
 		const currentIndicators = indicators();
@@ -630,12 +624,12 @@ export default function BTCChart() {
 
 		setIsLoadingMore(true);
 		try {
-		const olderData = await fetchHistoricalData(
-			interval(),
-			"USD",
-			activeAsset().hlSymbol || activeAsset().symbol,
-			earliestTimeMs,
-		);
+			const olderData = await fetchHistoricalData(
+				interval(),
+				"USD",
+				activeAsset().hlSymbol || activeAsset().symbol,
+				earliestTimeMs,
+			);
 
 			if (olderData.length === 0) {
 				setIsLoadingMore(false);
@@ -904,14 +898,14 @@ export default function BTCChart() {
 
 	// --- Update Realtime Indicators (Optimized) ---
 	const updateIndicatorRealtime = (allData: BTCData[]) => {
-		const currentInd = indicators();
+		const _currentInd = indicators();
 		const lastCandle = allData[allData.length - 1];
 		if (!lastCandle) return;
 
 		const slice = allData.slice(-1000);
 		const closes = slice.map((d) => d.close);
 
-		const updateSeries = (
+		const _updateSeries = (
 			series: ISeriesApi<"Line"> | undefined,
 			calcFn: (data: number[], p: number) => number[],
 			period: number,
@@ -932,7 +926,7 @@ export default function BTCChart() {
 	const updateLegendToLatest = (data: BTCData[]) => {
 		if (data.length === 0) return;
 		const lastCandle = data[data.length - 1];
-		const currentInd = indicators();
+		const _currentInd = indicators();
 
 		const dateStr = new Date(Number(lastCandle.time) * 1000).toLocaleString(
 			"en-US",
@@ -954,8 +948,8 @@ export default function BTCChart() {
 				: "—";
 
 		// Calculate values for latest candle
-		const closes = data.map((d) => d.close);
-		const highs = data.map((d) => d.high);
+		const _closes = data.map((d) => d.close);
+		const _highs = data.map((d) => d.high);
 
 		const change = lastCandle.close - lastCandle.open;
 		const changePct = (change / lastCandle.open) * 100;
@@ -975,7 +969,7 @@ export default function BTCChart() {
 					? "text-emerald-500"
 					: "text-rose-500",
 			tdLabel: tdMap().get(lastCandle.time as number)?.label,
-		// Raw open value used by JSX to compute live change vs currentPrice()
+			// Raw open value used by JSX to compute live change vs currentPrice()
 			openRaw: lastCandle.open,
 			closeRaw: lastCandle.close,
 			x: 0,
@@ -993,7 +987,7 @@ export default function BTCChart() {
 		// Sync Visibility
 		volumeSeries?.applyOptions({ visible: !!currentInd.volume });
 
-		const totalHeight = chartContainer?.clientHeight || 450;
+		const _totalHeight = chartContainer?.clientHeight || 450;
 
 		chart.priceScale("right").applyOptions({
 			scaleMargins: { top: 0.1, bottom: 0.1 },
@@ -1002,16 +996,12 @@ export default function BTCChart() {
 		untrack(() => refreshAllMarkers(currentData));
 
 		if (!currentData.length) return;
-		const closes = currentData.map((d) => d.close);
-	}
+		const _closes = currentData.map((d) => d.close);
+	};
 
 	// --- History Query ---
 	const historyQuery = createQuery(() => ({
-		queryKey: [
-			"history",
-			interval(),
-			activeAsset().symbol,
-		],
+		queryKey: ["history", interval(), activeAsset().symbol],
 		queryFn: async () => {
 			return await fetchHistoricalData(
 				interval(),
@@ -1027,8 +1017,7 @@ export default function BTCChart() {
 			candlestickSeries.applyOptions({
 				priceFormat: {
 					type: "custom",
-					formatter: (price: number) =>
-						formatCryptoPrice(price, "USD"),
+					formatter: (price: number) => formatCryptoPrice(price, "USD"),
 				},
 			});
 		}
@@ -1106,10 +1095,7 @@ export default function BTCChart() {
 		if (!chartContainer) return;
 
 		const handler = (e: ErrorEvent) => {
-			if (
-				e instanceof ErrorEvent &&
-				e.message === "Object is disposed"
-			) {
+			if (e instanceof ErrorEvent && e.message === "Object is disposed") {
 				e.preventDefault();
 				e.stopPropagation();
 			}
@@ -1158,8 +1144,7 @@ export default function BTCChart() {
 			wickDownColor: "#f12d59",
 			priceFormat: {
 				type: "custom",
-				formatter: (price: number) =>
-					formatCryptoPrice(price, "USD"),
+				formatter: (price: number) => formatCryptoPrice(price, "USD"),
 				minMove: 0.00000001,
 			},
 		});
@@ -1187,7 +1172,7 @@ export default function BTCChart() {
 			[],
 		) as unknown as ISeriesMarkersPrimitive;
 
-		const createLineSeries = (color: string) =>
+		const _createLineSeries = (color: string) =>
 			(chart as IChartApi).addSeries(LineSeries, {
 				color,
 				lineWidth: 1,
@@ -1197,12 +1182,12 @@ export default function BTCChart() {
 				lastValueVisible: true,
 			});
 
-	const oscillatorOptions = {
-		crosshairMarkerVisible: false,
-		lineWidth: 1 as const,
-		priceLineVisible: false,
-		lastValueVisible: true,
-	};
+		const _oscillatorOptions = {
+			crosshairMarkerVisible: false,
+			lineWidth: 1 as const,
+			priceLineVisible: false,
+			lastValueVisible: true,
+		};
 
 		let lastTooltipTime: number | null = null;
 		let cachedTooltipData: Omit<TooltipData, "x" | "y" | "snapY"> | null = null;
@@ -1296,13 +1281,13 @@ export default function BTCChart() {
 				changeVal: `${candle.close - candle.open >= 0 ? "+" : ""}${formatTooltipPrice(candle.close - candle.open)}`,
 				changePct: `${((candle.close - candle.open) / candle.open) * 100 >= 0 ? "+" : ""}${(((candle.close - candle.open) / candle.open) * 100).toFixed(2)}%`,
 				volume: formattedVolume,
-			currencySymbol: "$",
+				currencySymbol: "$",
 				changeColor:
 					candle.close >= candle.open ? "text-emerald-600" : "text-rose-500",
-			tdLabel: tdStatus?.label,
-			tdColor: tdColor,
-			tdDescription: tdStatus?.description,
-		};
+				tdLabel: tdStatus?.label,
+				tdColor: tdColor,
+				tdDescription: tdStatus?.description,
+			};
 
 			setLegendData({
 				...cachedTooltipData,
@@ -1340,7 +1325,12 @@ export default function BTCChart() {
 		let resizeObserver: ResizeObserver | undefined;
 		if (typeof ResizeObserver !== "undefined" && chartContainer) {
 			resizeObserver = new ResizeObserver(() => {
-				if (chart && chartContainer && chartContainer.clientWidth > 0 && chartContainer.clientHeight > 0) {
+				if (
+					chart &&
+					chartContainer &&
+					chartContainer.clientWidth > 0 &&
+					chartContainer.clientHeight > 0
+				) {
 					chart.applyOptions({
 						width: chartContainer.clientWidth,
 						height: chartContainer.clientHeight,
@@ -1351,12 +1341,12 @@ export default function BTCChart() {
 		}
 		window.addEventListener("resize", handleResize);
 
-		const handleMouseMove = (e: MouseEvent) => {
+		const _handleMouseMove = (_e: MouseEvent) => {
 			syncAllIndicators();
 		};
 
 		onCleanup(() => {
-			chartDisposed = true;
+			_chartDisposed = true;
 			if (ws) ws.close();
 			window.removeEventListener("resize", handleResize);
 			window.removeEventListener("error", handler);
@@ -1368,10 +1358,7 @@ export default function BTCChart() {
 				try {
 					chart.remove();
 				} catch (e) {
-					if (
-						e instanceof Error &&
-						e.message === "Object is disposed"
-					) {
+					if (e instanceof Error && e.message === "Object is disposed") {
 						return;
 					}
 					throw e;
@@ -1384,7 +1371,7 @@ export default function BTCChart() {
 		setChartReady(true);
 	});
 
-		// --- Layout & Indicator Effect (Optimized) ---
+	// --- Layout & Indicator Effect (Optimized) ---
 	createEffect(() => {
 		// Track indicators changes only
 		indicators();
@@ -1487,7 +1474,11 @@ export default function BTCChart() {
 															role="button"
 															tabIndex={0}
 														>
-															<svg class="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+															<svg
+																class="w-3.5 h-3.5 text-amber-400"
+																fill="currentColor"
+																viewBox="0 0 20 20"
+															>
 																<title>Remove from favorites</title>
 																<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
 															</svg>
@@ -1499,15 +1490,15 @@ export default function BTCChart() {
 									</div>
 								</Show>
 							</div>
-						{/* Large price */}
-						<div class="text-[22px] font-mono font-black text-emerald-400 leading-tight mt-0.5">
-							{formatCryptoPrice(currentPrice(), "USD")}
+							{/* Large price */}
+							<div class="text-[22px] font-mono font-black text-emerald-400 leading-tight mt-0.5">
+								{formatCryptoPrice(currentPrice(), "USD")}
+							</div>
 						</div>
+						{/* Connection indicator */}
+						<div class="flex items-center">
+							{wsConnected() ? <IconPulse /> : <IconWifiOff />}
 						</div>
-					{/* Connection indicator */}
-					<div class="flex items-center">
-						{wsConnected() ? <IconPulse /> : <IconWifiOff />}
-					</div>
 					</div>
 
 					{/* Row 2: Favorite intervals + dropdown with all intervals */}
@@ -1567,42 +1558,30 @@ export default function BTCChart() {
 									/>
 								</svg>
 							</button>
-						<Show when={showIntervalDropdown()}>
-							<IntervalDropdown>
-								<div class="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 min-w-35">
-									<For each={intervals}>
-										{(opt) => (
-											<div
-												class="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-slate-300 hover:bg-slate-700 transition-colors cursor-pointer"
-												onClick={() => {
-													setInterval(opt.value);
-													setShowIntervalDropdown(false);
-												}}
-												onKeyDown={(e) => {
-													if (e.key === "Enter" || e.key === " ") {
+							<Show when={showIntervalDropdown()}>
+								<IntervalDropdown>
+									<div class="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 min-w-35">
+										<For each={intervals}>
+											{(opt) => (
+												<div
+													class="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-slate-300 hover:bg-slate-700 transition-colors cursor-pointer"
+													onClick={() => {
 														setInterval(opt.value);
 														setShowIntervalDropdown(false);
-													}
-												}}
-												role="option"
-												tabIndex={0}
-											>
-												<button
-													type="button"
-													class="p-0.5"
-													onClick={(e) => {
-														e.stopPropagation();
-														const current = favoriteIntervals();
-														if (current.includes(opt.value)) {
-															setFavoriteIntervals(
-																current.filter((i) => i !== opt.value),
-															);
-														} else {
-															setFavoriteIntervals([...current, opt.value]);
-														}
 													}}
 													onKeyDown={(e) => {
 														if (e.key === "Enter" || e.key === " ") {
+															setInterval(opt.value);
+															setShowIntervalDropdown(false);
+														}
+													}}
+													role="option"
+													tabIndex={0}
+												>
+													<button
+														type="button"
+														class="p-0.5"
+														onClick={(e) => {
 															e.stopPropagation();
 															const current = favoriteIntervals();
 															if (current.includes(opt.value)) {
@@ -1612,27 +1591,39 @@ export default function BTCChart() {
 															} else {
 																setFavoriteIntervals([...current, opt.value]);
 															}
-														}
-													}}
-													aria-label={
-														favoriteIntervals().includes(opt.value)
-															? "Remove from favorites"
-															: "Add to favorites"
-													}
-												>
-													<svg
-														class={`w-3 h-3 ${favoriteIntervals().includes(opt.value) ? "text-yellow-400" : "text-slate-600"}`}
-														fill="currentColor"
-														viewBox="0 0 20 20"
-													>
-														<title>
-															{favoriteIntervals().includes(opt.value)
+														}}
+														onKeyDown={(e) => {
+															if (e.key === "Enter" || e.key === " ") {
+																e.stopPropagation();
+																const current = favoriteIntervals();
+																if (current.includes(opt.value)) {
+																	setFavoriteIntervals(
+																		current.filter((i) => i !== opt.value),
+																	);
+																} else {
+																	setFavoriteIntervals([...current, opt.value]);
+																}
+															}
+														}}
+														aria-label={
+															favoriteIntervals().includes(opt.value)
 																? "Remove from favorites"
-																: "Add to favorites"}
-														</title>
-														<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-													</svg>
-												</button>
+																: "Add to favorites"
+														}
+													>
+														<svg
+															class={`w-3 h-3 ${favoriteIntervals().includes(opt.value) ? "text-yellow-400" : "text-slate-600"}`}
+															fill="currentColor"
+															viewBox="0 0 20 20"
+														>
+															<title>
+																{favoriteIntervals().includes(opt.value)
+																	? "Remove from favorites"
+																	: "Add to favorites"}
+															</title>
+															<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+														</svg>
+													</button>
 													<span>{opt.label.toUpperCase()}</span>
 												</div>
 											)}
@@ -1766,15 +1757,34 @@ export default function BTCChart() {
 										/>
 									</div>
 									<div class="max-h-80 overflow-y-auto no-scrollbar py-1">
-										<Show when={!assetSearchQuery() && getFavoriteAssets().length > 0}>
+										<Show
+											when={
+												!assetSearchQuery() && getFavoriteAssets().length > 0
+											}
+										>
 											<div class="px-3 py-1.5 text-[9px] font-bold text-amber-400 uppercase tracking-widest border-b border-white/5 mb-1 flex items-center gap-1">
-												<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+												<svg
+													class="w-3 h-3"
+													fill="currentColor"
+													viewBox="0 0 20 20"
+												>
 													<title>Favorites</title>
 													<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
 												</svg>
 												Favorites
 											</div>
-											<For each={SUPPORTED_ASSETS.filter((a) => getFavoriteAssets().includes(a.symbol) && (a.name.toLowerCase().includes(assetSearchQuery().toLowerCase()) || a.symbol.toLowerCase().includes(assetSearchQuery().toLowerCase())))}>
+											<For
+												each={SUPPORTED_ASSETS.filter(
+													(a) =>
+														getFavoriteAssets().includes(a.symbol) &&
+														(a.name
+															.toLowerCase()
+															.includes(assetSearchQuery().toLowerCase()) ||
+															a.symbol
+																.toLowerCase()
+																.includes(assetSearchQuery().toLowerCase())),
+												)}
+											>
 												{(asset) => (
 													<button
 														type="button"
@@ -1785,40 +1795,54 @@ export default function BTCChart() {
 															setAssetSearchQuery("");
 														}}
 													>
-													<div class="flex items-center gap-2">
-														<span
-															class={
-																activeAsset().symbol === asset.symbol
-																	? "text-white"
-																	: "text-slate-200"
-															}
+														<div class="flex items-center gap-2">
+															<span
+																class={
+																	activeAsset().symbol === asset.symbol
+																		? "text-white"
+																		: "text-slate-200"
+																}
+															>
+																{asset.symbol}
+															</span>
+															<span class="text-slate-500">/USDC</span>
+														</div>
+														<div
+															onClick={(e) => {
+																e.stopPropagation();
+																toggleFavorite(asset.symbol);
+															}}
+															class="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+															role="button"
+															tabIndex={0}
 														>
-															{asset.symbol}
-														</span>
-														<span class="text-slate-500">/USDC</span>
-													</div>
-													<div
-														onClick={(e) => {
-															e.stopPropagation();
-															toggleFavorite(asset.symbol);
-														}}
-														class="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
-														role="button"
-														tabIndex={0}
-													>
-														<svg class="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-															<title>Remove from favorites</title>
-															<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-														</svg>
-													</div>
-												</button>
+															<svg
+																class="w-3.5 h-3.5 text-amber-400"
+																fill="currentColor"
+																viewBox="0 0 20 20"
+															>
+																<title>Remove from favorites</title>
+																<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+															</svg>
+														</div>
+													</button>
 												)}
 											</For>
 										</Show>
 										<div class="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 mb-1 flex items-center gap-1">
-											<svg class="w-3 h-3" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+											<svg
+												class="w-3 h-3"
+												fill="none"
+												viewBox="0 0 20 20"
+												stroke="currentColor"
+											>
 												<title>All assets</title>
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+												/>
 											</svg>
 											All Assets
 										</div>
@@ -1855,26 +1879,34 @@ export default function BTCChart() {
 														</span>
 														<span class="text-slate-500">/USDC</span>
 													</div>
-												<div class="flex items-center gap-1">
-													<span class="font-mono text-[9px] opacity-40 shrink-0 uppercase">
-														{asset.name}
-													</span>
-													<div
-														onClick={(e) => {
-															e.stopPropagation();
-															toggleFavorite(asset.symbol);
-														}}
-														class="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
-														role="button"
-														tabIndex={0}
-													>
-<svg class={`w-3.5 h-3.5 ${getFavoriteAssets().includes(asset.symbol) ? "text-amber-400" : "text-slate-600 hover:text-slate-400"}`} fill="currentColor" viewBox="0 0 20 20">
-    <title>{getFavoriteAssets().includes(asset.symbol) ? "Remove from favorites" : "Add to favorites"}</title>
-															<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-														</svg>
+													<div class="flex items-center gap-1">
+														<span class="font-mono text-[9px] opacity-40 shrink-0 uppercase">
+															{asset.name}
+														</span>
+														<div
+															onClick={(e) => {
+																e.stopPropagation();
+																toggleFavorite(asset.symbol);
+															}}
+															class="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+															role="button"
+															tabIndex={0}
+														>
+															<svg
+																class={`w-3.5 h-3.5 ${getFavoriteAssets().includes(asset.symbol) ? "text-amber-400" : "text-slate-600 hover:text-slate-400"}`}
+																fill="currentColor"
+																viewBox="0 0 20 20"
+															>
+																<title>
+																	{getFavoriteAssets().includes(asset.symbol)
+																		? "Remove from favorites"
+																		: "Add to favorites"}
+																</title>
+																<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+															</svg>
+														</div>
 													</div>
-												</div>
-											</button>
+												</button>
 											)}
 										</For>
 									</div>
@@ -1930,42 +1962,30 @@ export default function BTCChart() {
 										/>
 									</svg>
 								</button>
-							<Show when={showIntervalDropdown()}>
-								<IntervalDropdown>
-									<div class="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 min-w-35">
-										<For each={intervals}>
-											{(opt) => (
-												<div
-													class="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors cursor-pointer"
-													onClick={() => {
-														setInterval(opt.value);
-														setShowIntervalDropdown(false);
-													}}
-													onKeyDown={(e) => {
-														if (e.key === "Enter" || e.key === " ") {
+								<Show when={showIntervalDropdown()}>
+									<IntervalDropdown>
+										<div class="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 min-w-35">
+											<For each={intervals}>
+												{(opt) => (
+													<div
+														class="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors cursor-pointer"
+														onClick={() => {
 															setInterval(opt.value);
 															setShowIntervalDropdown(false);
-														}
-													}}
-													role="option"
-													tabIndex={0}
-												>
-													<button
-														type="button"
-														class="p-0.5"
-														onClick={(e) => {
-															e.stopPropagation();
-															const current = favoriteIntervals();
-															if (current.includes(opt.value)) {
-																setFavoriteIntervals(
-																	current.filter((i) => i !== opt.value),
-																);
-															} else {
-																setFavoriteIntervals([...current, opt.value]);
-															}
 														}}
 														onKeyDown={(e) => {
 															if (e.key === "Enter" || e.key === " ") {
+																setInterval(opt.value);
+																setShowIntervalDropdown(false);
+															}
+														}}
+														role="option"
+														tabIndex={0}
+													>
+														<button
+															type="button"
+															class="p-0.5"
+															onClick={(e) => {
 																e.stopPropagation();
 																const current = favoriteIntervals();
 																if (current.includes(opt.value)) {
@@ -1975,35 +1995,50 @@ export default function BTCChart() {
 																} else {
 																	setFavoriteIntervals([...current, opt.value]);
 																}
-															}
-														}}
-														aria-label={
-															favoriteIntervals().includes(opt.value)
-																? "Remove from favorites"
-																: "Add to favorites"
-														}
-													>
-														<svg
-															class={`w-3 h-3 ${favoriteIntervals().includes(opt.value) ? "text-yellow-400" : "text-slate-600"}`}
-															fill="currentColor"
-															viewBox="0 0 20 20"
-														>
-															<title>
-																{favoriteIntervals().includes(opt.value)
+															}}
+															onKeyDown={(e) => {
+																if (e.key === "Enter" || e.key === " ") {
+																	e.stopPropagation();
+																	const current = favoriteIntervals();
+																	if (current.includes(opt.value)) {
+																		setFavoriteIntervals(
+																			current.filter((i) => i !== opt.value),
+																		);
+																	} else {
+																		setFavoriteIntervals([
+																			...current,
+																			opt.value,
+																		]);
+																	}
+																}
+															}}
+															aria-label={
+																favoriteIntervals().includes(opt.value)
 																	? "Remove from favorites"
-																	: "Add to favorites"}
-															</title>
-															<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-														</svg>
-													</button>
-													<span>{opt.label.toUpperCase()}</span>
-												</div>
-											)}
-										</For>
-									</div>
-								</IntervalDropdown>
-							</Show>
-						</div>
+																	: "Add to favorites"
+															}
+														>
+															<svg
+																class={`w-3 h-3 ${favoriteIntervals().includes(opt.value) ? "text-yellow-400" : "text-slate-600"}`}
+																fill="currentColor"
+																viewBox="0 0 20 20"
+															>
+																<title>
+																	{favoriteIntervals().includes(opt.value)
+																		? "Remove from favorites"
+																		: "Add to favorites"}
+																</title>
+																<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+															</svg>
+														</button>
+														<span>{opt.label.toUpperCase()}</span>
+													</div>
+												)}
+											</For>
+										</div>
+									</IntervalDropdown>
+								</Show>
+							</div>
 						</div>
 
 						<div class="relative">
@@ -2066,13 +2101,13 @@ export default function BTCChart() {
 						</div>
 					</div>
 
-				<div class="flex items-center gap-2">
-					<div class="flex items-center gap-2 px-2 border-l border-white/5">
-						<div class="flex items-center">
-							{wsConnected() ? <IconPulse /> : <IconWifiOff />}
+					<div class="flex items-center gap-2">
+						<div class="flex items-center gap-2 px-2 border-l border-white/5">
+							<div class="flex items-center">
+								{wsConnected() ? <IconPulse /> : <IconWifiOff />}
+							</div>
 						</div>
 					</div>
-				</div>
 				</div>
 			</Show>
 			<div class="relative w-full h-[calc(100vh-10rem)] group cursor-crosshair touch-action-none bg-[#0b0e14]">
@@ -2095,9 +2130,9 @@ export default function BTCChart() {
 					</div>
 				</Show>
 
-			<div ref={chartContainer} class="w-full h-full opacity-90" />
+				<div ref={chartContainer} class="w-full h-full opacity-90" />
 
-			{/* Bitget-style Legend Overlay */}
+				{/* Bitget-style Legend Overlay */}
 				<div class="absolute top-1 left-2 z-30 pointer-events-none flex flex-col gap-0.5 select-none transition-all duration-200 overflow-hidden max-w-[calc(100%-20px)]">
 					<Show when={legendData()}>
 						{(t) => (
@@ -2195,7 +2230,7 @@ export default function BTCChart() {
 									<div
 										class={`bg-black/20 p-1.5 rounded w-fit ${isMobile() ? "flex flex-col gap-0.5" : "flex flex-wrap gap-x-3 gap-y-px"}`}
 									>
-							<Show when={indicators().tdSeq && t().tdLabel}>
+										<Show when={indicators().tdSeq && t().tdLabel}>
 											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
 												<span class="text-emerald-500">TD Sequential</span>
 												<span class="text-emerald-500">{t().tdLabel}</span>
