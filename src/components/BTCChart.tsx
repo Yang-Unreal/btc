@@ -29,7 +29,7 @@ import {
 } from "../lib/constants";
 import { formatCryptoPrice } from "../lib/format";
 import {
-	calculateSMA,
+	findLastSwingHigh,
 } from "../lib/indicators";
 import type {
 	AssetConfig,
@@ -51,9 +51,6 @@ interface TooltipData {
 	close: string;
 	volume: string;
 	changeColor: string;
-	ma20?: string;
-	ma60?: string;
-	ma120?: string;
 	tdLabel?: string;
 	tdColor?: string;
 	tdDescription?: string;
@@ -129,9 +126,6 @@ export default function BTCChart() {
 	let chartDisposed = false;
 
 	// Indicator Series Refs
-	let ma20Series: ISeriesApi<"Line"> | undefined;
-	let ma60Series: ISeriesApi<"Line"> | undefined;
-	let ma120Series: ISeriesApi<"Line"> | undefined;
 
 	let ws: WebSocket | undefined;
 	let wsPingInterval: number | undefined;
@@ -241,9 +235,6 @@ export default function BTCChart() {
 	const [chartReady, setChartReady] = createSignal(false);
 
 	const [indicators, setIndicators] = createSignal<Record<string, boolean>>({
-		ma20: false,
-		ma60: false,
-		ma120: false,
 		tdSeq: false,
 		volume: true,
 	});
@@ -381,27 +372,6 @@ export default function BTCChart() {
 			color: "bg-teal-500/50",
 			textColor: "text-teal-400",
 			borderColor: "border-teal-500/20",
-		},
-		{
-			key: "ma20",
-			label: "MA 20",
-			color: "bg-red-500",
-			textColor: "text-red-500",
-			borderColor: "border-red-500",
-		},
-		{
-			key: "ma60",
-			label: "MA 60",
-			color: "bg-green-500",
-			textColor: "text-green-500",
-			borderColor: "border-green-500",
-		},
-		{
-			key: "ma120",
-			label: "MA 120",
-			color: "bg-blue-600",
-			textColor: "text-blue-600",
-			borderColor: "border-blue-600",
 		},
 		{
 			key: "tdSeq",
@@ -955,10 +925,6 @@ export default function BTCChart() {
 			}
 		};
 
-		if (currentInd.ma20) updateSeries(ma20Series, calculateSMA, 20);
-		if (currentInd.ma60) updateSeries(ma60Series, calculateSMA, 60);
-		if (currentInd.ma120) updateSeries(ma120Series, calculateSMA, 120);
-
 		refreshAllMarkers(allData);
 		updateLegendToLatest(allData);
 	};
@@ -991,10 +957,6 @@ export default function BTCChart() {
 		const closes = data.map((d) => d.close);
 		const highs = data.map((d) => d.high);
 
-		const ma20 = calculateSMA(closes, 20);
-		const ma60 = calculateSMA(closes, 60);
-		const ma120 = calculateSMA(closes, 120);
-
 		const change = lastCandle.close - lastCandle.open;
 		const changePct = (change / lastCandle.open) * 100;
 
@@ -1012,11 +974,7 @@ export default function BTCChart() {
 				lastCandle.close >= lastCandle.open
 					? "text-emerald-500"
 					: "text-rose-500",
-			ma20: formatValue(ma20[ma20.length - 1]),
-			ma60: formatValue(ma60[ma60.length - 1]),
-			ma120: formatValue(ma120[ma120.length - 1]),
-
-		tdLabel: tdMap().get(lastCandle.time as number)?.label,
+			tdLabel: tdMap().get(lastCandle.time as number)?.label,
 		// Raw open value used by JSX to compute live change vs currentPrice()
 			openRaw: lastCandle.open,
 			closeRaw: lastCandle.close,
@@ -1033,10 +991,6 @@ export default function BTCChart() {
 		if (!chart || !candlestickSeries) return;
 
 		// Sync Visibility
-		ma20Series?.applyOptions({ visible: !!currentInd.ma20 });
-		ma60Series?.applyOptions({ visible: !!currentInd.ma60 });
-		ma120Series?.applyOptions({ visible: !!currentInd.ma120 });
-
 		volumeSeries?.applyOptions({ visible: !!currentInd.volume });
 
 		const totalHeight = chartContainer?.clientHeight || 450;
@@ -1049,28 +1003,7 @@ export default function BTCChart() {
 
 		if (!currentData.length) return;
 		const closes = currentData.map((d) => d.close);
-
-		const processMA = (
-			active: boolean,
-			series: ISeriesApi<"Line"> | undefined,
-			period: number,
-		) => {
-			if (active && series && closes.length >= period) {
-				const vals = calculateSMA(closes, period);
-				const lineData: LineData[] = [];
-				for (let i = 0; i < vals.length; i++) {
-					if (!Number.isNaN(vals[i]))
-						lineData.push({ time: currentData[i].time, value: vals[i] });
-				}
-				series.setData(lineData);
-			} else if (series) {
-				series.setData([]);
-			}
-		};
-		processMA(currentInd.ma20, ma20Series, 20);
-		processMA(currentInd.ma60, ma60Series, 60);
-		processMA(currentInd.ma120, ma120Series, 120);
-	};
+	}
 
 	// --- History Query ---
 	const historyQuery = createQuery(() => ({
@@ -1264,10 +1197,6 @@ export default function BTCChart() {
 				lastValueVisible: true,
 			});
 
-		ma20Series = createLineSeries("#EF4444"); // red-500
-		ma60Series = createLineSeries("#22C55E"); // green-500
-		ma120Series = createLineSeries("#2563EB"); // blue-600
-
 	const oscillatorOptions = {
 		crosshairMarkerVisible: false,
 		lineWidth: 1 as const,
@@ -1355,16 +1284,6 @@ export default function BTCChart() {
 					tdColor = "bg-amber-50 text-amber-700 border-amber-100";
 			}
 
-			const ma20Val = ma20Series
-				? (param.seriesData.get(ma20Series) as LineData)
-				: undefined;
-			const ma60Val = ma60Series
-				? (param.seriesData.get(ma60Series) as LineData)
-				: undefined;
-			const ma120Val = ma120Series
-				? (param.seriesData.get(ma120Series) as LineData)
-				: undefined;
-
 			lastTooltipTime = param.time as number;
 			cachedTooltipData = {
 				time: dateStr,
@@ -1380,10 +1299,6 @@ export default function BTCChart() {
 			currencySymbol: "$",
 				changeColor:
 					candle.close >= candle.open ? "text-emerald-600" : "text-rose-500",
-			ma20: formatTooltipPrice(ma20Val?.value),
-				ma60: formatTooltipPrice(ma60Val?.value),
-			ma120: formatTooltipPrice(ma120Val?.value),
-
 			tdLabel: tdStatus?.label,
 			tdColor: tdColor,
 			tdDescription: tdStatus?.description,
@@ -2280,32 +2195,6 @@ export default function BTCChart() {
 									<div
 										class={`bg-black/20 p-1.5 rounded w-fit ${isMobile() ? "flex flex-col gap-0.5" : "flex flex-wrap gap-x-3 gap-y-px"}`}
 									>
-										<Show
-											when={indicators().ma20 && t().ma20 && t().ma20 !== "—"}
-										>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-red-500">MA 20</span>
-												<span class="text-red-500">{t().ma20}</span>
-											</div>
-										</Show>
-										<Show
-											when={indicators().ma60 && t().ma60 && t().ma60 !== "—"}
-										>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-green-500">MA 60 close 0</span>
-												<span class="text-green-500">{t().ma60}</span>
-											</div>
-										</Show>
-										<Show
-											when={
-												indicators().ma120 && t().ma120 && t().ma120 !== "—"
-											}
-										>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-blue-600">MA 120 close 0</span>
-												<span class="text-blue-600">{t().ma120}</span>
-											</div>
-							</Show>
 							<Show when={indicators().tdSeq && t().tdLabel}>
 											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
 												<span class="text-emerald-500">TD Sequential</span>
