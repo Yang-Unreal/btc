@@ -29,11 +29,7 @@ import {
 } from "../lib/constants";
 import { formatCryptoPrice } from "../lib/format";
 import {
-	calculateATR,
-	calculateEMA,
-	calculateRSI,
 	calculateSMA,
-	findLastSwingHigh,
 } from "../lib/indicators";
 import type {
 	AssetConfig,
@@ -55,17 +51,9 @@ interface TooltipData {
 	close: string;
 	volume: string;
 	changeColor: string;
-	ema20?: string;
-	ema60?: string;
-	ema120?: string;
 	ma20?: string;
 	ma60?: string;
 	ma120?: string;
-	prevHigh?: string;
-	rsi?: string;
-	atr?: string;
-	fng?: string;
-	fngClass?: string;
 	tdLabel?: string;
 	tdColor?: string;
 	tdDescription?: string;
@@ -77,13 +65,6 @@ interface TooltipData {
 	openRaw?: number;
 	/** Raw numeric close price — used to display the K-line's close price */
 	closeRaw?: number;
-}
-
-// ... [Existing Interfaces for FNGData, TDState, etc. remain unchanged] ...
-interface FNGData {
-	value: string;
-	value_classification: string;
-	timestamp: string;
 }
 
 interface TDState {
@@ -148,16 +129,9 @@ export default function BTCChart() {
 	let chartDisposed = false;
 
 	// Indicator Series Refs
-	let ema20Series: ISeriesApi<"Line"> | undefined;
-	let ema60Series: ISeriesApi<"Line"> | undefined;
-	let ema120Series: ISeriesApi<"Line"> | undefined;
 	let ma20Series: ISeriesApi<"Line"> | undefined;
 	let ma60Series: ISeriesApi<"Line"> | undefined;
 	let ma120Series: ISeriesApi<"Line"> | undefined;
-	let prevHighSeries: ISeriesApi<"Line"> | undefined;
-	let rsiSeries: ISeriesApi<"Line"> | undefined;
-	let fngSeries: ISeriesApi<"Line"> | undefined;
-	let atrSeries: ISeriesApi<"Line"> | undefined;
 
 	let ws: WebSocket | undefined;
 	let wsPingInterval: number | undefined;
@@ -270,23 +244,9 @@ export default function BTCChart() {
 		ma20: false,
 		ma60: false,
 		ma120: false,
-		ema20: false,
-		ema60: false,
-		ema120: false,
-		rsi: false,
-		fng: false,
 		tdSeq: false,
-		atr: false,
 		volume: true,
 	});
-
-	const [indicatorHeights, setIndicatorHeights] = createSignal<
-		Record<string, number>
-	>({
-		oscillators: 100,
-		atr: 100,
-	});
-	const [draggingArea, setDraggingArea] = createSignal<string | null>(null); // 'top' | 'middle'
 
 	// Track initial settings load to prevent layout shift
 	const [settingsLoaded, setSettingsLoaded] = createSignal(false);
@@ -338,14 +298,6 @@ export default function BTCChart() {
 				const validInterval = intervals.find((i) => i.value === settingsData.interval);
 				if (validInterval) setInterval(validInterval.value as Interval);
 			}
-			if (settingsData.indicatorHeights) {
-				setIndicatorHeights(settingsData.indicatorHeights);
-			} else if (settingsData.indicatorHeight) {
-				setIndicatorHeights({
-					oscillators: settingsData.indicatorHeight / 2,
-					atr: settingsData.indicatorHeight / 2,
-				});
-			}
 			if (settingsData.favoriteIntervals && Array.isArray(settingsData.favoriteIntervals)) {
 				setFavoriteIntervals(settingsData.favoriteIntervals as Interval[]);
 			}
@@ -367,7 +319,6 @@ export default function BTCChart() {
 	createEffect(() => {
 		if (!settingsLoaded()) return;
 		const currentIndicators = indicators();
-		const currentIndHeights = indicatorHeights();
 		const currentInterval = interval();
 		const currentAsset = activeAsset();
 
@@ -376,7 +327,6 @@ export default function BTCChart() {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				indicators: currentIndicators,
-				indicatorHeights: currentIndHeights,
 				interval: currentInterval,
 				activeAsset: currentAsset.symbol,
 			}),
@@ -405,7 +355,6 @@ export default function BTCChart() {
 	});
 
 	const [btcData, setBtcData] = createSignal<BTCData[]>([]);
-	const [fngCache, setFngCache] = createSignal<Map<number, number>>(new Map());
 	const [tdMap, setTdMap] = createSignal<Map<number, TDState>>(new Map());
 
 	const [legendData, setLegendData] = createSignal<TooltipData | null>(null);
@@ -455,53 +404,11 @@ export default function BTCChart() {
 			borderColor: "border-blue-600",
 		},
 		{
-			key: "ema20",
-			label: "EMA 20",
-			color: "bg-yellow-400",
-			textColor: "text-yellow-400",
-			borderColor: "border-yellow-400",
-		},
-		{
-			key: "ema60",
-			label: "EMA 60",
-			color: "bg-purple-400",
-			textColor: "text-purple-400",
-			borderColor: "border-purple-400",
-		},
-		{
-			key: "ema120",
-			label: "EMA 120",
-			color: "bg-orange-400",
-			textColor: "text-orange-400",
-			borderColor: "border-orange-400",
-		},
-		{
-			key: "rsi",
-			label: "RSI",
-			color: "bg-[#7E57C2]",
-			textColor: "text-[#7E57C2]",
-			borderColor: "border-[#7E57C2]",
-		},
-		{
-			key: "fng",
-			label: "Fear & Greed",
-			color: "bg-[#F7931A]",
-			textColor: "text-[#F7931A]",
-			borderColor: "border-[#F7931A]",
-		},
-		{
 			key: "tdSeq",
 			label: "TD Sequential",
 			color: "bg-emerald-600",
 			textColor: "text-emerald-600",
 			borderColor: "border-emerald-600",
-		},
-		{
-			key: "atr",
-			label: "ATR 14",
-			color: "bg-slate-400",
-			textColor: "text-slate-400",
-			borderColor: "border-slate-400",
 		},
 	];
 
@@ -805,28 +712,6 @@ export default function BTCChart() {
 		}
 	};
 
-	// --- Fetch F&G (Unchanged) ---
-	const fetchFNGData = async () => {
-		if (fngCache().size > 0) return;
-		try {
-			const res = await fetch("https://api.alternative.me/fng/?limit=0");
-			const json = await res.json();
-			if (json.data && Array.isArray(json.data)) {
-				const map = new Map<number, number>();
-				json.data.forEach((item: FNGData) => {
-					const ts = parseInt(item.timestamp, 10);
-					const date = new Date(ts * 1000);
-					date.setUTCHours(0, 0, 0, 0);
-					const normalizedTs = Math.floor(date.getTime() / 1000);
-					map.set(normalizedTs, parseInt(item.value, 10));
-				});
-				setFngCache(map);
-			}
-		} catch (e) {
-			console.error("Failed to fetch FNG data", e);
-		}
-	};
-
 	// --- Hyperliquid WebSocket Connection ---
 	const connectWebSocket = (
 		activeInterval: Interval,
@@ -1053,8 +938,6 @@ export default function BTCChart() {
 		const lastCandle = allData[allData.length - 1];
 		if (!lastCandle) return;
 
-		// Use a sufficient slice for calculation to ensure EMA convergence
-		// 1000 bars is usually enough for EMA200
 		const slice = allData.slice(-1000);
 		const closes = slice.map((d) => d.close);
 
@@ -1072,42 +955,9 @@ export default function BTCChart() {
 			}
 		};
 
-		if (currentInd.ema20) updateSeries(ema20Series, calculateEMA, 20);
-		if (currentInd.ema60) updateSeries(ema60Series, calculateEMA, 60);
-		if (currentInd.ema120) updateSeries(ema120Series, calculateEMA, 120);
-
 		if (currentInd.ma20) updateSeries(ma20Series, calculateSMA, 20);
 		if (currentInd.ma60) updateSeries(ma60Series, calculateSMA, 60);
 		if (currentInd.ma120) updateSeries(ma120Series, calculateSMA, 120);
-
-		if (currentInd.rsi && rsiSeries && slice.length > 20) {
-			const rsiValues = calculateRSI(closes, 14);
-			const lastRSI = rsiValues[rsiValues.length - 1];
-			if (!Number.isNaN(lastRSI)) {
-				rsiSeries.update({ time: lastCandle.time, value: lastRSI });
-			}
-		}
-
-		if (currentInd.fng && fngSeries) {
-			const date = new Date((lastCandle.time as number) * 1000);
-			date.setUTCHours(0, 0, 0, 0);
-			const dayTs = Math.floor(date.getTime() / 1000);
-			const val = fngCache().get(dayTs);
-			if (val !== undefined) {
-				fngSeries.update({ time: lastCandle.time, value: val });
-			}
-		}
-
-		if (currentInd.atr && atrSeries && slice.length > 14) {
-			const atrValues = calculateATR(
-				slice.map((d) => ({ high: d.high, low: d.low, close: d.close })),
-				14,
-			);
-			const lastATR = atrValues[atrValues.length - 1];
-			if (!Number.isNaN(lastATR)) {
-				atrSeries.update({ time: lastCandle.time, value: lastATR });
-			}
-		}
 
 		refreshAllMarkers(allData);
 		updateLegendToLatest(allData);
@@ -1141,16 +991,9 @@ export default function BTCChart() {
 		const closes = data.map((d) => d.close);
 		const highs = data.map((d) => d.high);
 
-		const rsiValues = calculateRSI(closes, 14);
-		const lastRSI = rsiValues[rsiValues.length - 1];
-
-		const ema20 = calculateEMA(closes, 20);
-		const ema60 = calculateEMA(closes, 60);
-		const ema120 = calculateEMA(closes, 120);
 		const ma20 = calculateSMA(closes, 20);
 		const ma60 = calculateSMA(closes, 60);
 		const ma120 = calculateSMA(closes, 120);
-		const lastPrevHigh = findLastSwingHigh(highs, 10, 2);
 
 		const change = lastCandle.close - lastCandle.open;
 		const changePct = (change / lastCandle.open) * 100;
@@ -1169,39 +1012,12 @@ export default function BTCChart() {
 				lastCandle.close >= lastCandle.open
 					? "text-emerald-500"
 					: "text-rose-500",
-			ema20: formatValue(ema20[ema20.length - 1]),
-			ema60: formatValue(ema60[ema60.length - 1]),
-			ema120: formatValue(ema120[ema120.length - 1]),
 			ma20: formatValue(ma20[ma20.length - 1]),
 			ma60: formatValue(ma60[ma60.length - 1]),
 			ma120: formatValue(ma120[ma120.length - 1]),
 
-			prevHigh: formatValue(lastPrevHigh ?? undefined),
-			rsi: !Number.isNaN(lastRSI) ? lastRSI.toFixed(1) : undefined,
-			atr: currentInd.atr
-				? formatValue(
-						calculateATR(
-							data.map((d) => ({ high: d.high, low: d.low, close: d.close })),
-							14,
-						).pop(),
-					)
-				: undefined,
-			tdLabel: tdMap().get(lastCandle.time as number)?.label,
-			fng: currentInd.fng
-				? fngCache()
-						.get(
-							Math.floor(
-								new Date((lastCandle.time as number) * 1000).setUTCHours(
-									0,
-									0,
-									0,
-									0,
-								) / 1000,
-							),
-						)
-						?.toString()
-				: undefined,
-			// Raw open value used by JSX to compute live change vs currentPrice()
+		tdLabel: tdMap().get(lastCandle.time as number)?.label,
+		// Raw open value used by JSX to compute live change vs currentPrice()
 			openRaw: lastCandle.open,
 			closeRaw: lastCandle.close,
 			x: 0,
@@ -1217,123 +1033,22 @@ export default function BTCChart() {
 		if (!chart || !candlestickSeries) return;
 
 		// Sync Visibility
-		ema20Series?.applyOptions({ visible: !!currentInd.ema20 });
-		ema60Series?.applyOptions({ visible: !!currentInd.ema60 });
-		ema120Series?.applyOptions({ visible: !!currentInd.ema120 });
 		ma20Series?.applyOptions({ visible: !!currentInd.ma20 });
 		ma60Series?.applyOptions({ visible: !!currentInd.ma60 });
 		ma120Series?.applyOptions({ visible: !!currentInd.ma120 });
 
-		prevHighSeries?.applyOptions({ visible: !!currentInd.prevHigh });
-		rsiSeries?.applyOptions({ visible: !!currentInd.rsi });
-		fngSeries?.applyOptions({ visible: !!currentInd.fng });
-		atrSeries?.applyOptions({ visible: !!currentInd.atr });
 		volumeSeries?.applyOptions({ visible: !!currentInd.volume });
 
 		const totalHeight = chartContainer?.clientHeight || 450;
-		const heights = indicatorHeights();
-
-		const oscillatorsActive = !!(currentInd.rsi || currentInd.fng);
-		const atrActive = !!currentInd.atr;
-
-		const activeOscillators = [];
-		if (oscillatorsActive) activeOscillators.push("oscillators");
-		if (atrActive) activeOscillators.push("atrScale");
-
-		const oscH = oscillatorsActive ? heights.oscillators : 0;
-		const atrH = atrActive ? heights.atr : 0;
-
-		const totalIndHeight = oscH + atrH;
-		const marginRatio =
-			totalIndHeight > 0 ? (totalIndHeight + 40) / totalHeight : 0.1;
 
 		chart.priceScale("right").applyOptions({
-			scaleMargins: { top: 0.1, bottom: marginRatio },
+			scaleMargins: { top: 0.1, bottom: 0.1 },
 		});
-
-		const areaStart = 1 - totalIndHeight / totalHeight;
-
-		if (activeOscillators.length === 1) {
-			const margins = { top: areaStart, bottom: 0.05 };
-			chart.priceScale(activeOscillators[0]).applyOptions({
-				visible: true,
-				scaleMargins: margins,
-			});
-			// Hide others
-			const other =
-				activeOscillators[0] === "oscillators" ? "atrScale" : "oscillators";
-			chart.priceScale(other).applyOptions({ visible: false });
-		} else if (activeOscillators.length === 2) {
-			// Stack them: oscillators on top, ATR on bottom
-			const oscRatio = oscH / totalHeight;
-			const atrRatio = atrH / totalHeight;
-
-			// ATR bottom: from (1 - atrRatio) to 1
-			chart.priceScale("atrScale").applyOptions({
-				visible: true,
-				scaleMargins: {
-					top: 1 - atrRatio,
-					bottom: 0.05,
-				},
-			});
-			// Oscillators above ATR: from (1 - atrRatio - oscRatio) to (1 - atrRatio)
-			chart.priceScale("oscillators").applyOptions({
-				visible: true,
-				scaleMargins: {
-					top: 1 - atrRatio - oscRatio,
-					bottom: atrRatio + 0.02, // small gap
-				},
-			});
-		} else {
-			chart.priceScale("oscillators").applyOptions({ visible: false });
-			chart.priceScale("atrScale").applyOptions({ visible: false });
-		}
 
 		untrack(() => refreshAllMarkers(currentData));
 
-		if (currentInd.fng) {
-			fetchFNGData().then(() => {
-				if (!fngSeries || !currentData.length) return;
-				const cache = fngCache();
-				if (cache.size === 0) return;
-				const fngLineData: LineData[] = [];
-				currentData.forEach((candle) => {
-					const date = new Date((candle.time as number) * 1000);
-					date.setUTCHours(0, 0, 0, 0);
-					const dayTs = Math.floor(date.getTime() / 1000);
-					const val = cache.get(dayTs);
-					if (val !== undefined)
-						fngLineData.push({ time: candle.time, value: val });
-				});
-				fngSeries.setData(fngLineData);
-			});
-		} else if (fngSeries) {
-			fngSeries.setData([]);
-		}
-
 		if (!currentData.length) return;
 		const closes = currentData.map((d) => d.close);
-
-		const processEMA = (
-			active: boolean,
-			series: ISeriesApi<"Line"> | undefined,
-			period: number,
-		) => {
-			if (active && series && closes.length >= period) {
-				const vals = calculateEMA(closes, period);
-				const lineData: LineData[] = [];
-				for (let i = 0; i < vals.length; i++) {
-					if (!Number.isNaN(vals[i]))
-						lineData.push({ time: currentData[i].time, value: vals[i] });
-				}
-				series.setData(lineData);
-			} else if (series) {
-				series.setData([]);
-			}
-		};
-		processEMA(currentInd.ema20, ema20Series, 20);
-		processEMA(currentInd.ema60, ema60Series, 60);
-		processEMA(currentInd.ema120, ema120Series, 120);
 
 		const processMA = (
 			active: boolean,
@@ -1355,69 +1070,6 @@ export default function BTCChart() {
 		processMA(currentInd.ma20, ma20Series, 20);
 		processMA(currentInd.ma60, ma60Series, 60);
 		processMA(currentInd.ma120, ma120Series, 120);
-
-		// Prev High (Swing High)
-		if (currentInd.prevHigh && prevHighSeries && currentData.length >= 15) {
-			const highs = currentData.map((d) => d.high);
-			const lineData: LineData[] = [];
-			for (let i = 10; i < highs.length; i++) {
-				// Look back 10 bars, forward 2 bars to find swing highs
-				const currentHigh = highs[i];
-				let isSwingHigh = true;
-
-				// Check previous 10 bars
-				for (let j = 1; j <= 10; j++) {
-					if (highs[i - j] >= currentHigh) {
-						isSwingHigh = false;
-						break;
-					}
-				}
-
-				if (!isSwingHigh) continue;
-
-				// Check next 2 bars
-				for (let j = 1; j <= 2; j++) {
-					if (i + j < highs.length && highs[i + j] > currentHigh) {
-						isSwingHigh = false;
-						break;
-					}
-				}
-
-				if (isSwingHigh) {
-					lineData.push({ time: currentData[i].time, value: currentHigh });
-				}
-			}
-			prevHighSeries.setData(lineData);
-		} else if (prevHighSeries) {
-			prevHighSeries.setData([]);
-		}
-
-		if (currentInd.rsi && rsiSeries && closes.length > 14) {
-			const rsiVals = calculateRSI(closes, 14);
-			const rsiData: LineData[] = [];
-			for (let i = 0; i < rsiVals.length; i++) {
-				if (!Number.isNaN(rsiVals[i]))
-					rsiData.push({ time: currentData[i].time, value: rsiVals[i] });
-			}
-			rsiSeries.setData(rsiData);
-		} else if (rsiSeries) {
-			rsiSeries.setData([]);
-		}
-
-		if (currentInd.atr && atrSeries && currentData.length > 14) {
-			const atrVals = calculateATR(
-				currentData.map((d) => ({ high: d.high, low: d.low, close: d.close })),
-				14,
-			);
-			const atrData: LineData[] = [];
-			for (let i = 0; i < atrVals.length; i++) {
-				if (!Number.isNaN(atrVals[i]))
-					atrData.push({ time: currentData[i].time, value: atrVals[i] });
-			}
-			atrSeries.setData(atrData);
-		} else if (atrSeries) {
-			atrSeries.setData([]);
-		}
 	};
 
 	// --- History Query ---
@@ -1612,69 +1264,16 @@ export default function BTCChart() {
 				lastValueVisible: true,
 			});
 
-		ema20Series = createLineSeries("#FACC15"); // yellow-400
-		ema60Series = createLineSeries("#C084FC"); // purple-400
-		ema120Series = createLineSeries("#FB923C"); // orange-400
-
 		ma20Series = createLineSeries("#EF4444"); // red-500
 		ma60Series = createLineSeries("#22C55E"); // green-500
 		ma120Series = createLineSeries("#2563EB"); // blue-600
 
-		prevHighSeries = createLineSeries("#f97316"); // orange-500
-
-		const oscillatorOptions = {
-			priceScaleId: "oscillators",
-			crosshairMarkerVisible: false,
-			lineWidth: 1 as const,
-			priceLineVisible: false,
-			lastValueVisible: true,
-		};
-		rsiSeries = chart.addSeries(LineSeries, {
-			...oscillatorOptions,
-			color: "#7E57C2",
-			visible: false,
-		});
-		fngSeries = chart.addSeries(LineSeries, {
-			...oscillatorOptions,
-			color: "#F7931A",
-			visible: false,
-		});
-
-		atrSeries = chart.addSeries(LineSeries, {
-			...oscillatorOptions,
-			priceScaleId: "atrScale",
-			color: "#94a3b8", // slate-400
-			visible: false,
-		});
-
-		rsiSeries.createPriceLine({
-			price: 70,
-			color: "#cbd5e1",
-			lineWidth: 1,
-			lineStyle: 2,
-			axisLabelVisible: false,
-			title: "",
-		});
-		rsiSeries.createPriceLine({
-			price: 30,
-			color: "#cbd5e1",
-			lineWidth: 1,
-			lineStyle: 2,
-			axisLabelVisible: false,
-			title: "",
-		});
-
-		chart.priceScale("oscillators").applyOptions({
-			scaleMargins: { top: 0.8, bottom: 0 },
-			visible: false,
-			borderVisible: false,
-		});
-
-		chart.priceScale("atrScale").applyOptions({
-			scaleMargins: { top: 0.8, bottom: 0 },
-			visible: false,
-			borderVisible: false,
-		});
+	const oscillatorOptions = {
+		crosshairMarkerVisible: false,
+		lineWidth: 1 as const,
+		priceLineVisible: false,
+		lastValueVisible: true,
+	};
 
 		let lastTooltipTime: number | null = null;
 		let cachedTooltipData: Omit<TooltipData, "x" | "y" | "snapY"> | null = null;
@@ -1744,26 +1343,7 @@ export default function BTCChart() {
 				? (Math.round(volumeVal.value * 100) / 100).toLocaleString()
 				: "—";
 
-			const rsiVal = rsiSeries
-				? (param.seriesData.get(rsiSeries) as LineData)
-				: undefined;
-			const fngVal = fngSeries
-				? (param.seriesData.get(fngSeries) as LineData)
-				: undefined;
-
-			const prevHighVal = prevHighSeries
-				? (param.seriesData.get(prevHighSeries) as LineData)
-				: undefined;
 			const snapY = candlestickSeries.priceToCoordinate(candle.close);
-
-			const fngNum = fngVal ? Math.round(fngVal.value) : undefined;
-			let fngClass = "text-gray-500";
-			if (fngNum !== undefined) {
-				if (fngNum < 25) fngClass = "text-red-600 font-bold";
-				else if (fngNum < 45) fngClass = "text-orange-500 font-bold";
-				else if (fngNum > 75) fngClass = "text-green-600 font-bold";
-				else if (fngNum > 55) fngClass = "text-teal-500 font-bold";
-			}
 
 			const tdStatus = tdMap().get(Number(param.time));
 			let tdColor = "";
@@ -1775,15 +1355,6 @@ export default function BTCChart() {
 					tdColor = "bg-amber-50 text-amber-700 border-amber-100";
 			}
 
-			const ema20Val = ema20Series
-				? (param.seriesData.get(ema20Series) as LineData)
-				: undefined;
-			const ema60Val = ema60Series
-				? (param.seriesData.get(ema60Series) as LineData)
-				: undefined;
-			const ema120Val = ema120Series
-				? (param.seriesData.get(ema120Series) as LineData)
-				: undefined;
 			const ma20Val = ma20Series
 				? (param.seriesData.get(ma20Series) as LineData)
 				: undefined;
@@ -1809,30 +1380,14 @@ export default function BTCChart() {
 			currencySymbol: "$",
 				changeColor:
 					candle.close >= candle.open ? "text-emerald-600" : "text-rose-500",
-				ema20: formatTooltipPrice(ema20Val?.value),
-				ema60: formatTooltipPrice(ema60Val?.value),
-				ema120: formatTooltipPrice(ema120Val?.value),
-				ma20: formatTooltipPrice(ma20Val?.value),
+			ma20: formatTooltipPrice(ma20Val?.value),
 				ma60: formatTooltipPrice(ma60Val?.value),
-				ma120: formatTooltipPrice(ma120Val?.value),
+			ma120: formatTooltipPrice(ma120Val?.value),
 
-				prevHigh: formatTooltipPrice(prevHighVal?.value),
-				rsi:
-					rsiVal && typeof rsiVal.value === "number"
-						? rsiVal.value.toFixed(1)
-						: undefined,
-				fng: fngNum?.toString(),
-				fngClass,
-				tdLabel: tdStatus?.label,
-				tdColor: tdColor,
-				tdDescription: tdStatus?.description,
-
-				atr: formatTooltipPrice(
-					atrSeries
-						? (param.seriesData.get(atrSeries) as LineData)?.value
-						: undefined,
-				),
-			};
+			tdLabel: tdStatus?.label,
+			tdColor: tdColor,
+			tdDescription: tdStatus?.description,
+		};
 
 			setLegendData({
 				...cachedTooltipData,
@@ -1882,95 +1437,13 @@ export default function BTCChart() {
 		window.addEventListener("resize", handleResize);
 
 		const handleMouseMove = (e: MouseEvent) => {
-			const area = draggingArea();
-			if (!area || !chartContainer) return;
-
-			const rect = chartContainer.getBoundingClientRect();
-			const relativeY = e.clientY - rect.top;
-			const totalHeight = rect.height;
-			const heights = indicatorHeights();
-
-			const activeInds = untrack(() => Object.assign({}, indicators())); // Not needed for logic, just naming
-			const oscillatorsActive = !!(activeInds.rsi || activeInds.fng);
-			const atrActive = !!activeInds.atr;
-
-			if (area === "top") {
-				// Top-most active indicator handle
-				const newTotalHeight = Math.max(
-					50,
-					Math.min(totalHeight * 0.7, totalHeight - relativeY),
-				);
-				if (oscillatorsActive && atrActive) {
-					// Adjust total indicator height, then distribute proportionally
-					const currentTotal = heights.oscillators + heights.atr;
-					if (currentTotal === 0) return; // Avoid division by zero
-					const ratioOsc = heights.oscillators / currentTotal;
-					const ratioAtr = heights.atr / currentTotal;
-					setIndicatorHeights({
-						oscillators: Math.max(30, newTotalHeight * ratioOsc),
-						atr: Math.max(30, newTotalHeight * ratioAtr),
-					});
-				} else if (oscillatorsActive) {
-					setIndicatorHeights({ ...heights, oscillators: newTotalHeight });
-				} else if (atrActive) {
-					setIndicatorHeights({ ...heights, atr: newTotalHeight });
-				}
-			} else if (area === "middle") {
-				// Splitter between oscillators and ATR
-				// relativeY is the mouse position from the top of the chart container
-				// The top of the ATR pane is at (totalHeight - heights.atr)
-				// The top of the Oscillators pane is at (totalHeight - heights.atr - heights.oscillators)
-
-				// We want to adjust the split, so the sum of heights.oscillators + heights.atr remains constant
-				// The mouse Y position should define the boundary between the two panes.
-				// The bottom of the oscillators pane (and top of ATR pane) should be at relativeY.
-
-				const currentTotalIndHeight = heights.oscillators + heights.atr;
-				const newOscillatorsHeight = Math.max(30, totalHeight - relativeY - 20); // 20 is approx padding/margin
-				const newAtrHeight = Math.max(
-					30,
-					currentTotalIndHeight - newOscillatorsHeight,
-				);
-
-				if (
-					newOscillatorsHeight + newAtrHeight > currentTotalIndHeight + 10 ||
-					newOscillatorsHeight + newAtrHeight < currentTotalIndHeight - 10
-				) {
-					// If the total height changes too much, it means the mouse is outside the expected range.
-					// Re-calculate based on mouse position relative to the bottom of the chart.
-					const newAtrHeightFromBottom = Math.max(30, totalHeight - relativeY);
-					const newOscHeightFromBottom = Math.max(
-						30,
-						currentTotalIndHeight - newAtrHeightFromBottom,
-					);
-					setIndicatorHeights({
-						oscillators: newOscHeightFromBottom,
-						atr: newAtrHeightFromBottom,
-					});
-				} else {
-					setIndicatorHeights({
-						oscillators: newOscillatorsHeight,
-						atr: newAtrHeight,
-					});
-				}
-			}
-
 			syncAllIndicators();
 		};
-
-		const handleMouseUp = () => {
-			setDraggingArea(null);
-		};
-
-		window.addEventListener("mousemove", handleMouseMove);
-		window.addEventListener("mouseup", handleMouseUp);
 
 		onCleanup(() => {
 			chartDisposed = true;
 			if (ws) ws.close();
 			window.removeEventListener("resize", handleResize);
-			window.removeEventListener("mousemove", handleMouseMove);
-			window.removeEventListener("mouseup", handleMouseUp);
 			window.removeEventListener("error", handler);
 			if (resizeObserver) resizeObserver.disconnect();
 			if (loadMoreTimer) clearTimeout(loadMoreTimer);
@@ -2709,65 +2182,7 @@ export default function BTCChart() {
 
 			<div ref={chartContainer} class="w-full h-full opacity-90" />
 
-			{/* Indicator Resize Handles */}
-				<Show
-					when={
-						Object.values(indicators()).some((v) => v) &&
-						(indicators().rsi || indicators().fng || indicators().atr)
-					}
-				>
-					{/* Top Handle - Price/Indicator border */}
-					<div
-						role="separator"
-						tabIndex={0}
-						aria-label="Resize indicator area"
-						aria-valuenow={
-							indicatorHeights().oscillators + indicatorHeights().atr
-						}
-						class="absolute left-0 right-0 z-40 h-2 cursor-row-resize group/handle transition-colors outline-none focus:bg-indigo-500/20"
-						style={{
-							bottom: `${(indicators().rsi || indicators().fng ? indicatorHeights().oscillators : 0) + (indicators().atr ? indicatorHeights().atr : 0)}px`,
-							"background-color":
-								draggingArea() === "top"
-									? "rgba(99, 102, 241, 0.4)"
-									: "transparent",
-						}}
-						onMouseDown={(e) => {
-							e.preventDefault();
-							setDraggingArea("top");
-						}}
-					>
-						<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-white/5 group-hover/handle:bg-indigo-500/50" />
-					</div>
-
-					{/* Middle Handle - Between Oscillators and ATR */}
-					<Show
-						when={(indicators().rsi || indicators().fng) && indicators().atr}
-					>
-						<div
-							role="separator"
-							tabIndex={0}
-							aria-label="Resize between indicators"
-							aria-valuenow={indicatorHeights().atr}
-							class="absolute left-0 right-0 z-40 h-2 cursor-row-resize group/handle transition-colors outline-none focus:bg-indigo-500/20"
-							style={{
-								bottom: `${indicatorHeights().atr}px`,
-								"background-color":
-									draggingArea() === "middle"
-										? "rgba(99, 102, 241, 0.4)"
-										: "transparent",
-							}}
-							onMouseDown={(e) => {
-								e.preventDefault();
-								setDraggingArea("middle");
-							}}
-						>
-						<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-white/5 group-hover/handle:bg-indigo-500/50" />
-					</div>
-				</Show>
-			</Show>
-
-				{/* Bitget-style Legend Overlay */}
+			{/* Bitget-style Legend Overlay */}
 				<div class="absolute top-1 left-2 z-30 pointer-events-none flex flex-col gap-0.5 select-none transition-all duration-200 overflow-hidden max-w-[calc(100%-20px)]">
 					<Show when={legendData()}>
 						{(t) => (
@@ -2890,68 +2305,8 @@ export default function BTCChart() {
 												<span class="text-blue-600">MA 120 close 0</span>
 												<span class="text-blue-600">{t().ma120}</span>
 											</div>
-										</Show>
-										<Show
-											when={
-												indicators().ema20 && t().ema20 && t().ema20 !== "—"
-											}
-										>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-yellow-400">EMA 20 close 0</span>
-												<span class="text-yellow-400">{t().ema20}</span>
-											</div>
-										</Show>
-										<Show
-											when={
-												indicators().ema60 && t().ema60 && t().ema60 !== "—"
-											}
-										>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-purple-400">EMA 60 close 0</span>
-												<span class="text-purple-400">{t().ema60}</span>
-											</div>
-										</Show>
-										<Show
-											when={
-												indicators().ema120 && t().ema120 && t().ema120 !== "—"
-											}
-										>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-orange-400">EMA 120 close 0</span>
-												<span class="text-orange-400">{t().ema120}</span>
-											</div>
-										</Show>
-										<Show
-											when={
-												indicators().prevHigh &&
-												t().prevHigh &&
-												t().prevHigh !== "—"
-											}
-										>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-orange-500">PREV HIGH</span>
-												<span class="text-orange-500">{t().prevHigh}</span>
-											</div>
-										</Show>
-										<Show when={indicators().rsi && t().rsi}>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-[#7E57C2]">RSI 14</span>
-												<span class="text-[#7E57C2]">{t().rsi}</span>
-											</div>
-										</Show>
-										<Show when={indicators().atr && t().atr && t().atr !== "—"}>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-slate-400">ATR 14</span>
-												<span class="text-slate-400">{t().atr}</span>
-											</div>
-										</Show>
-										<Show when={indicators().fng && t().fng}>
-											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
-												<span class="text-[#F7931A]">Fear & Greed</span>
-												<span class="text-[#F7931A]">{t().fng}</span>
-											</div>
-										</Show>
-										<Show when={indicators().tdSeq && t().tdLabel}>
+							</Show>
+							<Show when={indicators().tdSeq && t().tdLabel}>
 											<div class="flex items-center gap-1.5 text-[10px] leading-none font-bold opacity-90">
 												<span class="text-emerald-500">TD Sequential</span>
 												<span class="text-emerald-500">{t().tdLabel}</span>
