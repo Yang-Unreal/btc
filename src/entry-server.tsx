@@ -2,9 +2,7 @@
 import { createHandler, StartServer } from "@solidjs/start/server";
 import { startPriceAlertMonitor } from "./monitor/price-alerts-ws";
 
-if (typeof window === "undefined") {
-	startPriceAlertMonitor().catch(console.error);
-}
+startPriceAlertMonitor().catch(console.error);
 
 export default createHandler(() => {
 	return (

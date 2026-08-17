@@ -163,6 +163,7 @@ async function handleTrade(data: any[]) {
 }
 
 function connect() {
+	if (typeof WebSocket === "undefined") return;
 	if (state.connecting) return;
 	if (state.ws && state.ws.readyState === WebSocket.OPEN) return;
 
@@ -219,6 +220,10 @@ function connect() {
 }
 
 export async function startPriceAlertMonitor() {
+	if (typeof WebSocket === "undefined") {
+		console.log("[price-alerts-ws] WebSocket not available, skipping monitor");
+		return;
+	}
 	connect();
 	setInterval(async () => {
 		if (state.ws?.readyState === WebSocket.OPEN) {
