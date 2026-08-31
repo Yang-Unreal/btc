@@ -145,12 +145,11 @@ async function evaluateCandle(tf: string, candle: Candle): Promise<void> {
 	const state = states[tf];
 	const prev = state.closedCandles.filter((c) => c.ts < candle.ts);
 	if (prev.length < COMPARE_CANDLES) return;
-
 	const recent = prev.slice(-COMPARE_CANDLES);
-	const avgBody = recent.reduce((sum, c) => sum + c.body, 0) / COMPARE_CANDLES;
-	if (avgBody <= 0) return;
+	const maxBody = Math.max(...recent.map((c) => c.body));
+	if (maxBody <= 0) return;
 
-	const ratio = candle.body / avgBody;
+	const ratio = candle.body / maxBody;
 	if (ratio < MULTIPLIER) return;
 
 	const now = Date.now();
@@ -168,7 +167,8 @@ async function evaluateCandle(tf: string, candle: Candle): Promise<void> {
 	const recentStr = recent
 		.map((c) => `${candlePercent(c).toFixed(2)}%`)
 		.join(" / ");
-	const avgPct = ((avgBody / recent[0].open) * 100).toFixed(2);
+	const maxCandle = recent.reduce((m, c) => (c.body > m.body ? c : m));
+	const maxPct = ((maxBody / maxCandle.open) * 100).toFixed(2);
 
 	await sendTelegramMessage(
 		[
@@ -178,14 +178,14 @@ async function evaluateCandle(tf: string, candle: Candle): Promise<void> {
 			`📊 方向: ${direction}`,
 			`💥 实体范围: ${candle.body.toFixed(2)}  (O: $${candle.open.toFixed(2)} → C: $${candle.close.toFixed(2)})`,
 			`📏 实体占比: ${candlePercent(candle).toFixed(2)}%`,
-			`📈 前${COMPARE_CANDLES}根平均实体: ${avgPct}%  (逐根: ${recentStr})`,
+			`📈 前${COMPARE_CANDLES}根最大实体: ${maxPct}%  (逐根: ${recentStr})`,
 			`⚡ 放大倍数: <b>${ratio.toFixed(2)}x</b> (阈值: ${MULTIPLIER}x)`,
 			"",
-			`🚀 当前K线实体是前${COMPARE_CANDLES}根的 <b>${ratio.toFixed(2)}x</b>，显著放大！`,
+			`🚀 当前K线实体是前${COMPARE_CANDLES}根中最长的一根的 <b>${ratio.toFixed(2)}x</b>，显著放大！`,
 		].join("\n"),
 	);
 	console.log(
-		`[big-candle] ${tf} ${SYMBOL} ALERT sent: body ${ratio.toFixed(2)}x avg`,
+		`[big-candle] ${tf} ${SYMBOL} ALERT sent: body ${ratio.toFixed(2)}x max`,
 	);
 }
 
