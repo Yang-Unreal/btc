@@ -1,8 +1,10 @@
 // @refresh reload
 import { createHandler, StartServer } from "@solidjs/start/server";
+import { startBigCandleMonitor } from "./monitor/big-candle-alert";
 import { startPriceAlertMonitor } from "./monitor/price-alerts-ws";
 
 startPriceAlertMonitor().catch(console.error);
+startBigCandleMonitor();
 
 export default createHandler(() => {
 	return (

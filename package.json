@@ -8,9 +8,8 @@
 		"start": "vinxi start",
 		"version": "vinxi version",
 		"db:push": "drizzle-kit push",
-		"monitor:ma": "bun run src/monitor/ma-convergence.ts",
-		"monitor:4h": "bun run src/monitor/4h-entanglement.ts",
-		"monitor:td": "bun run src/monitor/td-sequential.ts"
+
+		"monitor:big-candle": "bun run src/monitor/big-candle-alert.ts"
 	},
 	"dependencies": {
 		"@nktkas/hyperliquid": "^0.33.3",
